@@ -1,11 +1,11 @@
-import { SingleDeal } from "./SingleDeal.tsx";
+import { Deal } from "./Deal.tsx";
 import { useSnapshot } from "valtio/react";
 import { multiTabStore } from "../stores/multiTabStore.ts";
 import { DealStoreProvider } from "../contexts/DealStoreProvider.tsx";
 import clsx from "clsx";
-import { useEffect } from "react";
+import { useEffect, memo } from "react";
 
-export const MultiDeal = () => {
+export const MultiDeal = memo(() => {
   const snap = useSnapshot(multiTabStore);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export const MultiDeal = () => {
                 key={key}
                 currentDeal={multiTabStore.deals[key]}
               >
-                <SingleDeal />
+                <Deal />
               </DealStoreProvider>
             );
           }
@@ -57,4 +57,6 @@ export const MultiDeal = () => {
       </div>
     </section>
   );
-};
+});
+
+MultiDeal.displayName = "MultiDeal";
