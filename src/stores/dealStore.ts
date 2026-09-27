@@ -1,6 +1,8 @@
 import { proxy } from "valtio";
 import { type ProductStore, createProductStore } from "./productStore.ts";
 import { uuid, setValueByPath } from "../utils/utils.ts";
+import { effect } from "valtio-reactive";
+import { devtoolsStore } from "./devToolsStore.ts";
 
 type CcyPair = string;
 
@@ -10,6 +12,7 @@ export type DealStore = {
   products: Record<string, ProductStore>;
   isInternal: boolean;
   hedgeTypes: string[];
+  spotPriceStreamValue: number;
   actions: {
     addNewProduct(): void;
     setValueByPath(path: string, value: unknown): void;
@@ -22,6 +25,7 @@ export const createDealStore = (): DealStore => {
     premiumCcy: "2",
     products: {},
     isInternal: true,
+    spotPriceStreamValue: 0,
     get hedgeTypes() {
       return this.isInternal ? ["abc"] : ["def"];
     },
@@ -33,6 +37,14 @@ export const createDealStore = (): DealStore => {
         setValueByPath(dealStore, path, value);
       },
     },
+  });
+
+  effect(() => {
+    if (devtoolsStore.isSpotPriceStreamEnabled) {
+      setInterval(() => {
+        dealStore.spotPriceStreamValue += 1;
+      }, 1000);
+    }
   });
 
   return dealStore;

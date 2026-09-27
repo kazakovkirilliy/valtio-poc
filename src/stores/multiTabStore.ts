@@ -2,17 +2,21 @@ import { proxy } from "valtio";
 import { devtools } from "valtio/utils";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 import { uuid } from "../utils/utils.ts";
+import { devtoolsStore, type DevToolsStore } from "./devToolsStore.ts";
 
 export type MultiTabStore = {
+  devtools: DevToolsStore;
   activeDealId: string;
   deals: Record<string, DealStore>;
   actions: {
     addNewDeal(): void;
     setActiveDeal(activeDealId: string): void;
+    toggleSpotPriceStreamEnabled(): void;
   };
 };
 
 export const multiTabStore = proxy<MultiTabStore>({
+  devtools: devtoolsStore,
   activeDealId: "",
   deals: {},
   actions: {
@@ -23,6 +27,10 @@ export const multiTabStore = proxy<MultiTabStore>({
     },
     setActiveDeal(activeDealId: string) {
       multiTabStore.activeDealId = activeDealId;
+    },
+    toggleSpotPriceStreamEnabled() {
+      devtoolsStore.isSpotPriceStreamEnabled =
+        !devtoolsStore.isSpotPriceStreamEnabled;
     },
   },
 });

@@ -20,6 +20,9 @@ importers:
       valtio:
         specifier: latest
         version: 2.3.2(@types/react@19.3.0)(react@19.3.0)
+      valtio-persist:
+        specifier: ^2.2.5
+        version: 2.2.5(@types/react@19.3.0)(react@19.3.0)
       valtio-reactive:
         specifier: latest
         version: 0.2.0(valtio@2.3.2(@types/react@19.3.0)(react@19.3.0))
@@ -890,6 +893,23 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  valtio-persist@2.2.5:
+    resolution: {integrity: sha512-4baK/iuGeB4TuhM+1dF+BI1Or/3q58Q36BqKD5IcNokaW8eLzLgIr+77qZWr5OGuzLfu2kXAQe9cyhzc4BOzBw==}
+    peerDependencies:
+      '@react-native-async-storage/async-storage': ^2.1.2
+      expo-file-system: '*'
+      expo-secure-store: '*'
+      react-native-keychain: '*'
+    peerDependenciesMeta:
+      '@react-native-async-storage/async-storage':
+        optional: true
+      expo-file-system:
+        optional: true
+      expo-secure-store:
+        optional: true
+      react-native-keychain:
+        optional: true
+
   valtio-reactive@0.2.0:
     resolution: {integrity: sha512-Zl1vr0w2S33QP9wBRX60p1LczyHrX+AWLB3iRl1doCdUTKaCziSj9GZIyrEIMykfjd0b3t27+X44phKOplcyfg==}
     peerDependencies:
@@ -1753,6 +1773,14 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
+
+  valtio-persist@2.2.5(@types/react@19.3.0)(react@19.3.0):
+    dependencies:
+      proxy-compare: 3.0.1
+      valtio: 2.3.2(@types/react@19.3.0)(react@19.3.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
 
   valtio-reactive@0.2.0(valtio@2.3.2(@types/react@19.3.0)(react@19.3.0)):
     dependencies:
