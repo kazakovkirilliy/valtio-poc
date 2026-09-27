@@ -1,32 +1,33 @@
-import {proxy} from "valtio";
-import {devtools} from 'valtio/utils'
-import {type DealStore} from "./dealStore.ts";
-import {uuid, setValueByPath} from "../utils/utils.ts";
-
+import { proxy } from "valtio";
+import { devtools } from "valtio/utils";
+import { type DealStore, createDealStore } from "./dealStore.ts";
+import { uuid } from "../utils/utils.ts";
 
 export type MultiTabStore = {
-    deals: Record<string, DealStore>;
-    actions: {
-        addNewDeal(): void;
-        setValueByPath(path:string, value: unknown): void;
-    }
+  activeDealId: string;
+  deals: Record<string, DealStore>;
+  actions: {
+    addNewDeal(): void;
+    setActiveDeal(activeDealId: string): void;
+  };
 };
 
-
 export const multiTabStore = proxy<MultiTabStore>({
-    deals: {},
-    actions: {
-        addNewDeal(){
-            // multiTabStore.deals[uuid()]= createDealStore(multiTabStore);
-        },
-        setValueByPath(path:string, value: unknown) {
-            setValueByPath(multiTabStore,path, value);
-        }
-
-    }
+  activeDealId: "",
+  deals: {},
+  actions: {
+    addNewDeal() {
+      const newDaelId = uuid();
+      multiTabStore.deals[newDaelId] = createDealStore();
+      multiTabStore.activeDealId = newDaelId;
+    },
+    setActiveDeal(activeDealId: string) {
+      multiTabStore.activeDealId = activeDealId;
+    },
+  },
 });
 
 devtools(multiTabStore, {
-    name: "multiTab",
-    enabled: true
+  name: "multiTab",
+  enabled: true,
 });

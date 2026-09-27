@@ -1,19 +1,45 @@
+.button {
+  padding: 8px;
+  border: 0;
+  cursor: pointer;
+  background: var(--bg);
+}
+
+.button-active {
+  background: var(--code-bg);
+}
+
 .columnsContainer {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .column {
-  border: 1px solid #eee;
+  width: 250px;
+  border: 1px solid var(--border);
   min-height: 500px;
   display: flex;
   flex-direction: column;
   align-items: end;
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .column h5 {
   text-align: center;
   width: 100%;
+}
+
+.deal {
+  background: var(--code-bg);
+  padding-top: 8px;
+}
+
+.multiDeal-header {
+  display: flex;
+
+  .button {
+    min-width: 100px;
+  }
 }
