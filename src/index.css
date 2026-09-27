@@ -107,3 +107,9 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+
+label {
+  font-size: 12px;
+  margin-right: 8px;
+}

@@ -6,4 +6,14 @@
 .column {
   border: 1px solid #eee;
   min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.column h5 {
+  text-align: center;
+  width: 100%;
 }

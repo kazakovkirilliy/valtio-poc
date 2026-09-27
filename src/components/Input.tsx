@@ -1,13 +1,18 @@
-import type { ChangeEvent } from "react";
+import {type ChangeEvent, useId, memo} from "react";
 
 type Props = {
-  value: string;
-  onChange: (value: string) => void;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
 };
 
-export const Input = ({ value, onChange }: Props) => {
-  const handleOnChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onChange(event.target.value);
-  };
-  return <input value={value} onChange={handleOnChange} />;
-};
+export const Input = memo(({label, value, onChange}: Props) => {
+    const id = useId();
+    const handleOnChange = (event: ChangeEvent<HTMLInputElement>) => {
+        onChange(event.target.value);
+    };
+    return <div>
+        <label htmlFor={id}>{label}</label>
+        <input id={id} value={value} onChange={handleOnChange}/>
+    </div>;
+});
