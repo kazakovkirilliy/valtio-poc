@@ -1,0 +1,9 @@
+.columnsContainer {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
+}
+
+.column {
+  border: 1px solid #eee;
+  min-height: 500px;
+}
