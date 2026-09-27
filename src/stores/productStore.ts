@@ -1,47 +1,47 @@
 import {proxy} from "valtio";
-import {subscribeKey} from "valtio/utils";
-import {dealStore} from "./dealStore.ts";
+import { type DealStore} from "./dealStore.ts";
+import {effect} from "valtio-reactive";
 
 
 export type ProductStore = {
+    productNotionalCcy: string;
     productPremiumCcy: string;
     strike: string;
-    actions: {
-        setProductPremiumCcy(newCcy: string): void;
-        setProductStrike(strike: string): void;
-    }
 };
 
 
 /**
  * Product factory.
  */
-export const createProductStore = () => {
+export const createProductStore = ($dealStore: DealStore) => {
     const productStore = proxy<ProductStore>({
-        productPremiumCcy: dealStore.premiumCcy,
-        strike: "",
-        actions: {
-            setProductPremiumCcy(newCcy: string) {
-                productStore.productPremiumCcy = newCcy;
-            },
-            setProductStrike(strike: string) {
-                productStore.strike = strike;
-            }
-        }
+        productNotionalCcy: "",
+        productPremiumCcy: "",
+        strike: ""
     });
 
     /**
-     * Two-way Sync (part 1)
+     * Two-way Sync
      */
-    subscribeKey(dealStore,'premiumCcy',(premiumCcy)=>{
-        productStore.productPremiumCcy = premiumCcy;
+    effect(()=>{
+        console.log("Premium Changed (Deal)");
+        productStore.productPremiumCcy = $dealStore.premiumCcy
+    })
+    effect(()=>{
+        console.log("Premium Changed (Product)");
+        $dealStore.premiumCcy = productStore.productPremiumCcy
     })
 
     /**
-     * Two-way Sync (part 2)
+     * Two-way Sync
      */
-    subscribeKey(productStore,'productPremiumCcy',(productPremiumCcy)=>{
-        dealStore.premiumCcy = productPremiumCcy;
+    effect(()=>{
+        console.log("Notional Changed (Deal)");
+        productStore.productNotionalCcy = $dealStore.notionalCcy;
+    })
+    effect(()=>{
+        console.log("Notional Changed (Product)");
+        $dealStore.notionalCcy = productStore.productNotionalCcy
     })
 
     return productStore;

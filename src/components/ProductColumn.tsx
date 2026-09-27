@@ -1,8 +1,5 @@
-import {Input} from "./Input.tsx";
-import {useSnapshot} from "valtio/react";
-import {dealStore} from "../stores/dealStore.ts";
 import {memo} from "react";
-import {PremiumCcyField} from "./PremiumCcyField.tsx";
+import {Input} from "./Input.tsx";
 
 type Props = {
     productId: string
@@ -10,21 +7,24 @@ type Props = {
 
 export const ProductColumn = memo(({productId}: Props) => {
 
-    const snap = useSnapshot(dealStore);
-
-    const product = snap.products[productId];
-
     return (
         <div className="column">
             <h5>Product Column</h5>
-            <PremiumCcyField path={`products.${productId}.productPremiumCcy`}
-                             actionPath={`products.${productId}.actions.setProductPremiumCcy`}
+            <Input
+                label="Notional Ccy"
+                path={`products.${productId}.productNotionalCcy`}
+            />
+            <Input
+                label="Premium Ccy"
+                path={`products.${productId}.productPremiumCcy`}
             />
             <Input
                 label="Strike"
-                value={product.strike}
-                onChange={product.actions.setProductStrike}
+                path={`products.${productId}.strike`}
             />
+
         </div>
     );
 });
+
+ProductColumn.displayName = "ProductColumn";

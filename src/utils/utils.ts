@@ -7,10 +7,26 @@ export const uuid = ()=>crypto.randomUUID().toString();
 
 export const getValueByPath = (target:object, path: string): unknown=>{
 
-    console.log(path.split('.'),'\path.split(\'.\')')
     return path.split('.').reduce((currentTarget,part)=>{
         // @ts-expect-error YOLO
         return currentTarget[part];
     },target);
 
 }
+
+export const setValueByPath = (target: object, path: string, value: unknown): void => {
+    const parts = path.split('.');
+    const lastKey = parts.pop() as string;
+
+    // @ts-expect-error YOLO
+    const deepest = parts.reduce((currentTarget: Record<string, unknown>, part) => {
+        // Create intermediate object if missing
+        if (currentTarget[part] === undefined || currentTarget[part] === null) {
+            currentTarget[part] = {};
+        }
+        return currentTarget[part];
+    }, target);
+
+    // @ts-expect-error YOLO
+    (deepest as Record<string, unknown>)[lastKey] = value;
+};

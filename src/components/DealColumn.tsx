@@ -1,11 +1,20 @@
 import {memo} from "react";
-import {PremiumCcyField} from "./PremiumCcyField.tsx";
+import {Input} from "./Input.tsx";
 
 export const DealColumn = memo(() => {
     return (
         <div className="column">
             <h5>Deal Column</h5>
-            <PremiumCcyField path="premiumCcy" actionPath="actions.setPremiumCcy" />
+            <Input
+                label="Notional Ccy"
+                path="notionalCcy"
+            />
+            <Input
+                label="Premium Ccy"
+                path="premiumCcy"
+            />
         </div>
     );
 });
+
+DealColumn.displayName = "DealColumn";

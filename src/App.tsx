@@ -1,8 +1,8 @@
 import "./App.css";
-import {DealColumn} from "./components/DealColumn.tsx";
 import {ProductColumn} from "./components/ProductColumn.tsx";
 import {useSnapshot} from "valtio/react";
 import {dealStore} from "./stores/dealStore.ts";
+import {DealColumn} from "./components/DealColumn.tsx";
 
 function App() {
     const snap = useSnapshot(dealStore);
