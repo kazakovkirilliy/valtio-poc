@@ -19,7 +19,8 @@
     "valtio-auto-persist": "^2.2.3",
     "valtio-persist": "^2.2.5",
     "valtio-plugin": "^1.11.4",
-    "valtio-reactive": "latest"
+    "valtio-reactive": "0.2.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -33,8 +33,11 @@ importers:
         specifier: ^1.11.4
         version: 1.11.4(@types/react@19.3.0)(react@19.3.0)(valtio@2.3.2(@types/react@19.3.0)(react@19.3.0))
       valtio-reactive:
-        specifier: latest
+        specifier: 0.2.0
         version: 0.2.0(valtio@2.3.2(@types/react@19.3.0)(react@19.3.0))
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1

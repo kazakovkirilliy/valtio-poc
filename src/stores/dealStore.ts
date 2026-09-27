@@ -13,6 +13,11 @@ export type DealStore = {
   isInternal: boolean;
   hedgeTypes: string[];
   spotPriceStreamValue: number;
+  hasValidationErrors: boolean;
+  validationErrors: {
+    path: string;
+    error: any;
+  }[];
   actions: {
     addNewProduct(): void;
     setValueByPath(path: string, value: unknown): void;
@@ -27,6 +32,8 @@ export const createDealStore = (): DealStore => {
     isInternal: true,
     spotPriceStreamValue: 0,
     hedgeTypes: [],
+    hasValidationErrors: false,
+    validationErrors: [],
     actions: {
       addNewProduct() {
         dealStore.products[uuid()] = createProductStore(dealStore);
