@@ -1,27 +1,26 @@
-import { useDealStoreSnapshot } from "../contexts/DealStoreProvider.tsx";
+import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import { useSnapshot } from "valtio/react";
 import { multiTabStore } from "../stores/multiTabStore.ts";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
 export const DealHeader = memo(() => {
-  const snap = useDealStoreSnapshot();
+  const dealStore = useDealStore();
   const multiTabStoreSnap = useSnapshot(multiTabStore);
+
+  const handleAddNewProduct = useCallback(() => {
+    dealStore.actions.addNewProduct();
+  }, [dealStore.actions]);
 
   return (
     <div className="deal__header">
-      <button
-        className="button"
-        onClick={() => {
-          snap.actions.addNewProduct();
-        }}
-      >
+      <button className="button" onClick={handleAddNewProduct}>
         Add New Product
       </button>
 
       <button
         className="button"
         onClick={() => {
-          multiTabStoreSnap.actions.toggleSpotPriceStreamEnabled();
+          multiTabStore.actions.toggleSpotPriceStreamEnabled();
         }}
       >
         Toggle Spot Price Stream (

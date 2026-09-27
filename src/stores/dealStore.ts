@@ -2,7 +2,7 @@ import { proxy } from "valtio";
 import { type ProductStore, createProductStore } from "./productStore.ts";
 import { uuid, setValueByPath } from "../utils/utils.ts";
 import { effect } from "valtio-reactive";
-import { devtoolsStore } from "./devToolsStore.ts";
+import { multiTabStore } from "./multiTabStore.ts";
 
 type CcyPair = string;
 
@@ -26,9 +26,7 @@ export const createDealStore = (): DealStore => {
     products: {},
     isInternal: true,
     spotPriceStreamValue: 0,
-    get hedgeTypes() {
-      return this.isInternal ? ["abc"] : ["def"];
-    },
+    hedgeTypes: [],
     actions: {
       addNewProduct() {
         dealStore.products[uuid()] = createProductStore(dealStore);
@@ -40,12 +38,16 @@ export const createDealStore = (): DealStore => {
   });
 
   effect(() => {
-    if (devtoolsStore.isSpotPriceStreamEnabled) {
+    if (multiTabStore.devtools.isSpotPriceStreamEnabled) {
       setInterval(() => {
         dealStore.spotPriceStreamValue += 1;
       }, 1000);
     }
   });
+
+  effect(
+    () => (dealStore.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]),
+  );
 
   return dealStore;
 };

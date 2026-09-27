@@ -1,29 +1,44 @@
-import { useId, memo, useCallback } from "react";
+import {
+  useId,
+  memo,
+  useCallback,
+  type DetailedHTMLProps,
+  type InputHTMLAttributes,
+} from "react";
 import { getValueByPath } from "../utils/utils.ts";
-import { useDealStoreSnapshot } from "../contexts/DealStoreProvider.tsx";
+import {
+  useDealStoreSnapshot,
+  useDealStore,
+} from "../contexts/DealStoreProvider.tsx";
 
 type Props = {
   path: string;
   label: string;
+
+  inputProps?: DetailedHTMLProps<
+    InputHTMLAttributes<HTMLInputElement>,
+    HTMLInputElement
+  >;
 };
 
-export const Input = memo(({ path, label }: Props) => {
+export const Input = memo(({ path, label, inputProps = {} }: Props) => {
   const id = useId();
 
   const snap = useDealStoreSnapshot();
+  const actions = useDealStore().actions;
   const value = getValueByPath(snap, path) as string;
 
   const handleOnChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      snap.actions.setValueByPath(path, e.target.value);
+      actions.setValueByPath(path, e.target.value);
     },
-    [snap.actions, path],
+    [actions, path],
   );
 
   return (
     <div>
       <label htmlFor={id}>{label}</label>
-      <input id={id} value={value} onChange={handleOnChange} />
+      <input {...inputProps} id={id} value={value} onChange={handleOnChange} />
     </div>
   );
 });

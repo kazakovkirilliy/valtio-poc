@@ -17,8 +17,8 @@ export const setValueByPath = (
   const parts = path.split(".");
   const lastKey = parts.pop() as string;
 
-  // @ts-expect-error YOLO
   const deepest = parts.reduce(
+    // @ts-expect-error YOLO
     (currentTarget: Record<string, unknown>, part) => {
       // Create intermediate object if missing
       if (currentTarget[part] === undefined || currentTarget[part] === null) {

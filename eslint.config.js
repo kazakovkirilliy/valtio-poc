@@ -3,6 +3,7 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import valtio from "eslint-plugin-valtio";
 
 import { defineConfig, globalIgnores } from "eslint/config";
 
@@ -11,7 +12,7 @@ export default defineConfig([
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
-      // prettier.configs.recommended,
+      valtio.configs["flat/recommended"],
       js.configs.recommended,
       tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,

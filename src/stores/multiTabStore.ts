@@ -2,7 +2,16 @@ import { proxy } from "valtio";
 import { devtools } from "valtio/utils";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 import { uuid } from "../utils/utils.ts";
-import { devtoolsStore, type DevToolsStore } from "./devToolsStore.ts";
+
+import { persist } from "valtio-auto-persist";
+
+export type DevToolsStore = {
+  isSpotPriceStreamEnabled: boolean;
+};
+
+export const { store: devtoolsStore } = await persist<DevToolsStore>({
+  isSpotPriceStreamEnabled: true,
+});
 
 export type MultiTabStore = {
   devtools: DevToolsStore;

@@ -7,7 +7,11 @@ export const DealColumn = memo(() => {
       <h5>Deal Column</h5>
       <Input label="Notional Ccy" path="notionalCcy" />
       <Input label="Premium Ccy" path="premiumCcy" />
-      <Input label="Spot Stream" path={`spotPriceStreamValue`} />
+      <Input
+        label="Spot Stream"
+        path={`spotPriceStreamValue`}
+        inputProps={{ disabled: true }}
+      />
     </div>
   );
 });

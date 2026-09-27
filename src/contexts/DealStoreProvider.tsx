@@ -20,7 +20,12 @@ export const DealStoreProvider = ({
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDealStoreSnapshot = () => {
   const dealStore = useContext(DealStoreContext);
   return useSnapshot(dealStore);
 };
+
+// raw proxy, no rerender
+// eslint-disable-next-line react-refresh/only-export-components
+export const useDealStore = () => useContext(DealStoreContext);

@@ -4,6 +4,12 @@ import { useDealStoreSnapshot } from "../contexts/DealStoreProvider.tsx";
 import { DealHeader } from "./DealHeader.tsx";
 import { memo } from "react";
 
+const SingleProduct = memo(({ productId }: { productId: string }) => (
+  <ProductColumn key={productId} productId={productId} />
+));
+
+SingleProduct.displayName = "SingleProduct";
+
 export const Deal = memo(() => {
   const snap = useDealStoreSnapshot();
 
@@ -15,7 +21,7 @@ export const Deal = memo(() => {
         <div className="columnsContainer">
           <DealColumn />
           {Object.keys(snap.products).map((productId) => (
-            <ProductColumn key={productId} productId={productId} />
+            <SingleProduct key={productId} productId={productId} />
           ))}
         </div>
       </section>
