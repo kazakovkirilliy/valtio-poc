@@ -1,9 +1,13 @@
-import { proxy } from "valtio";
+import { proxy, ref } from "valtio";
 import { type ProductStore, createProductStore } from "./productStore.ts";
 import { uuid, setValueByPath } from "../utils/utils.ts";
 import { effect } from "valtio-reactive";
 import { multiTabStore } from "./multiTabStore.ts";
 import type { $ZodIssue } from "zod/v4/core";
+import {
+  type SpotPriceStream,
+  createSpotPriceStream,
+} from "./spotPriceStream.ts";
 
 export type DealStore = {
   notionalCcy: string;
@@ -12,7 +16,7 @@ export type DealStore = {
   products: Record<string, ProductStore>;
   isInternal: boolean;
   hedgeTypes: string[];
-  spotPriceStreamValue: number;
+  spotPriceStream: SpotPriceStream;
   hasValidationErrors: boolean;
   validationErrors: Record<string, $ZodIssue[]>; // keyed by field name
   actions: {
@@ -21,13 +25,16 @@ export type DealStore = {
   };
 };
 export const createDealStore = (): DealStore => {
+  const spotPriceStream = createSpotPriceStream();
+
   const dealStore = proxy<DealStore>({
     notionalCcy: "1xxxxxx",
     premiumCcy: "2",
     strike: undefined,
     products: {},
     isInternal: true,
-    spotPriceStreamValue: 0,
+    // ref(): valtio does not track it, so ticks never notify the deal proxy
+    spotPriceStream: ref(spotPriceStream),
     hedgeTypes: [],
     hasValidationErrors: false,
     validationErrors: {},
@@ -47,9 +54,9 @@ export const createDealStore = (): DealStore => {
 
   effect(() => {
     if (multiTabStore.devtools.isSpotPriceStreamEnabled) {
-      setInterval(() => {
-        dealStore.spotPriceStreamValue += 1;
-      }, 1000);
+      spotPriceStream.start();
+    } else {
+      spotPriceStream.stop();
     }
   });
 

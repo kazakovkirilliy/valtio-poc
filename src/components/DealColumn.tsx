@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Input } from "./Input.tsx";
+import { SpotPriceField } from "./SpotPriceField.tsx";
 
 export const DealColumn = memo(() => {
   return (
@@ -8,11 +9,7 @@ export const DealColumn = memo(() => {
       <Input label="Notional Ccy" path="notionalCcy" />
       <Input label="Premium Ccy" path="premiumCcy" />
       <Input label="Strike" path="strike" isBroadcasting />
-      <Input
-        label="Spot Stream"
-        path={`spotPriceStreamValue`}
-        inputProps={{ disabled: true }}
-      />
+      <SpotPriceField />
     </div>
   );
 });
