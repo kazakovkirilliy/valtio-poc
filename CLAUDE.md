@@ -1,0 +1,1 @@
+Do not run prettier, eslint, or any lint/format scripts unless I ask.

@@ -24,7 +24,7 @@ export const createDealStore = (): DealStore => {
   const dealStore = proxy<DealStore>({
     notionalCcy: "1xxxxxx",
     premiumCcy: "2",
-    strike: "",
+    strike: undefined,
     products: {},
     isInternal: true,
     spotPriceStreamValue: 0,
