@@ -10,6 +10,7 @@ import {
   useDealStoreSnapshot,
   useDealStore,
 } from "../contexts/DealStoreProvider.tsx";
+import clsx from "clsx";
 
 type Props = {
   path: string;
@@ -27,6 +28,11 @@ export const Input = memo(({ path, label, inputProps = {} }: Props) => {
   const snap = useDealStoreSnapshot();
   const actions = useDealStore().actions;
   const value = getValueByPath(snap, path) as string;
+  const hasError = getValueByPath(
+    snap,
+    `validationErrors.${path.replaceAll(".", "_")}`,
+  );
+  // const hasError = useValidationError(path);
 
   const handleOnChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +44,15 @@ export const Input = memo(({ path, label, inputProps = {} }: Props) => {
   return (
     <div>
       <label htmlFor={id}>{label}</label>
-      <input {...inputProps} id={id} value={value} onChange={handleOnChange} />
+      <input
+        className={clsx({
+          hasError,
+        })}
+        {...inputProps}
+        id={id}
+        value={value}
+        onChange={handleOnChange}
+      />
     </div>
   );
 });
