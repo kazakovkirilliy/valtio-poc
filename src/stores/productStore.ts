@@ -11,6 +11,7 @@ export type ProductStore = {
 };
 
 const ccySchema = z.string().max(6, "Must be at most 6 characters");
+const strikeSchema = z.string().max(3, "Must be at most 3 characters");
 
 /**
  * Product factory.
@@ -49,6 +50,17 @@ export const createProductStore = (
     $dealStore.notionalCcy = productStore.productNotionalCcy;
   });
 
+  /**
+   * One-way Sync
+   * Consume the broadcast command — each product maps it
+   * to its own strike field name.
+   */
+  effect(() => {
+    const broadcast = $dealStore.strike;
+    if (broadcast === undefined) return;
+    productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
+  });
+
   const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
     if (!a && !b?.length) return true;
     if (!a || !b) return false;
@@ -82,7 +94,7 @@ export const createProductStore = (
 
   validateField("productNotionalCcy", ccySchema);
   validateField("productPremiumCcy", ccySchema);
-  validateField("strike", z.string());
+  validateField("strike", strikeSchema);
 
   return productStore;
 };

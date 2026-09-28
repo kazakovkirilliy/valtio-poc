@@ -8,7 +8,7 @@ import type { $ZodIssue } from "zod/v4/core";
 export type DealStore = {
   notionalCcy: string;
   premiumCcy: string;
-  strike: string;
+  strike: string | undefined;
   products: Record<string, ProductStore>;
   isInternal: boolean;
   hedgeTypes: string[];
