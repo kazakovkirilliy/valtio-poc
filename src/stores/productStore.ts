@@ -1,5 +1,4 @@
 import { proxy } from "valtio";
-import { subscribeKey } from "valtio/utils";
 import { type DealStore } from "./dealStore.ts";
 import { effect } from "valtio-reactive";
 import { z } from "zod";
@@ -55,23 +54,12 @@ export const createProductStore = (
    * One-way Sync
    * Consume the broadcast command — each product maps it
    * to its own strike field name.
-   *
-   * A plain key subscription rather than an `effect`: writing inside an effect
-   * synchronously runs the strike validation effect, whose reads get recorded
-   * as dependencies of this one — so every keystroke in the product strike
-   * would re-run it and overwrite the product value with the deal's.
-   * Sync notification is required: the broadcast is set and reset in one tick.
    */
-  subscribeKey(
-    $dealStore,
-    "strike",
-    (broadcast) => {
-      if (broadcast === undefined) return;
-      productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
-    },
-    true,
-  );
-
+  effect(() => {
+    const broadcast = $dealStore.strike;
+    if (broadcast === undefined) return;
+    productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
+  });
   const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
     if (!a && !b?.length) return true;
     if (!a || !b) return false;
