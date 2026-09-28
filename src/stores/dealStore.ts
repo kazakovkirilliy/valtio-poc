@@ -5,11 +5,10 @@ import { effect } from "valtio-reactive";
 import { multiTabStore } from "./multiTabStore.ts";
 import type { $ZodIssue } from "zod/v4/core";
 
-type CcyPair = string;
-
 export type DealStore = {
-  notionalCcy: CcyPair;
-  premiumCcy: CcyPair;
+  notionalCcy: string;
+  premiumCcy: string;
+  strike: string;
   products: Record<string, ProductStore>;
   isInternal: boolean;
   hedgeTypes: string[];
@@ -25,6 +24,7 @@ export const createDealStore = (): DealStore => {
   const dealStore = proxy<DealStore>({
     notionalCcy: "1xxxxxx",
     premiumCcy: "2",
+    strike: "",
     products: {},
     isInternal: true,
     spotPriceStreamValue: 0,
