@@ -14,7 +14,7 @@ export const SpotPriceField = memo(() => {
     () =>
       spotPriceStream.subscribe(() => {
         if (inputRef.current) {
-          inputRef.current.value = String(spotPriceStream.getValue());
+          inputRef.current.value = spotPriceStream.getValue().toString();
         }
       }),
     [spotPriceStream],
