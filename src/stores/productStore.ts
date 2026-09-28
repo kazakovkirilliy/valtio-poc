@@ -2,6 +2,7 @@ import { proxy } from "valtio";
 import { type DealStore } from "./dealStore.ts";
 import { effect } from "valtio-reactive";
 import { z } from "zod";
+import type { $ZodIssue } from "zod/v4/core";
 
 export type ProductStore = {
   productNotionalCcy: string;
@@ -10,12 +11,6 @@ export type ProductStore = {
 };
 
 const ccySchema = z.string().max(6, "Must be at most 6 characters");
-
-const ProductStoreSchema = z.object({
-  productNotionalCcy: ccySchema,
-  productPremiumCcy: ccySchema,
-  strike: z.string(),
-});
 
 /**
  * Product factory.
@@ -54,33 +49,40 @@ export const createProductStore = (
     $dealStore.notionalCcy = productStore.productNotionalCcy;
   });
 
+  const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
+    if (!a && !b?.length) return true;
+    if (!a || !b) return false;
+    return (
+      a.length === b.length && a.every((i, idx) => i.message === b[idx].message)
+    );
+  };
   /**
-   * Reactive validation: runs whenever ANY product field changes,
-   * no matter who changed it or how.
+   * Per-field validation: each effect reads ONE field and writes ONE key.
+   * A keystroke in `strike` never touches the currency issue entries.
    */
-  effect(() => {
-    const result = ProductStoreSchema.safeParse({
-      productNotionalCcy: productStore.productNotionalCcy,
-      productPremiumCcy: productStore.productPremiumCcy,
-      strike: productStore.strike,
+  const validateField = <K extends keyof ProductStore>(
+    field: K,
+    schema: z.ZodType,
+  ) => {
+    effect(() => {
+      const fullPath = `products.${productId}.${field}`.replaceAll(".", "_");
+
+      const value = productStore[field]; // narrow read
+      const result = schema.safeParse(value);
+      const issues = result.success ? [] : result.error.issues;
+
+      // Only write if the content actually changed — avoids new
+      // array identities on unrelated reruns of the effect.
+      const prev = $dealStore.validationErrors[fullPath];
+      if (isSameIssues(prev, issues)) return;
+
+      $dealStore.validationErrors[fullPath] = issues;
     });
+  };
 
-    const issuesByField: DealStore["validationErrors"] = {};
-
-    if (result.success) {
-      $dealStore.validationErrors = {}; // all valid
-      return;
-    }
-
-    for (const issue of result.error.issues) {
-      const field = `products.${productId}.${String(issue.path[0])}`.replaceAll(
-        ".",
-        "_",
-      );
-      (issuesByField[field] ??= []).push(issue);
-    }
-    $dealStore.validationErrors = issuesByField;
-  });
+  validateField("productNotionalCcy", ccySchema);
+  validateField("productPremiumCcy", ccySchema);
+  validateField("strike", z.string());
 
   return productStore;
 };
