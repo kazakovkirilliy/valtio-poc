@@ -2,7 +2,7 @@ import { proxy } from "valtio";
 import { type DealStore } from "./dealStore.ts";
 import { effect } from "valtio-reactive";
 import { z } from "zod";
-import type { $ZodIssue } from "zod/v4/core";
+import { validateFieldFactory } from "../utils/validateField.ts";
 
 export type ProductStore = {
   productNotionalCcy: string;
@@ -60,36 +60,12 @@ export const createProductStore = (
     if (broadcast === undefined) return;
     productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
   });
-  const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
-    if (!a && !b?.length) return true;
-    if (!a || !b) return false;
-    return (
-      a.length === b.length && a.every((i, idx) => i.message === b[idx].message)
-    );
-  };
-  /**
-   * Per-field validation: each effect reads ONE field and writes ONE key.
-   * A keystroke in `strike` never touches the currency issue entries.
-   */
-  const validateField = <K extends keyof ProductStore>(
-    field: K,
-    schema: z.ZodType,
-  ) => {
-    effect(() => {
-      const fullPath = `products.${productId}.${field}`.replaceAll(".", "_");
 
-      const value = productStore[field]; // narrow read
-      const result = schema.safeParse(value);
-      const issues = result.success ? [] : result.error.issues;
-
-      // Only write if the content actually changed — avoids new
-      // array identities on unrelated reruns of the effect.
-      const prev = $dealStore.validationErrors[fullPath];
-      if (isSameIssues(prev, issues)) return;
-
-      $dealStore.validationErrors[fullPath] = issues;
-    });
-  };
+  const validateField = validateFieldFactory(
+    $dealStore,
+    productStore,
+    productId,
+  );
 
   validateField("productNotionalCcy", ccySchema);
   validateField("productPremiumCcy", ccySchema);

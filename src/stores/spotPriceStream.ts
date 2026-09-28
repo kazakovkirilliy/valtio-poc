@@ -29,7 +29,7 @@ export const createSpotPriceStream = (): SpotPriceStream => {
       timer = setInterval(() => {
         value += 1;
         listeners.forEach((listener) => listener());
-      }, 1000);
+      }, 500);
     },
     stop() {
       clearInterval(timer);
