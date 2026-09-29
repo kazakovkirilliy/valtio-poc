@@ -15,7 +15,9 @@ export type DealStore = {
   strike: string | undefined;
   products: Record<string, ProductStore>;
   isInternal: boolean;
-  hedgeTypes: string[];
+  options: {
+    hedgeTypes: string[];
+  };
   spotPriceStream: SpotPriceStream;
   hasValidationErrors: boolean;
   validationErrors: Record<string, $ZodIssue[]>; // keyed by field name
@@ -33,9 +35,10 @@ export const createDealStore = (): DealStore => {
     strike: undefined,
     products: {},
     isInternal: true,
-    // ref(): valtio does not track it, so ticks never notify the deal proxy
-    spotPriceStream: ref(spotPriceStream),
-    hedgeTypes: [],
+    spotPriceStream: ref(spotPriceStream), // ref(): valtio does not track it, so ticks never notify the deal proxy
+    options: {
+      hedgeTypes: [],
+    },
     hasValidationErrors: false,
     validationErrors: {},
     actions: {
@@ -60,9 +63,8 @@ export const createDealStore = (): DealStore => {
     }
   });
 
-  effect(
-    () => (dealStore.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]),
-  );
+  const options = dealStore.options;
+  effect(() => (options.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]));
 
   return dealStore;
 };
