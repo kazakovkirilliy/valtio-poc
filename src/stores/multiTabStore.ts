@@ -46,5 +46,6 @@ export const multiTabStore = proxy<MultiTabStore>({
 
 devtools(multiTabStore, {
   name: "multiTab",
-  enabled: true,
+  // serializes the whole state tree on every change — keep it out of prod
+  enabled: import.meta.env.DEV,
 });

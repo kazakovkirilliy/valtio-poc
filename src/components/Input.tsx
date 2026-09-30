@@ -12,7 +12,7 @@ import {
   useDealStore,
 } from "../contexts/DealStoreProvider.tsx";
 import clsx from "clsx";
-import { useValidationError } from "../hooks/useValidationError.tsx";
+import { getValidationError } from "../utils/getValidationError.ts";
 
 type Props = {
   path: string;
@@ -37,7 +37,7 @@ export const Input = memo(
     const snap = useDealStoreSnapshot();
     const actions = useDealStore().actions;
     const value = getValueByPath(snap, path) as string | undefined;
-    const { hasError } = useValidationError(path);
+    const { hasError } = getValidationError(snap, path);
 
     const [draft, setDraft] = useState("");
 
