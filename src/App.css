@@ -1,42 +1,216 @@
-main { max-width: 1280px; padding: 32px; margin: 0 auto; }
-.app-header, .workspace-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
-.eyebrow { font-size: 11px; letter-spacing: .12em; color: var(--accent); font-weight: 700; }
-.button { padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
-.button:hover { border-color: var(--accent); }
-.button.active { background: var(--accent); color: white; border-color: var(--accent); }
-.button.quiet { background: transparent; }
-.button:focus-visible, input:focus-visible, .row-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.workspace-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 28px 0 20px; }
-.tab-group { display: flex; }
-.tab { border-radius: 6px 0 0 6px; }
-.close-tab { border-radius: 0 6px 6px 0; border-left: 0; }
-.workspace-editor { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden; }
-.workspace-toolbar { padding: 20px; }
-.status { font-size: 12px; color: var(--muted); margin-top: 6px; }
-.actions { display: flex; gap: 8px; }
-.shared-fields { display: grid; grid-template-columns: 1fr 1fr 1.6fr .8fr; gap: 20px; padding: 20px; border-block: 1px solid var(--border); background: var(--bg); }
-.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.field label, .live-value > span { font-size: 12px; color: var(--muted); }
-.field input { width: 100%; min-width: 0; padding: 9px 10px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); font: inherit; font-size: 14px; box-sizing: border-box; }
-.field input[aria-invalid="true"] { border-color: var(--error); }
-.field-error { font-size: 11px; color: var(--error); }
-.field-hint { font-size: 10px; color: var(--muted); }
-.live-value { display: flex; flex-direction: column; gap: 5px; }
-.live-value output { font-size: 24px; font-variant-numeric: tabular-nums; }
-.live-value small { font-size: 11px; color: var(--muted); }
-.mode { display: flex; gap: 8px; padding: 16px 20px; font-size: 12px; align-items: center; }
-.mode span { color: var(--muted); margin-left: 8px; }
-.row-scroll { height: 500px; overflow: auto; border-top: 1px solid var(--border); }
-.row-canvas { position: relative; width: 100%; }
-.virtual-row { position: absolute; top: 0; left: 0; width: 100%; }
-.editor-row { display: grid; grid-template-columns: 36px 1fr 1fr 1fr 80px; gap: 20px; padding: 16px 20px; box-sizing: border-box; border-bottom: 1px solid var(--border); height: 114px; align-items: start; }
-.row-number { color: var(--muted); font-size: 12px; padding-top: 26px; }
-.editor-row > button { margin-top: 21px; }
-.empty-state { padding: 40px; color: var(--muted); text-align: center; }
-@media (max-width: 760px) {
-  main { padding: 16px; }
-  .app-header, .workspace-toolbar { align-items: start; flex-direction: column; }
-  .shared-fields { grid-template-columns: 1fr 1fr; }
-  .editor-row { grid-template-columns: 24px 1fr 1fr 1fr 64px; gap: 8px; padding-inline: 10px; }
-  .editor-row .button { padding-inline: 6px; }
+main {
+  padding: 8px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.button {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.button:hover {
+  border-color: var(--accent);
+}
+
+.button.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.button.quiet {
+  background: transparent;
+}
+
+.button:focus-visible,
+input:focus-visible,
+.columnsContainer:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.multiDeal-header,
+.deal__header {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.multiDeal-header {
+  margin-bottom: 12px;
+}
+
+.tab-group {
+  display: flex;
+}
+
+.tab {
+  min-width: 100px;
+  border-radius: 4px 0 0 4px;
+}
+
+.close-tab {
+  border-radius: 0 4px 4px 0;
+  border-left: 0;
+}
+
+.deal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.deal__header {
+  padding: 8px;
+}
+
+.columnsContainer {
+  height: calc(100vh - 118px);
+  min-height: 540px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.columns-canvas {
+  position: relative;
+  width: 100%;
+}
+
+.column-group {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: grid;
+  align-items: start;
+  padding-top: 8px;
+  box-sizing: border-box;
+}
+
+.column {
+  width: 100%;
+  height: 560px;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.deal-column {
+  background: var(--bg);
+}
+
+.column h3 {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.column h3 span {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field label,
+.live-value > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.field-error {
+  font-size: 11px;
+  color: var(--error);
+}
+
+.field-hint {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.live-value {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.live-value output {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-value small,
+.status {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mode {
+  display: flex;
+  gap: 5px;
+  font-size: 11px;
+  align-items: center;
+}
+
+.mode span {
+  color: var(--muted);
+}
+
+.remove-product {
+  margin-top: auto;
+}
+
+.status {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty-state {
+  padding: 40px;
+  color: var(--muted);
+  text-align: center;
 }

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>State architecture overview videos</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; color: #edf3fb; background: #0e1622; }
+      body { margin: 0; }
+      main { max-width: 1100px; margin: 0 auto; padding: 36px 24px; }
+      h1 { font-size: 30px; margin: 0 0 12px; }
+      h2 { font-size: 19px; margin: 0 0 12px; }
+      p { color: #adbbce; line-height: 1.6; }
+      a { color: #baa4ff; }
+      article { margin: 32px 0; padding: 22px; border: 1px solid #344559; border-radius: 12px; background: #182435; }
+      video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0e1622; border-radius: 8px; }
+      .links { display: flex; gap: 20px; flex-wrap: wrap; font-size: 14px; }
+      .tag { color: #73e0bb; font-size: 12px; letter-spacing: .08em; }
+      footer { font-size: 13px; color: #adbbce; margin-top: 30px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="tag">CAPTIONS ONLY · NO AUDIO</p>
+      <h1>Three state architecture approaches</h1>
+      <p>Short animated explanations of how each approach works, its advantages, its disadvantages, and when to choose it. All three retain the deal-and-product column structure and use Apollo for remote data.</p>
+      <article>
+        <h2>1. Valtio — scoped proxies · 1:12</h2>
+        <p>The smallest migration: canonical shared state, small product proxies, and access-tracked snapshots.</p>
+        <video controls preload="metadata" poster="01-valtio.jpg" aria-label="Valtio architecture overview">
+          <source src="01-valtio.mp4" type="video/mp4" />
+          <track kind="captions" src="01-valtio.vtt" srclang="en" label="English" />
+        </video>
+        <p class="links"><a href="01-valtio.mp4" download>Download MP4</a><a href="01-valtio.srt" download>Download captions</a></p>
+      </article>
+      <article>
+        <h2>2. Zustand — selectors and product stores · 1:12</h2>
+        <p>Explicit actions and selectors, including the tradeoff between one workspace store and sharding by product.</p>
+        <video controls preload="metadata" poster="02-zustand.jpg" aria-label="Zustand architecture overview">
+          <source src="02-zustand.mp4" type="video/mp4" />
+          <track kind="captions" src="02-zustand.vtt" srclang="en" label="English" />
+        </video>
+        <p class="links"><a href="02-zustand.mp4" download>Download MP4</a><a href="02-zustand.srt" download>Download captions</a></p>
+      </article>
+      <article>
+        <h2>3. Jotai + Apollo — selected architecture · 1:23</h2>
+        <p>Scoped drafts, field dependencies, atomic commands, an Apollo boundary, and an isolated live display.</p>
+        <video controls preload="metadata" poster="03-jotai-apollo.jpg" aria-label="Jotai and Apollo architecture overview">
+          <source src="03-jotai-apollo.mp4" type="video/mp4" />
+          <track kind="captions" src="03-jotai-apollo.vtt" srclang="en" label="English" />
+        </video>
+        <p class="links"><a href="03-jotai-apollo.mp4" download>Download MP4</a><a href="03-jotai-apollo.srt" download>Download captions</a></p>
+      </article>
+      <footer>The videos contain burned-in English captions and no audio streams. Benchmark values refer to local scalar subscription tests, not browser latency. Details and sources are in the accompanying README and architecture decision record.</footer>
+    </main>
+  </body>
+</html>

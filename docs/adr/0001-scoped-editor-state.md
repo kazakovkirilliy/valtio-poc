@@ -4,7 +4,7 @@ Status: accepted for this proof of concept.
 
 ## Decision
 
-Use Jotai field atoms within one store per workspace. Use Apollo for remote state, React for temporary UI state, and a separate React external-store channel for high-rate display values. Keep canonical shared values, explicit batched commands, lifecycle-owned subscriptions, and virtualized rows regardless of library.
+Use Jotai field atoms within one store per workspace. Use Apollo for remote state, React for temporary UI state, and a separate React external-store channel for high-rate display values. Keep canonical shared values, explicit batched commands, lifecycle-owned subscriptions, and virtualized wrapping product columns regardless of library.
 
 The editor contains independently changing fields, shared values, derived validation, dynamic rows, multiple concurrent drafts, and live display updates. Explicit dependency graphs fit these requirements while keeping React code small and avoiding selector and effect plumbing.
 

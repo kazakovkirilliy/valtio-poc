@@ -1,0 +1,29 @@
+1
+00:00:00,000 --> 00:00:09,000
+Explicit actions behind the same columns
+Zustand keeps the original deal and product UI. Apollo handles remote entities. Actions change state; selectors choose what each input reads.
+
+2
+00:00:09,000 --> 00:00:22,000
+One store: selector checks still fan out
+Workspace selectors can skip unrelated React renders, but every subscribed selector still checks an update. At 1,000 subscribers, 2,000 edits caused two million checks.
+
+3
+00:00:22,000 --> 00:00:35,000
+Shard by product to bound the work
+A small store per product isolates local edits. Shared fields live in a separate store. Cross-product commands coordinate these stores explicitly.
+
+4
+00:00:35,000 --> 00:00:48,000
+Advantages
+Product stores made only one subscription check per edit. The timing measures scalar writes, not initialization, memory use, or browser latency.
+
+5
+00:00:48,000 --> 00:01:01,000
+Disadvantages
+Partitioning improves subscription work but increases coordination. Shared summaries and bulk commands require deliberate design across separate stores.
+
+6
+00:01:01,000 --> 00:01:12,000
+When I would choose it
+Both measurements cover 2,000 scalar writes at 1,000 subscribers. Shard only when measured fan-out justifies the extra store instances.

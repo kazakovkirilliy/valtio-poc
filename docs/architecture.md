@@ -28,7 +28,7 @@ flowchart LR
   Draft -->|snapshot at save time| Mutation[Apollo mutation]
   Mutation --> Server
   Draft --> Inputs[Subscribed field inputs]
-  Draft --> Rows[Virtual row list]
+  Draft --> Rows[Wrapping product columns]
   Source[Apollo subscription with no cache writes] --> Channel[Latest value channel]
   Channel -->|once per animation frame| Live[React live display]
   Shell[React workspace registry] -->|owns store lifetime| Draft
@@ -57,7 +57,7 @@ Bulk edits are write transactions, not persistent state or effects. They set eac
 | Snapshot/export | O(number of rows), on demand | None |
 | Live message | Constant work; retain latest value | At most one display notification per animation frame |
 
-Virtualization bounds mounted views to the viewport and overscan. Row identity uses stable IDs, not array indexes. The layout currently uses fixed 114px row heights; changing the content to variable heights requires measuring rows. Large calculations should run outside render, and sustained expensive work can move to a worker after measurement. A store change cannot fix an unbounded DOM tree.
+The UI preserves the parent hierarchy: deal tabs, a deal toolbar, one deal column with shared and broadcast fields, and N product columns that wrap with the available width. The internal draft model retains generic row/field names; its rows are rendered as product columns. Virtualization groups columns into 580px rows, with 560px cards, and bounds mounted views to the viewport and overscan. The leading group remains mounted so scrolling cannot dispose the deal live source or discard an uncommitted broadcast. Product identity uses stable IDs, not array indexes. Changing card content to variable heights requires measuring groups. Large calculations should run outside render, and sustained expensive work can move to a worker after measurement. A store change cannot fix an unbounded DOM tree.
 
 The live channel has two values: the latest received value and the last published display snapshot. It receives every value but deliberately coalesces **display** notifications. It is unsuitable for an ordered event ledger or calculations requiring every message; route those through a separate event processor before publishing a display value. All snapshots are primitives and remain stable between changes, as required by React's external-store subscription contract.
 
@@ -108,8 +108,10 @@ The save helper captures a snapshot and edit revision before sending. It blocks 
 | `src/state/liveValue.ts` | Frame-coalesced display subscription and a disposable demo source |
 | `src/data/apolloGateway.ts` | Typed Apollo boundary and save acknowledgement |
 | `src/App.tsx` | Workspace registry and optional UI preference |
-| `src/components/WorkspaceEditor.tsx` | Provider, toolbar, validity/dirty status |
-| `src/components/RowList.tsx` | Virtualization and stable row identity |
+| `src/components/WorkspaceEditor.tsx` | Scoped provider and deal toolbar |
+| `src/components/DealColumn.tsx` | Shared fields, broadcast, live value, and aggregate status |
+| `src/components/ProductColumn.tsx` | Independent product controls sharing canonical parent fields |
+| `src/components/ProductColumns.tsx` | Responsive wrapping columns, group virtualization, and stable product identity |
 | `src/components/TextInput.tsx` | Narrow field subscriptions and accessible errors |
 | `src/components/BroadcastInput.tsx` | Temporary draft and explicit commit |
 | `src/components/LiveValueField.tsx` | React external-store display and source lifecycle |
@@ -120,7 +122,7 @@ Add a new independent field by defining its typed field and validation in the mo
 
 The test suite covers a 1,000-input React render probe, independent workspace drafts, stable collection identity, atomic broadcasts, repeated and empty commands, removed-row references, randomized validation operations, snapshot round trips, save races, failures, canonicalization, Strict Mode cleanup, and 10,000-message bursts. Apollo boundary tests use an actual Apollo client with a controlled link, including GraphQL errors and cache isolation.
 
-Browser verification exercised 1,001 rows, shared edits, broadcast values at the bottom of the virtual list, workspace switching, and live pause/resume. The browser mounted 10 row views at the start and end of the list. The development page loaded without an error overlay or page errors. Store microbenchmark timings are recorded separately and should not be interpreted as browser interaction latency.
+Browser verification exercised 1,001 products in the restored column UI, including broadcast values at the bottom of the virtual grid and responsive wrapping. At a 1,280px viewport, seven product columns were mounted initially; at a 600px viewport, two columns fit per group and five product columns were mounted. The deal column stays mounted while scrolling. Tests cover hierarchy preservation, broadcasts to offscreen products, and edit retention after scrolling away and back. The development page loaded without an error overlay or page errors. Store microbenchmark timings are recorded separately and should not be interpreted as browser interaction latency.
 
 ## References
 

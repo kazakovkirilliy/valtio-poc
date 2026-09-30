@@ -1,0 +1,23 @@
+[
+  {
+    "file": "01-valtio.mp4",
+    "seconds": 72.0,
+    "video": "h264",
+    "audioStreams": 0,
+    "bytes": 393946
+  },
+  {
+    "file": "02-zustand.mp4",
+    "seconds": 72.0,
+    "video": "h264",
+    "audioStreams": 0,
+    "bytes": 438075
+  },
+  {
+    "file": "03-jotai-apollo.mp4",
+    "seconds": 83.0,
+    "video": "h264",
+    "audioStreams": 0,
+    "bytes": 532211
+  }
+]

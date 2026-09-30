@@ -12,6 +12,9 @@ import { manualFrames } from "./helpers.ts";
 
 beforeEach(() => localStorage.clear());
 
+const dealColumn = () => screen.getByRole("region", { name: "Deal column" });
+const dealCode = () => within(dealColumn()).getByLabelText("Notional Ccy");
+
 describe("React editor", () => {
   it("commits only the edited input among 1,000 subscribed inputs", () => {
     const workspace = createWorkspace();
@@ -28,38 +31,38 @@ describe("React editor", () => {
   it("preserves edits through tab switches without adding rows on remount", async () => {
     const user = userEvent.setup();
     render(<StrictMode><App /></StrictMode>);
-    await user.clear(screen.getByLabelText("Shared base code"));
-    await user.type(screen.getByLabelText("Shared base code"), "EDIT");
-    await user.click(screen.getByRole("button", { name: "New workspace" }));
-    expect((screen.getByLabelText("Shared base code") as HTMLInputElement).value).toBe("BASE");
-    await user.click(screen.getByRole("button", { name: "Workspace 1" }));
-    expect((screen.getByLabelText("Shared base code") as HTMLInputElement).value).toBe("EDIT");
-    expect(screen.getByRole("status", { name: "Workspace status" }).textContent).toContain("1 rows");
+    await user.clear(dealCode());
+    await user.type(dealCode(), "EDIT");
+    await user.click(screen.getByRole("button", { name: "Add New Deal" }));
+    expect((dealCode() as HTMLInputElement).value).toBe("BASE");
+    await user.click(screen.getByRole("button", { name: "Tab 1" }));
+    expect((dealCode() as HTMLInputElement).value).toBe("EDIT");
+    expect(screen.getByRole("status", { name: "Deal status" }).textContent).toContain("1 product");
   });
 
   it("links shared inputs and supports repeatable empty broadcasts", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(screen.getByRole("button", { name: "Add row" }));
-    const firstRow = screen.getByRole("region", { name: "Row 1" });
-    const secondRow = screen.getByRole("region", { name: "Row 2" });
-    await user.clear(within(firstRow).getByLabelText("Base code"));
-    await user.type(within(firstRow).getByLabelText("Base code"), "SAME");
-    expect((within(secondRow).getByLabelText("Base code") as HTMLInputElement).value).toBe("SAME");
-    const broadcast = screen.getByLabelText("Apply level to all rows");
+    await user.click(screen.getByRole("button", { name: "Add New Product" }));
+    const firstRow = screen.getByRole("region", { name: "Product 1" });
+    const secondRow = screen.getByRole("region", { name: "Product 2" });
+    await user.clear(within(firstRow).getByLabelText("Notional Ccy"));
+    await user.type(within(firstRow).getByLabelText("Notional Ccy"), "SAME");
+    expect((within(secondRow).getByLabelText("Notional Ccy") as HTMLInputElement).value).toBe("SAME");
+    const broadcast = within(dealColumn()).getByLabelText("Strike");
     await user.type(broadcast, "123{Enter}");
-    expect((within(secondRow).getByLabelText("Level") as HTMLInputElement).value).toBe("123");
+    expect((within(secondRow).getByLabelText("Strike") as HTMLInputElement).value).toBe("123");
     await user.type(broadcast, "x");
     await user.clear(broadcast);
     await user.keyboard("{Enter}");
-    expect((within(firstRow).getByLabelText("Level") as HTMLInputElement).value).toBe("");
+    expect((within(firstRow).getByLabelText("Strike") as HTMLInputElement).value).toBe("");
   });
 
-  it("keeps rendered rows bounded when 1,000 rows are added", () => {
+  it("keeps rendered product columns bounded when 1,000 products are added", () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Add 1,000 rows" }));
-    expect(screen.getByRole("status", { name: "Workspace status" }).textContent).toContain("1,001 rows");
-    const rendered = screen.getAllByRole("region", { name: /^Row \d+$/ });
+    fireEvent.click(screen.getByRole("button", { name: "Add 1,000 Products" }));
+    expect(screen.getByRole("status", { name: "Deal status" }).textContent).toContain("1,001 products");
+    const rendered = screen.getAllByRole("region", { name: /^Product \d+$/ });
     expect(rendered.length).toBeGreaterThan(0);
     expect(rendered.length).toBeLessThan(25);
   });
@@ -89,11 +92,11 @@ describe("React editor", () => {
     try {
       const view = render(<StrictMode><App /></StrictMode>);
       expect(vi.getTimerCount()).toBe(1);
-      fireEvent.click(screen.getByRole("button", { name: "New workspace" }));
+      fireEvent.click(screen.getByRole("button", { name: "Add New Deal" }));
       expect(vi.getTimerCount()).toBe(1);
-      fireEvent.click(screen.getByRole("button", { name: "Workspace 1" }));
+      fireEvent.click(screen.getByRole("button", { name: "Tab 1" }));
       expect(vi.getTimerCount()).toBe(1);
-      fireEvent.click(screen.getByRole("button", { name: "Live updates: on" }));
+      fireEvent.click(screen.getByRole("button", { name: "Toggle Spot Price Stream (Enabled)" }));
       expect(vi.getTimerCount()).toBe(0);
       view.unmount();
       expect(vi.getTimerCount()).toBe(0);
@@ -106,12 +109,44 @@ describe("React editor", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     try {
       render(<App />);
-      fireEvent.change(screen.getByLabelText("Shared base code"), { target: { value: "EDIT" } });
-      fireEvent.click(screen.getByRole("button", { name: "Close Workspace 1" }));
+      fireEvent.change(dealCode(), { target: { value: "EDIT" } });
+      fireEvent.click(screen.getByRole("button", { name: "Close Tab 1" }));
       expect(confirm).toHaveBeenCalledTimes(1);
-      expect((screen.getByLabelText("Shared base code") as HTMLInputElement).value).toBe("EDIT");
+      expect((dealCode() as HTMLInputElement).value).toBe("EDIT");
     } finally {
       confirm.mockRestore();
     }
+  });
+
+  it("preserves the parent hierarchy with shared controls in the leading deal column", () => {
+    render(<App />);
+    const parent = dealColumn();
+    const product = screen.getByRole("region", { name: "Product 1" });
+    expect(within(parent).getByRole("heading", { name: "Deal Column" })).toBeTruthy();
+    expect(within(product).getByRole("heading", { name: "Product Column 1" })).toBeTruthy();
+    expect(within(parent).getByLabelText("Notional Ccy")).toBeTruthy();
+    expect(within(parent).getByLabelText("Premium Ccy")).toBeTruthy();
+    expect(within(parent).getByLabelText("Strike")).toBeTruthy();
+    expect(within(parent).getByLabelText("Spot Stream")).toBeTruthy();
+    expect(parent.compareDocumentPosition(product) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps deal controls mounted while virtualized products scroll and receive broadcasts", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Add 1,000 Products" }));
+    const parent = dealColumn();
+    const broadcast = within(parent).getByLabelText("Strike");
+    fireEvent.change(broadcast, { target: { value: "123" } });
+    const viewport = screen.getByLabelText("Deal and product columns");
+    const height = parseFloat((viewport.firstElementChild as HTMLElement).style.height);
+    fireEvent.scroll(viewport, { target: { scrollTop: height - 540 } });
+    expect(dealColumn()).toBe(parent);
+    fireEvent.keyDown(broadcast, { key: "Enter" });
+    const last = screen.getByRole("region", { name: "Product 1001" });
+    expect((within(last).getByLabelText("Strike") as HTMLInputElement).value).toBe("123");
+    fireEvent.change(within(last).getByLabelText("Strike"), { target: { value: "999" } });
+    fireEvent.scroll(viewport, { target: { scrollTop: 0 } });
+    fireEvent.scroll(viewport, { target: { scrollTop: height - 540 } });
+    expect((within(screen.getByRole("region", { name: "Product 1001" })).getByLabelText("Strike") as HTMLInputElement).value).toBe("999");
   });
 });

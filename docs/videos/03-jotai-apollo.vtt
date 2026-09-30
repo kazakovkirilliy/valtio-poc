@@ -1,0 +1,29 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:10.000
+One isolated draft store per deal
+This is the implemented architecture. The original columns remain. Shared fields have canonical atoms; each independent product field has its own atom.
+
+00:00:10.000 --> 00:00:23.000
+Field dependencies drive local updates
+A field edit updates its dependency neighborhood. Validation is derived. An incremental invalid-field count updates the deal summary without scanning every product.
+
+00:00:23.000 --> 00:00:35.000
+Broadcasts are atomic write commands
+One write transaction updates all current products. Empty values and repeated commands work. Subscribers see the completed update; new products start empty.
+
+00:00:35.000 --> 00:00:48.000
+Apollo owns remote state; Jotai owns edits
+Load once into a draft and save an explicit snapshot. Refetches do not silently overwrite edits. Save acknowledgements preserve changes made during the request.
+
+00:00:48.000 --> 00:01:00.000
+Live displays stay outside the draft graph
+Display-only subscriptions skip cache writes and publish once per animation frame. Wrapping product columns are virtualized while deal controls remain mounted.
+
+00:01:00.000 --> 00:01:13.000
+Advantages and disadvantages
+Jotai was selected for composition and maintainability. It is not the fastest scalar-write option: the local primitive test measured 1.59 milliseconds for 2,000 writes.
+
+00:01:13.000 --> 00:01:23.000
+Why this is the current choice
+The adapter is tested with an actual Apollo client and a controlled link. Production wiring still needs generated operations, client configuration, and a server conflict policy.

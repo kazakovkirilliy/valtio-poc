@@ -13,7 +13,7 @@ export function BroadcastInput({ workspace }: { workspace: Workspace }) {
   }
   return (
     <div className="field">
-      <label htmlFor={id}>Apply level to all rows</label>
+      <label htmlFor={id}>Strike</label>
       <input
         id={id}
         value={draft}
@@ -26,7 +26,7 @@ export function BroadcastInput({ workspace }: { workspace: Workspace }) {
         onKeyDown={(event) => { if (event.key === "Enter") commit(); }}
         autoComplete="off"
       />
-      <span className="field-hint">Enter or blur to apply. Clear the draft to clear every row.</span>
+      <span className="field-hint">Enter or blur to apply to every product. Clear a draft to clear all products.</span>
     </div>
   );
 }

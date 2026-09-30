@@ -1,0 +1,29 @@
+1
+00:00:00,000 --> 00:00:10,000
+Preserve the UI. Partition the state.
+Keep one deal column and N product columns. Apollo owns remote data. Shared values live once; independent product fields live in small proxies.
+
+2
+00:00:10,000 --> 00:00:23,000
+How an isolated field update works
+A typed action mutates one product proxy. Its access-tracked snapshot updates the subscribed input. Other product proxies receive no subscription notification.
+
+3
+00:00:23,000 --> 00:00:36,000
+Shared fields and deal summaries
+Linked inputs read one shared proxy. Broadcasts are explicit commands. Derive summaries or maintain counts in commands; avoid two-way synchronization effects.
+
+4
+00:00:36,000 --> 00:00:49,000
+Advantages
+Corrected Valtio keeps the existing programming style. Narrow subscriptions are efficient; no replacement library is required to fix state ownership.
+
+5
+00:00:49,000 --> 00:01:02,000
+Disadvantages
+The library does not enforce good boundaries. Broad snapshots, duplicated values, and unmanaged effects can bring the original problems back.
+
+6
+00:01:02,000 --> 00:01:12,000
+When I would choose it
+Valtio remains a defensible choice. Preserve canonical fields, typed commands, virtualization, and lifecycle cleanup regardless of the library.

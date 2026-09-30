@@ -1,0 +1,29 @@
+[
+  {
+    "file": "01-valtio.mp4",
+    "durationSeconds": 72,
+    "bytes": 393946,
+    "width": 1280,
+    "height": 720,
+    "fps": 12,
+    "audio": false
+  },
+  {
+    "file": "02-zustand.mp4",
+    "durationSeconds": 72,
+    "bytes": 438075,
+    "width": 1280,
+    "height": 720,
+    "fps": 12,
+    "audio": false
+  },
+  {
+    "file": "03-jotai-apollo.mp4",
+    "durationSeconds": 83,
+    "bytes": 532211,
+    "width": 1280,
+    "height": 720,
+    "fps": 12,
+    "audio": false
+  }
+]

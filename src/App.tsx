@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import { createWorkspace } from "./state/workspace.ts";
 import { createLiveValue, demoSource } from "./state/liveValue.ts";
@@ -14,7 +14,7 @@ function readStreamPreference(): boolean {
 }
 
 function createEntry(number: number) {
-  return { workspace: createWorkspace(), channel: createLiveValue(), name: `Workspace ${number}` };
+  return { workspace: createWorkspace(), channel: createLiveValue(), name: `Tab ${number}` };
 }
 
 export default function App() {
@@ -23,6 +23,7 @@ export default function App() {
     return { entries: [entry], activeId: entry.workspace.id, nextNumber: 2 };
   });
   const [streamEnabled, setStreamEnabled] = useState(readStreamPreference);
+  const toggleStream = useCallback(() => setStreamEnabled((current) => !current), []);
   const active = session.entries.find((entry) => entry.workspace.id === session.activeId);
   useEffect(() => {
     try { localStorage.setItem(preferencesKey, JSON.stringify({ streamEnabled })); } catch { /* Optional preference only. */ }
@@ -34,7 +35,7 @@ export default function App() {
   }
   function closeWorkspace(id: string) {
     const entry = session.entries.find((candidate) => candidate.workspace.id === id);
-    if (entry?.workspace.store.get(entry.workspace.dirty) && !window.confirm("Discard unsaved changes and close this workspace?")) return;
+    if (entry?.workspace.store.get(entry.workspace.dirty) && !window.confirm("Discard unsaved changes and close this deal?")) return;
     setSession((current) => {
       const entries = current.entries.filter((entry) => entry.workspace.id !== id);
       return { ...current, entries, activeId: current.activeId === id ? entries[0]?.workspace.id ?? "" : current.activeId };
@@ -43,20 +44,26 @@ export default function App() {
 
   return (
     <main>
-      <header className="app-header">
-        <div><p className="eyebrow">WORKSPACES</p><h1>Independent workspaces</h1></div>
-        <button className="button quiet" aria-pressed={streamEnabled} onClick={() => setStreamEnabled((current) => !current)}>Live updates: {streamEnabled ? "on" : "off"}</button>
-      </header>
-      <nav className="workspace-tabs" aria-label="Workspaces">
+      <h1 className="sr-only">Deal editor</h1>
+      <nav className="multiDeal-header" aria-label="Deals">
         {session.entries.map((entry) => (
           <div className="tab-group" key={entry.workspace.id}>
             <button className={`button tab ${entry.workspace.id === session.activeId ? "active" : ""}`} aria-pressed={entry.workspace.id === session.activeId} onClick={() => setSession((current) => ({ ...current, activeId: entry.workspace.id }))}>{entry.name}</button>
             <button className="button close-tab" aria-label={`Close ${entry.name}`} onClick={() => closeWorkspace(entry.workspace.id)}>×</button>
           </div>
         ))}
-        <button className="button quiet" onClick={addWorkspace}>New workspace</button>
+        <button className="button quiet" onClick={addWorkspace}>Add New Deal</button>
       </nav>
-      {active ? <WorkspaceEditor key={active.workspace.id} workspace={active.workspace} channel={active.channel} source={demoSource} streamEnabled={streamEnabled} /> : <p className="empty-state">Open a workspace to start editing.</p>}
+      {active ? (
+        <WorkspaceEditor
+          key={active.workspace.id}
+          workspace={active.workspace}
+          channel={active.channel}
+          source={demoSource}
+          streamEnabled={streamEnabled}
+          onToggleStream={toggleStream}
+        />
+      ) : <p className="empty-state">Open a deal to start editing.</p>}
     </main>
   );
 }
