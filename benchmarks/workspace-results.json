@@ -1,0 +1,16 @@
+{
+  "node": "v24.20.0",
+  "date": "2026-09-30T12:57:21.436Z",
+  "rows": 1000,
+  "editMs": 65.2,
+  "edits": 10000,
+  "editedNotifications": 10000,
+  "listNotifications": 0,
+  "broadcastMs": 5.6,
+  "broadcastNotifications": 1000,
+  "summaryNotifications": 1,
+  "liveMessages": 10000,
+  "scheduledFrames": 1,
+  "liveNotifications": 1,
+  "latestDisplay": 10000
+}

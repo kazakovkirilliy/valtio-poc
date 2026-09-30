@@ -1,75 +1,23 @@
-# React + TypeScript + Vite
+# Scoped workspace editor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React proof of concept for independent editable workspaces with shared fields, derived validation, bulk commands, and live updates.
 
-Currently, two official plugins are available:
+The architecture uses **Jotai stores per workspace**, **Apollo Client for remote data**, and a separate frame-coalesced live display. Rows are virtualized. The repository includes comparisons against corrected Valtio and Zustand implementations, reproducible benchmarks, and behavior tests.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```sh
+pnpm install --frozen-lockfile
+pnpm dev
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm bench
+pnpm bench:workspace
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Requires Node 22.12+ and pnpm 10.10.0. Benchmark timings are local store measurements; notification and React commit isolation are checked independently.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Read the [architecture](docs/architecture.md) for ownership, module boundaries, scaling costs and Apollo integration. The [decision record](docs/adr/0001-scoped-editor-state.md) compares alternatives and explains why Jotai was selected. Raw results are in [store comparison](benchmarks/results.json) and [implemented model](benchmarks/workspace-results.json).
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Try adding 1,000 rows, editing a shared field from either the header or a row, broadcasting a level with Enter, and switching workspaces. Drafts survive tab switches. Removing a row clears its validation contribution. Pausing live updates or hiding a workspace stops its live source.
 
-```
+The browser demo uses a local live source. The [Apollo adapter](src/data/apolloGateway.ts) is tested with an actual Apollo client and a controlled link; wire the host application's generated operations and existing client to connect a real server. No server schema or endpoint is supplied by this repository. Drafts are currently held in memory; only the live-toggle preference is persisted.

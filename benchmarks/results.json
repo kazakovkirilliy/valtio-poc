@@ -1,0 +1,128 @@
+{
+  "node": "v24.20.0",
+  "date": "2026-09-30T12:35:08.407Z",
+  "runs": 7,
+  "note": "Store subscription microbenchmark, not browser latency. Corrected Valtio and sharded Zustand are included.",
+  "results": [
+    {
+      "variant": "Valtio / root subscriptions",
+      "rows": 10,
+      "updates": 2000,
+      "medianMs": 1.77,
+      "subscriptionChecks": 20000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Valtio / row subscriptions",
+      "rows": 10,
+      "updates": 2000,
+      "medianMs": 0.58,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / workspace selectors",
+      "rows": 10,
+      "updates": 2000,
+      "medianMs": 0.55,
+      "subscriptionChecks": 20000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / row stores",
+      "rows": 10,
+      "updates": 2000,
+      "medianMs": 0.17,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Jotai / field atoms",
+      "rows": 10,
+      "updates": 2000,
+      "medianMs": 2.28,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Valtio / root subscriptions",
+      "rows": 100,
+      "updates": 2000,
+      "medianMs": 8.7,
+      "subscriptionChecks": 200000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Valtio / row subscriptions",
+      "rows": 100,
+      "updates": 2000,
+      "medianMs": 0.53,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / workspace selectors",
+      "rows": 100,
+      "updates": 2000,
+      "medianMs": 3.08,
+      "subscriptionChecks": 200000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / row stores",
+      "rows": 100,
+      "updates": 2000,
+      "medianMs": 0.11,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Jotai / field atoms",
+      "rows": 100,
+      "updates": 2000,
+      "medianMs": 1.5,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Valtio / root subscriptions",
+      "rows": 1000,
+      "updates": 2000,
+      "medianMs": 80.66,
+      "subscriptionChecks": 2000000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Valtio / row subscriptions",
+      "rows": 1000,
+      "updates": 2000,
+      "medianMs": 0.62,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / workspace selectors",
+      "rows": 1000,
+      "updates": 2000,
+      "medianMs": 30.38,
+      "subscriptionChecks": 2000000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Zustand / row stores",
+      "rows": 1000,
+      "updates": 2000,
+      "medianMs": 0.21,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    },
+    {
+      "variant": "Jotai / field atoms",
+      "rows": 1000,
+      "updates": 2000,
+      "medianMs": 1.59,
+      "subscriptionChecks": 2000,
+      "notifications": 2000
+    }
+  ]
+}
