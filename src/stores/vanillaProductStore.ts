@@ -1,10 +1,9 @@
-import { proxy } from "valtio";
-import { subscribeKey } from "valtio/utils";
 import { type DealStore } from "./dealStore.ts";
-import { z, type ZodType } from "zod";
-import { validateFieldFactory } from "../utils/validateField.ts";
-import { subscribeDealKey } from "../utils/subscribeDealKey.ts";
-import { daysUntil } from "../utils/utils.ts";
+import {
+  createOptionProduct,
+  createOptionsCommon,
+  createSharedData,
+} from "./optionProduct.ts";
 
 export type VanillaProductStore = {
   ui: {
@@ -40,183 +39,23 @@ export type VanillaProductStore = {
 };
 
 /**
- * Fields start empty and are only checked once filled in: `""` for strings,
- * `NaN` for numbers (an empty number input).
- */
-const optionalString = (schema: ZodType) => z.literal("").or(schema);
-const optionalNumber = (schema: ZodType) => z.nan().or(schema);
-
-const ccySchema = z.string().max(6, "Must be at most 6 characters");
-const strikeSchema = z.string().max(3, "Must be at most 3 characters");
-const dateSchema = optionalString(z.iso.date("Must be a valid date"));
-
-const buySellSchema = optionalString(z.enum(["Buy", "Sell"]));
-const callPutSchema = optionalString(z.enum(["Call", "Put"]));
-const settlementStyleSchema = optionalString(z.enum(["Physical", "Cash"]));
-const ccyPairSchema = optionalString(
-  z.string().regex(/^[A-Z]{6}$/, "Must be 6 uppercase letters, e.g. EURUSD"),
-);
-const expiryCutSchema = z.string().max(10, "Must be at most 10 characters");
-const fixingSourceSchema = z
-  .string()
-  .max(20, "Must be at most 20 characters");
-const amountSchema = optionalNumber(
-  z.number().positive("Must be greater than 0"),
-);
-const expiryDaysSchema = optionalNumber(
-  z.number().int().min(0, "Expiry date is in the past"),
-);
-
-
-/**
- * Vanilla product factory.
- *
- * Same sync model as `createProductStore`, but the synced fields are nested,
- * so each `subscribeKey` targets the nested proxy that owns the field.
- * Those subscriptions are bound to the nested objects created here — write
- * leaf values (as `setValueByPath` does), never replace the objects wholesale.
- *
- * `initial` (a plain deep copy) seeds a clone. `dispose` drops every
- * subscription, so a removed product is never written to again.
+ * Vanilla product factory — syncs, broadcasts and validation live in
+ * `createOptionProduct`. `initial` (a plain deep copy) seeds a clone.
  */
 export const createVanillaProductStore = (
   $dealStore: DealStore,
-  productId: string,
+  productPath: string,
   initial?: VanillaProductStore,
-) => {
-  const productStore = proxy<VanillaProductStore>(
+) =>
+  createOptionProduct(
+    $dealStore,
+    productPath,
     initial ?? {
-      ui: { title: "", index: 0 }, // set by the deal on insert
+      ui: { title: "", index: 0 }, // set by the group on creation
       data: {
         productType: "VanillaProduct",
-        cashSettlement: {
-          settlementCcy: "",
-          settlementFixingSource: "",
-        },
-        optionsCommon: {
-          base: {
-            buySell: "",
-            ccyPair: "",
-            deliveryDate: "",
-            expiryCut: "",
-            expiryDate: "",
-            expiryDays: NaN, // derived from expiryDate
-            notional: {
-              notionalCcy: $dealStore.notionalCcy,
-              amount: NaN,
-            },
-            premiumCcy: $dealStore.premiumCcy,
-            premiumDate: "",
-          },
-          callPut: "",
-          strike: "",
-        },
-        settlementStyle: "",
+        ...createSharedData(),
+        optionsCommon: createOptionsCommon($dealStore),
       },
     },
   );
-
-  const optionsCommon = productStore.data.optionsCommon;
-  const base = optionsCommon.base;
-  const notional = base.notional;
-
-  const subscriptions: Array<() => void> = [];
-  const track = (unsubscribe: () => void) => subscriptions.push(unsubscribe);
-
-  /**
-   * Two-way Sync
-   * Valtio ignores same-value writes, so the echo back stops after one hop.
-   */
-  track(
-    subscribeDealKey(
-      $dealStore,
-      "premiumCcy",
-      (value) => (base.premiumCcy = value),
-    ),
-  );
-  track(
-    subscribeKey(
-      base,
-      "premiumCcy",
-      (value) => ($dealStore.premiumCcy = value),
-      true,
-    ),
-  );
-
-  /**
-   * Two-way Sync
-   */
-  track(
-    subscribeDealKey(
-      $dealStore,
-      "notionalCcy",
-      (value) => (notional.notionalCcy = value),
-    ),
-  );
-  track(
-    subscribeKey(
-      notional,
-      "notionalCcy",
-      (value) => ($dealStore.notionalCcy = value),
-      true,
-    ),
-  );
-
-  /**
-   * One-way Sync
-   * Consume the broadcast command into this product's own strike field.
-   * Sync notification is required: the broadcast is set and reset in one tick.
-   */
-  track(
-    subscribeDealKey($dealStore, "strike", (broadcast) => {
-      if (broadcast === undefined) return;
-      optionsCommon.strike = broadcast;
-    }),
-  );
-
-  /**
-   * Derived field
-   * Days from today until expiry, recomputed whenever expiryDate changes.
-   * Sync, so expiryDays and its validation settle within the same keystroke.
-   */
-  track(
-    subscribeKey(
-      base,
-      "expiryDate",
-      (expiryDate) => (base.expiryDays = daysUntil(expiryDate)),
-      true,
-    ),
-  );
-
-  const validateField = validateFieldFactory(
-    $dealStore,
-    productStore,
-    productId,
-  );
-
-  [
-    validateField("data.optionsCommon.base.notional.notionalCcy", ccySchema),
-    validateField("data.optionsCommon.base.notional.amount", amountSchema),
-    validateField("data.optionsCommon.base.premiumCcy", ccySchema),
-    validateField("data.optionsCommon.base.premiumDate", dateSchema),
-    validateField("data.optionsCommon.base.buySell", buySellSchema),
-    validateField("data.optionsCommon.base.ccyPair", ccyPairSchema),
-    validateField("data.optionsCommon.base.expiryDate", dateSchema),
-    validateField("data.optionsCommon.base.expiryDays", expiryDaysSchema),
-    validateField("data.optionsCommon.base.expiryCut", expiryCutSchema),
-    validateField("data.optionsCommon.base.deliveryDate", dateSchema),
-    validateField("data.optionsCommon.strike", strikeSchema),
-    validateField("data.optionsCommon.callPut", callPutSchema),
-    validateField("data.settlementStyle", settlementStyleSchema),
-    validateField("data.cashSettlement.settlementCcy", ccySchema),
-    validateField(
-      "data.cashSettlement.settlementFixingSource",
-      fixingSourceSchema,
-    ),
-  ].forEach(track);
-
-  return {
-    productStore,
-    dispose: () => subscriptions.forEach((unsubscribe) => unsubscribe()),
-  };
-};

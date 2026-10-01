@@ -1,5 +1,4 @@
 import {
-  useId,
   memo,
   useCallback,
   useState,
@@ -12,18 +11,19 @@ import { useDealValue, useValidationError } from "../hooks/useDealValue.ts";
 
 type Props = {
   path: string;
+  /** Accessible name only; the visible labels live in the label column. */
   label: string;
   /**
    * - `text`: stores the string as typed.
-   * - `number`: stores a number (`NaN` while the field is empty or invalid,
-   *   so validation can flag it).
+   * - `number`: stores a number (`NaN` when the field is empty, so
+   *   validation can flag it).
    * - `date`: stores an ISO `YYYY-MM-DD` string (`""` when cleared).
    */
   type?: "text" | "number" | "date";
   /**
-   * Broadcast field: the text is held locally while typing and only written
-   * to the store on commit (blur or Enter), where it propagates to the
-   * subscribers and is then dropped — the value is never kept here.
+   * Broadcast field: on commit the value is written to the store, where it
+   * propagates to the subscribers, and is then dropped — the field is never
+   * kept here and shows empty again.
    */
   isBroadcasting?: boolean;
 
@@ -39,6 +39,11 @@ const toDisplayValue = (value: unknown) => {
   return String(value);
 };
 
+/**
+ * Every field commits on blur or Enter, never per keystroke: the text is
+ * held in a local draft while editing, so syncs, broadcasts and validation
+ * run once per edit instead of once per character.
+ */
 export const Input = memo(
   ({
     path,
@@ -47,32 +52,34 @@ export const Input = memo(
     isBroadcasting = false,
     inputProps = {},
   }: Props) => {
-    const id = useId();
-
     const actions = useDealStore().actions;
     const value = useDealValue(path);
     const { hasError } = useValidationError(path);
 
-    const [draft, setDraft] = useState("");
+    // `null` while not editing: the field shows the store value
+    const [draft, setDraft] = useState<string | null>(null);
 
     const handleOnChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (isBroadcasting) setDraft(e.target.value);
-        else
-          actions.setValueByPath(
-            path,
-            type === "number" ? e.target.valueAsNumber : e.target.value,
-          );
-      },
-      [actions, path, type, isBroadcasting],
+      (e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value),
+      [],
     );
 
     const handleCommit = useCallback(() => {
-      if (!isBroadcasting || !draft) return;
-      actions.setValueByPath(path, draft);
-      actions.setValueByPath(path, undefined);
-      setDraft("");
-    }, [actions, draft, path, isBroadcasting]);
+      if (draft === null) return;
+      setDraft(null);
+
+      if (isBroadcasting) {
+        if (!draft) return; // nothing to broadcast
+        actions.setValueByPath(path, type === "number" ? Number(draft) : draft);
+        actions.setValueByPath(path, undefined);
+        return;
+      }
+
+      // an empty number input is NaN, not Number("") === 0
+      const committed =
+        type === "number" ? (draft === "" ? NaN : Number(draft)) : draft;
+      actions.setValueByPath(path, committed);
+    }, [actions, draft, path, type, isBroadcasting]);
 
     const handleOnKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -82,21 +89,18 @@ export const Input = memo(
     );
 
     return (
-      <div>
-        <label htmlFor={id}>{label}</label>
-        <input
-          className={clsx({
-            hasError,
-          })}
-          type={type}
-          {...inputProps}
-          id={id}
-          value={isBroadcasting ? draft : toDisplayValue(value)}
-          onChange={handleOnChange}
-          onBlur={handleCommit}
-          onKeyDown={handleOnKeyDown}
-        />
-      </div>
+      <input
+        className={clsx({
+          hasError,
+        })}
+        type={type}
+        aria-label={label}
+        {...inputProps}
+        value={draft ?? toDisplayValue(value)}
+        onChange={handleOnChange}
+        onBlur={handleCommit}
+        onKeyDown={handleOnKeyDown}
+      />
     );
   },
 );

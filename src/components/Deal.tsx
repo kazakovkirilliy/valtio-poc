@@ -1,47 +1,20 @@
 import { DealColumn } from "./DealColumn.tsx";
-import { ProductColumn } from "./ProductColumn.tsx";
-import { VanillaProductColumn } from "./VanillaProductColumn.tsx";
+import { GroupColumn } from "./GroupColumn.tsx";
+import { LabelColumn } from "./LabelColumn.tsx";
+import { gridTemplateRows } from "./fieldRows.ts";
 import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import { DealHeader } from "./DealHeader.tsx";
-import { memo, type ComponentType } from "react";
+import { memo } from "react";
 import { useOnMount } from "../hooks/useOnMount.ts";
 import { useProxyArray } from "../hooks/useProxyValue.ts";
-import {
-  type ProductType,
-  getProductType,
-} from "../stores/productRegistry.ts";
-
-const productColumns: Record<
-  ProductType,
-  ComponentType<{ productId: string }>
-> = {
-  Product: ProductColumn,
-  VanillaProduct: VanillaProductColumn,
-};
-
-const SingleProduct = memo(
-  ({
-    productId,
-    productType,
-  }: {
-    productId: string;
-    productType: ProductType;
-  }) => {
-    const Column = productColumns[productType];
-    return <Column productId={productId} />;
-  },
-);
-
-SingleProduct.displayName = "SingleProduct";
 
 export const Deal = memo(() => {
   const dealStore = useDealStore();
-  const { products, actions } = dealStore;
-  // re-renders only when products are added, cloned, removed or reordered
-  const productIds = useProxyArray(dealStore.productIds);
+  // re-renders only when groups are added, cloned, removed or reordered
+  const groupIds = useProxyArray(dealStore.groupIds);
 
   useOnMount(() => {
-    actions.addNewProduct("Product");
+    dealStore.actions.addNewGroup("VanillaGroup");
   });
 
   return (
@@ -49,15 +22,11 @@ export const Deal = memo(() => {
       <section className="deal">
         <DealHeader />
 
-        <div className="columnsContainer">
+        <div className="columnsContainer" style={{ gridTemplateRows }}>
           <DealColumn />
-          {productIds.map((productId) => (
-            <SingleProduct
-              key={productId}
-              productId={productId}
-              // fixed at creation, so reading the proxy needs no subscription
-              productType={getProductType(products[productId])}
-            />
+          <LabelColumn />
+          {groupIds.map((groupId) => (
+            <GroupColumn key={groupId} groupId={groupId} />
           ))}
         </div>
       </section>

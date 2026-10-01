@@ -9,25 +9,52 @@
   background: var(--code-bg);
 }
 
+/*
+ * Rows (set inline from fieldRows.ts): group header, product header, then one
+ * per field. Every column — including product columns nested in a group —
+ * uses `subgrid`, so each field row has one shared height and lines up with
+ * the label column. Columns scroll horizontally instead of wrapping, since a
+ * wrapped column could not line up with the labels.
+ */
 .columnsContainer {
   margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: start;
+  overflow-x: auto;
 }
 
 .column {
-  width: 250px;
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
   border: 1px solid var(--border);
-  min-height: 500px;
-  display: flex;
-  flex-direction: column;
-  align-items: end;
   padding-left: 8px;
   padding-right: 8px;
-
 }
+
 .column input {
   width: 125px;
+}
+
+/* deal and label columns have no group header: theirs spans both header rows */
+.column__header--span {
+  grid-row: span 2;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  min-height: 32px;
+}
+
+.column--labels {
+  white-space: nowrap;
+}
+
+.cell--label {
+  justify-content: start;
 }
 
 .column h5 {
@@ -41,6 +68,30 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
+}
+
+.column__header h5 {
+  text-align: center;
+  width: 100%;
+}
+
+/* columns come inline from GroupColumn: one per product */
+.group {
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  border: 1px solid var(--border);
+  padding: 0 8px 8px;
+}
+
+.group__header {
+  grid-row: 1;
+  grid-column: 1 / -1;
+}
+
+/* product columns start below the group header */
+.group > .column {
+  grid-row: 2 / -1;
 }
 
 .deal {

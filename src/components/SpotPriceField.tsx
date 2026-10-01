@@ -1,12 +1,12 @@
-import { memo, useEffect, useId, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useDealStore } from "../contexts/DealStoreProvider.tsx";
+import { fieldLabels } from "./fieldRows.ts";
 
 /**
  * Read-only spot price. Ticks are written straight to the DOM node, so the
  * stream never causes a React render — not even of this field.
  */
 export const SpotPriceField = memo(() => {
-  const id = useId();
   const { spotPriceStream } = useDealStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -21,16 +21,13 @@ export const SpotPriceField = memo(() => {
   );
 
   return (
-    <div>
-      <label htmlFor={id}>Spot Stream</label>
-      <input
-        ref={inputRef}
-        id={id}
-        defaultValue={spotPriceStream.getValue()}
-        disabled
-        readOnly
-      />
-    </div>
+    <input
+      ref={inputRef}
+      aria-label={fieldLabels.spotStream}
+      defaultValue={spotPriceStream.getValue()}
+      disabled
+      readOnly
+    />
   );
 });
 

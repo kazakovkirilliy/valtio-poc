@@ -3,10 +3,10 @@ import { useProxyValue } from "../hooks/useProxyValue.ts";
 import { multiTabStore } from "../stores/multiTabStore.ts";
 import { memo, useCallback } from "react";
 import {
-  type ProductType,
-  productTypes,
-  productTypeLabels,
-} from "../stores/productRegistry.ts";
+  type GroupType,
+  groupTypes,
+  groupDefinitions,
+} from "../stores/groupStore.ts";
 
 export const DealHeader = memo(() => {
   const dealStore = useDealStore();
@@ -17,22 +17,22 @@ export const DealHeader = memo(() => {
     "isSpotPriceStreamEnabled",
   );
 
-  const handleAddNewProduct = useCallback(
-    (productType: ProductType) => {
-      dealStore.actions.addNewProduct(productType);
+  const handleAddNewGroup = useCallback(
+    (groupType: GroupType) => {
+      dealStore.actions.addNewGroup(groupType);
     },
     [dealStore.actions],
   );
 
   return (
     <div className="deal__header">
-      {productTypes.map((productType) => (
+      {groupTypes.map((groupType) => (
         <button
-          key={productType}
+          key={groupType}
           className="button"
-          onClick={() => handleAddNewProduct(productType)}
+          onClick={() => handleAddNewGroup(groupType)}
         >
-          Add {productTypeLabels[productType]}
+          Add {groupDefinitions[groupType].label}
         </button>
       ))}
 

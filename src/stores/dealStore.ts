@@ -1,13 +1,11 @@
 import { proxy, ref } from "valtio";
-import { deepClone } from "valtio/utils";
 import {
-  type AnyProductStore,
-  type ProductType,
-  createProduct,
-  getProductType,
-  productTypeLabels,
-} from "./productRegistry.ts";
-import { uuid, setValueByPath, toValidationKey } from "../utils/utils.ts";
+  type GroupStore,
+  type GroupType,
+  createGroupStore,
+  groupDefinitions,
+} from "./groupStore.ts";
+import { setValueByPath, toValidationKey } from "../utils/utils.ts";
 import { effect } from "valtio-reactive";
 import { multiTabStore } from "./multiTabStore.ts";
 import type { $ZodIssue } from "zod/v4/core";
@@ -16,12 +14,48 @@ import {
   createSpotPriceStream,
 } from "./spotPriceStream.ts";
 
-export type DealStore = {
+/**
+ * Broadcast commands: written on commit, then reset to `undefined` in the
+ * same tick. Every product in every group copies the value into its own
+ * field (see `broadcastTargets` in `optionProduct.ts`).
+ */
+export type DealBroadcasts = {
+  strike: string | undefined;
+  callPut: string | undefined;
+  buySell: string | undefined;
+  ccyPair: string | undefined;
+  deliveryDate: string | undefined;
+  expiryCut: string | undefined;
+  expiryDate: string | undefined;
+  premiumDate: string | undefined;
+  notionalAmount: number | undefined;
+  settlementStyle: string | undefined;
+  settlementCcy: string | undefined;
+  settlementFixingSource: string | undefined;
+};
+
+export type DealBroadcastKey = keyof DealBroadcasts;
+
+const createBroadcasts = (): DealBroadcasts => ({
+  strike: undefined,
+  callPut: undefined,
+  buySell: undefined,
+  ccyPair: undefined,
+  deliveryDate: undefined,
+  expiryCut: undefined,
+  expiryDate: undefined,
+  premiumDate: undefined,
+  notionalAmount: undefined,
+  settlementStyle: undefined,
+  settlementCcy: undefined,
+  settlementFixingSource: undefined,
+});
+
+export type DealStore = DealBroadcasts & {
   notionalCcy: string;
   premiumCcy: string;
-  strike: string | undefined;
-  products: Record<string, AnyProductStore>;
-  productIds: string[]; // display order; each product's `ui.index` mirrors it
+  groups: Record<string, GroupStore>;
+  groupIds: string[]; // display order; each group's `ui.index` mirrors it
   isInternal: boolean;
   options: {
     hedgeTypes: string[];
@@ -30,9 +64,9 @@ export type DealStore = {
   hasValidationErrors: boolean;
   validationErrors: Record<string, $ZodIssue[]>; // keyed by field name
   actions: {
-    addNewProduct(productType: ProductType): void;
-    cloneProduct(productId: string): void;
-    removeProduct(productId: string): void;
+    addNewGroup(groupType: GroupType): void;
+    cloneGroup(groupId: string): void;
+    removeGroup(groupId: string): void;
     setValueByPath(path: string, value: unknown): void;
   };
 };
@@ -42,41 +76,39 @@ export const createDealStore = (): DealStore => {
   // kept outside the proxy: functions, never rendered or snapshotted
   const disposers = new Map<string, () => void>();
 
-  /** Re-derives every product's index and title from its position. */
-  const reindexProducts = () => {
-    dealStore.productIds.forEach((productId, index) => {
-      const product = dealStore.products[productId];
-      // same-value writes are ignored, so unmoved products don't notify
-      product.ui.index = index;
-      product.ui.title = `${productTypeLabels[getProductType(product)]} #${index + 1}`;
+  /** Re-derives every group's index and title from its position. */
+  const reindexGroups = () => {
+    dealStore.groupIds.forEach((groupId, index) => {
+      const group = dealStore.groups[groupId];
+      // same-value writes are ignored, so unmoved groups don't notify
+      group.ui.index = index;
+      group.ui.title = `${groupDefinitions[group.groupType].label} #${index + 1}`;
     });
   };
 
-  const insertProduct = (
-    productType: ProductType,
+  const insertGroup = (
+    groupType: GroupType,
     position: number,
-    initial?: AnyProductStore,
+    source?: GroupStore,
   ) => {
-    const productId = uuid();
-    const { productStore, dispose } = createProduct(
-      productType,
+    const { groupStore, dispose } = createGroupStore(
       dealStore,
-      productId,
-      initial,
+      groupType,
+      source,
     );
-    disposers.set(productId, dispose);
-    // record first, so the id never appears in the order without its product
-    dealStore.products[productId] = productStore;
-    dealStore.productIds.splice(position, 0, productId);
-    reindexProducts();
+    disposers.set(groupStore.id, dispose);
+    // record first, so the id never appears in the order without its group
+    dealStore.groups[groupStore.id] = groupStore;
+    dealStore.groupIds.splice(position, 0, groupStore.id);
+    reindexGroups();
   };
 
   const dealStore = proxy<DealStore>({
+    ...createBroadcasts(),
     notionalCcy: "1xxxxxx",
     premiumCcy: "2",
-    strike: undefined,
-    products: {},
-    productIds: [],
+    groups: {},
+    groupIds: [],
     isInternal: true,
     spotPriceStream: ref(spotPriceStream), // ref(): valtio does not track it, so ticks never notify the deal proxy
     options: {
@@ -85,36 +117,35 @@ export const createDealStore = (): DealStore => {
     hasValidationErrors: false,
     validationErrors: {},
     actions: {
-      addNewProduct(productType: ProductType) {
-        insertProduct(productType, dealStore.productIds.length);
+      addNewGroup(groupType: GroupType) {
+        insertGroup(groupType, dealStore.groupIds.length);
       },
-      /** Inserts a copy of the product right after it. */
-      cloneProduct(productId: string) {
-        const position = dealStore.productIds.indexOf(productId);
+      /** Inserts a copy of the group (and its products) right after it. */
+      cloneGroup(groupId: string) {
+        const position = dealStore.groupIds.indexOf(groupId);
         if (position === -1) return;
-        const source = dealStore.products[productId];
-        // plain deep copy: the clone gets its own proxies and subscriptions
-        insertProduct(getProductType(source), position + 1, deepClone(source));
+        const source = dealStore.groups[groupId];
+        insertGroup(source.groupType, position + 1, source);
       },
-      removeProduct(productId: string) {
-        const position = dealStore.productIds.indexOf(productId);
+      removeGroup(groupId: string) {
+        const position = dealStore.groupIds.indexOf(groupId);
         if (position === -1) return;
 
-        disposers.get(productId)?.();
-        disposers.delete(productId);
+        disposers.get(groupId)?.();
+        disposers.delete(groupId);
 
-        // order first, so the id never appears without its product
-        dealStore.productIds.splice(position, 1);
-        delete dealStore.products[productId];
+        // order first, so the id never appears without its group
+        dealStore.groupIds.splice(position, 1);
+        delete dealStore.groups[groupId];
 
-        const errorPrefix = toValidationKey(`products.${productId}.`);
+        const errorPrefix = toValidationKey(`groups.${groupId}.`);
         for (const key of Object.keys(dealStore.validationErrors)) {
           if (key.startsWith(errorPrefix)) {
             delete dealStore.validationErrors[key];
           }
         }
 
-        reindexProducts();
+        reindexGroups();
       },
       setValueByPath(path: string, value: unknown) {
         setValueByPath(dealStore, path, value);

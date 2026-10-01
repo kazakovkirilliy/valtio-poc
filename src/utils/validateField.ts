@@ -15,7 +15,7 @@ const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
 export const validateFieldFactory = <T extends object>(
   $dealStore: DealStore,
   productStore: T,
-  productId: string,
+  productPath: string, // the product's path from the deal
 ) => {
   /**
    * Per-field validation: runs once now, then only when this product's own
@@ -24,7 +24,7 @@ export const validateFieldFactory = <T extends object>(
    * subscription is placed on the nested proxy that owns the leaf key.
    */
   const validateField = (path: LeafPath<T>, schema: ZodType) => {
-    const fullPath = toValidationKey(`products.${productId}.${path}`);
+    const fullPath = toValidationKey(`${productPath}.${path}`);
     const { parent, key } = resolveParent(productStore, path);
     if (!parent) throw new Error(`validateField: no parent for "${path}"`);
 
