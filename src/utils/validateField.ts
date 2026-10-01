@@ -1,8 +1,8 @@
-import type { ProductStore } from "../stores/productStore.ts";
 import { subscribeKey } from "valtio/utils";
 import type { DealStore } from "../stores/dealStore.ts";
 import type { $ZodIssue } from "zod/v4/core";
 import type { ZodType } from "zod";
+import { resolveParent, toValidationKey, type LeafPath } from "./utils.ts";
 
 const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
   if (!a && !b?.length) return true;
@@ -12,23 +12,23 @@ const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
   );
 };
 
-export const validateFieldFactory = (
+export const validateFieldFactory = <T extends object>(
   $dealStore: DealStore,
-  productStore: ProductStore,
+  productStore: T,
   productId: string,
 ) => {
   /**
    * Per-field validation: runs once now, then only when this product's own
    * field changes — never on unrelated deal or product changes.
+   * `path` is relative to the product and may be nested (`a.b.c`); the
+   * subscription is placed on the nested proxy that owns the leaf key.
    */
-  const validateField = <K extends keyof ProductStore>(
-    field: K,
-    schema: ZodType,
-  ) => {
-    const fullPath = `products.${productId}.${field}`.replaceAll(".", "_");
+  const validateField = (path: LeafPath<T>, schema: ZodType) => {
+    const fullPath = toValidationKey(`products.${productId}.${path}`);
+    const { parent, key } = resolveParent(productStore, path);
 
     const validate = () => {
-      const result = schema.safeParse(productStore[field]);
+      const result = schema.safeParse(parent[key]);
       const issues = result.success ? [] : result.error.issues;
 
       // Only write if the content actually changed — avoids new
@@ -40,7 +40,7 @@ export const validateFieldFactory = (
     };
 
     validate();
-    subscribeKey(productStore, field, validate, true);
+    subscribeKey(parent, key, validate, true);
   };
 
   return validateField;

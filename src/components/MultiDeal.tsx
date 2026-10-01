@@ -1,5 +1,5 @@
 import { Deal } from "./Deal.tsx";
-import { useSnapshot } from "valtio/react";
+import { useProxyKeys, useProxyValue } from "../hooks/useProxyValue.ts";
 import { multiTabStore } from "../stores/multiTabStore.ts";
 import { DealStoreProvider } from "../contexts/DealStoreProvider.tsx";
 import clsx from "clsx";
@@ -19,9 +19,10 @@ const SingleDeal = memo(
 );
 
 export const MultiDeal = memo(() => {
-  const snap = useSnapshot(multiTabStore);
-
-  const dealKeys = Object.keys(snap.deals);
+  // narrow subscriptions: a snapshot of multiTabStore was notified by every
+  // keystroke in every deal
+  const dealKeys = useProxyKeys(multiTabStore.deals);
+  const activeDealId = useProxyValue(multiTabStore, "activeDealId");
 
   useOnMount(() => {
     multiTabStore.actions.addNewDeal();
@@ -35,7 +36,7 @@ export const MultiDeal = memo(() => {
     <section>
       <div className="multiDeal-header">
         {dealKeys.map((key, index) => {
-          const isActive = key === snap.activeDealId;
+          const isActive = key === activeDealId;
           return (
             <button
               key={key}
@@ -65,7 +66,7 @@ export const MultiDeal = memo(() => {
           return (
             <SingleDeal
               key={key}
-              isActive={key == snap.activeDealId}
+              isActive={key == activeDealId}
               dealStore={multiTabStore.deals[key]}
             />
           );

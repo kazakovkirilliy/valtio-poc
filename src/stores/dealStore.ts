@@ -1,5 +1,9 @@
 import { proxy, ref } from "valtio";
-import { type ProductStore, createProductStore } from "./productStore.ts";
+import {
+  type AnyProductStore,
+  type ProductType,
+  productFactories,
+} from "./productRegistry.ts";
 import { uuid, setValueByPath } from "../utils/utils.ts";
 import { effect } from "valtio-reactive";
 import { multiTabStore } from "./multiTabStore.ts";
@@ -13,7 +17,7 @@ export type DealStore = {
   notionalCcy: string;
   premiumCcy: string;
   strike: string | undefined;
-  products: Record<string, ProductStore>;
+  products: Record<string, AnyProductStore>;
   isInternal: boolean;
   options: {
     hedgeTypes: string[];
@@ -22,7 +26,7 @@ export type DealStore = {
   hasValidationErrors: boolean;
   validationErrors: Record<string, $ZodIssue[]>; // keyed by field name
   actions: {
-    addNewProduct(): void;
+    addNewProduct(productType: ProductType): void;
     setValueByPath(path: string, value: unknown): void;
   };
 };
@@ -42,9 +46,9 @@ export const createDealStore = (): DealStore => {
     hasValidationErrors: false,
     validationErrors: {},
     actions: {
-      addNewProduct() {
+      addNewProduct(productType: ProductType) {
         const productId = uuid();
-        dealStore.products[productId] = createProductStore(
+        dealStore.products[productId] = productFactories[productType](
           dealStore,
           productId,
         );

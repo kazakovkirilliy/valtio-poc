@@ -24,6 +24,10 @@
   align-items: end;
   padding-left: 8px;
   padding-right: 8px;
+
+}
+.column input {
+  width: 125px;
 }
 
 .column h5 {

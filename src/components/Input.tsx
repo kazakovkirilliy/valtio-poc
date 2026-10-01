@@ -6,17 +6,20 @@ import {
   type DetailedHTMLProps,
   type InputHTMLAttributes,
 } from "react";
-import { getValueByPath } from "../utils/utils.ts";
-import {
-  useDealStoreSnapshot,
-  useDealStore,
-} from "../contexts/DealStoreProvider.tsx";
+import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import clsx from "clsx";
-import { getValidationError } from "../utils/getValidationError.ts";
+import { useDealValue, useValidationError } from "../hooks/useDealValue.ts";
 
 type Props = {
   path: string;
   label: string;
+  /**
+   * - `text`: stores the string as typed.
+   * - `number`: stores a number (`NaN` while the field is empty or invalid,
+   *   so validation can flag it).
+   * - `date`: stores an ISO `YYYY-MM-DD` string (`""` when cleared).
+   */
+  type?: "text" | "number" | "date";
   /**
    * Broadcast field: the text is held locally while typing and only written
    * to the store on commit (blur or Enter), where it propagates to the
@@ -30,23 +33,38 @@ type Props = {
   >;
 };
 
+const toDisplayValue = (value: unknown) => {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "number" && Number.isNaN(value)) return "";
+  return String(value);
+};
+
 export const Input = memo(
-  ({ path, label, isBroadcasting = false, inputProps = {} }: Props) => {
+  ({
+    path,
+    label,
+    type = "text",
+    isBroadcasting = false,
+    inputProps = {},
+  }: Props) => {
     const id = useId();
 
-    const snap = useDealStoreSnapshot();
     const actions = useDealStore().actions;
-    const value = getValueByPath(snap, path) as string | undefined;
-    const { hasError } = getValidationError(snap, path);
+    const value = useDealValue(path);
+    const { hasError } = useValidationError(path);
 
     const [draft, setDraft] = useState("");
 
     const handleOnChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         if (isBroadcasting) setDraft(e.target.value);
-        else actions.setValueByPath(path, e.target.value);
+        else
+          actions.setValueByPath(
+            path,
+            type === "number" ? e.target.valueAsNumber : e.target.value,
+          );
       },
-      [actions, path, isBroadcasting],
+      [actions, path, type, isBroadcasting],
     );
 
     const handleCommit = useCallback(() => {
@@ -70,9 +88,10 @@ export const Input = memo(
           className={clsx({
             hasError,
           })}
+          type={type}
           {...inputProps}
           id={id}
-          value={isBroadcasting ? draft : (value ?? "")}
+          value={isBroadcasting ? draft : toDisplayValue(value)}
           onChange={handleOnChange}
           onBlur={handleCommit}
           onKeyDown={handleOnKeyDown}

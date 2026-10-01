@@ -1,26 +1,46 @@
 import { DealColumn } from "./DealColumn.tsx";
 import { ProductColumn } from "./ProductColumn.tsx";
-import {
-  useDealStoreSnapshot,
-  useDealStore,
-} from "../contexts/DealStoreProvider.tsx";
+import { VanillaProductColumn } from "./VanillaProductColumn.tsx";
+import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import { DealHeader } from "./DealHeader.tsx";
-import { memo } from "react";
+import { memo, type ComponentType } from "react";
 import { useOnMount } from "../hooks/useOnMount.ts";
+import { useProxyKeys } from "../hooks/useProxyValue.ts";
+import {
+  type ProductType,
+  getProductType,
+} from "../stores/productRegistry.ts";
 
-const SingleProduct = memo(({ productId }: { productId: string }) => (
-  <ProductColumn key={productId} productId={productId} />
-));
+const productColumns: Record<
+  ProductType,
+  ComponentType<{ productId: string }>
+> = {
+  Product: ProductColumn,
+  VanillaProduct: VanillaProductColumn,
+};
+
+const SingleProduct = memo(
+  ({
+    productId,
+    productType,
+  }: {
+    productId: string;
+    productType: ProductType;
+  }) => {
+    const Column = productColumns[productType];
+    return <Column productId={productId} />;
+  },
+);
 
 SingleProduct.displayName = "SingleProduct";
 
 export const Deal = memo(() => {
-  const snap = useDealStoreSnapshot();
-
-  const actions = useDealStore().actions;
+  const { products, actions } = useDealStore();
+  // re-renders only when products are added or removed, not on field edits
+  const productIds = useProxyKeys(products);
 
   useOnMount(() => {
-    actions.addNewProduct();
+    actions.addNewProduct("Product");
   });
 
   return (
@@ -30,8 +50,13 @@ export const Deal = memo(() => {
 
         <div className="columnsContainer">
           <DealColumn />
-          {Object.keys(snap.products).map((productId) => (
-            <SingleProduct key={productId} productId={productId} />
+          {productIds.map((productId) => (
+            <SingleProduct
+              key={productId}
+              productId={productId}
+              // fixed at creation, so reading the proxy needs no subscription
+              productType={getProductType(products[productId])}
+            />
           ))}
         </div>
       </section>

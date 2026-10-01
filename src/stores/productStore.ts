@@ -3,8 +3,10 @@ import { subscribeKey } from "valtio/utils";
 import { type DealStore } from "./dealStore.ts";
 import { z } from "zod";
 import { validateFieldFactory } from "../utils/validateField.ts";
+import { subscribeDealKey } from "../utils/subscribeDealKey.ts";
 
 export type ProductStore = {
+  productType: "Product";
   productNotionalCcy: string;
   productPremiumCcy: string;
   strike: string;
@@ -27,6 +29,7 @@ export const createProductStore = (
   productId: string,
 ) => {
   const productStore = proxy<ProductStore>({
+    productType: "Product",
     productNotionalCcy: $dealStore.notionalCcy,
     productPremiumCcy: $dealStore.premiumCcy,
     strike: "",
@@ -36,11 +39,10 @@ export const createProductStore = (
    * Two-way Sync
    * Valtio ignores same-value writes, so the echo back stops after one hop.
    */
-  subscribeKey(
+  subscribeDealKey(
     $dealStore,
     "premiumCcy",
     (value) => (productStore.productPremiumCcy = value),
-    true,
   );
   subscribeKey(
     productStore,
@@ -52,11 +54,10 @@ export const createProductStore = (
   /**
    * Two-way Sync
    */
-  subscribeKey(
+  subscribeDealKey(
     $dealStore,
     "notionalCcy",
     (value) => (productStore.productNotionalCcy = value),
-    true,
   );
   subscribeKey(
     productStore,
@@ -71,14 +72,13 @@ export const createProductStore = (
    * to its own strike field name.
    * Sync notification is required: the broadcast is set and reset in one tick.
    */
-  subscribeKey(
+  subscribeDealKey(
     $dealStore,
     "strike",
     (broadcast) => {
       if (broadcast === undefined) return;
       productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
     },
-    true,
   );
 
   const validateField = validateFieldFactory(
