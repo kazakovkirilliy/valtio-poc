@@ -35,6 +35,14 @@
   width: 100%;
 }
 
+.column__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .deal {
   background: var(--code-bg);
   padding-top: 8px;

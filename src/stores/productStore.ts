@@ -6,6 +6,10 @@ import { validateFieldFactory } from "../utils/validateField.ts";
 import { subscribeDealKey } from "../utils/subscribeDealKey.ts";
 
 export type ProductStore = {
+  ui: {
+    title: string;
+    index: number;
+  };
   productType: "Product";
   productNotionalCcy: string;
   productPremiumCcy: string;
@@ -23,47 +27,65 @@ const strikeSchema = z.string().max(3, "Must be at most 3 characters");
  * every product's effects (nested, synchronously) — cost that grows much
  * faster than the product count. A key subscription does one cheap compare.
  * Sync notification (`true`) keeps all sides consistent within the keystroke.
+ *
+ * `initial` (a plain deep copy) seeds a clone. `dispose` drops every
+ * subscription, so a removed product is never written to again.
  */
 export const createProductStore = (
   $dealStore: DealStore,
   productId: string,
+  initial?: ProductStore,
 ) => {
-  const productStore = proxy<ProductStore>({
-    productType: "Product",
-    productNotionalCcy: $dealStore.notionalCcy,
-    productPremiumCcy: $dealStore.premiumCcy,
-    strike: "",
-  });
+  const productStore = proxy<ProductStore>(
+    initial ?? {
+      ui: { title: "", index: 0 }, // set by the deal on insert
+      productType: "Product",
+      productNotionalCcy: $dealStore.notionalCcy,
+      productPremiumCcy: $dealStore.premiumCcy,
+      strike: "",
+    },
+  );
+
+  const subscriptions: Array<() => void> = [];
+  const track = (unsubscribe: () => void) => subscriptions.push(unsubscribe);
 
   /**
    * Two-way Sync
    * Valtio ignores same-value writes, so the echo back stops after one hop.
    */
-  subscribeDealKey(
-    $dealStore,
-    "premiumCcy",
-    (value) => (productStore.productPremiumCcy = value),
+  track(
+    subscribeDealKey(
+      $dealStore,
+      "premiumCcy",
+      (value) => (productStore.productPremiumCcy = value),
+    ),
   );
-  subscribeKey(
-    productStore,
-    "productPremiumCcy",
-    (value) => ($dealStore.premiumCcy = value),
-    true,
+  track(
+    subscribeKey(
+      productStore,
+      "productPremiumCcy",
+      (value) => ($dealStore.premiumCcy = value),
+      true,
+    ),
   );
 
   /**
    * Two-way Sync
    */
-  subscribeDealKey(
-    $dealStore,
-    "notionalCcy",
-    (value) => (productStore.productNotionalCcy = value),
+  track(
+    subscribeDealKey(
+      $dealStore,
+      "notionalCcy",
+      (value) => (productStore.productNotionalCcy = value),
+    ),
   );
-  subscribeKey(
-    productStore,
-    "productNotionalCcy",
-    (value) => ($dealStore.notionalCcy = value),
-    true,
+  track(
+    subscribeKey(
+      productStore,
+      "productNotionalCcy",
+      (value) => ($dealStore.notionalCcy = value),
+      true,
+    ),
   );
 
   /**
@@ -72,13 +94,11 @@ export const createProductStore = (
    * to its own strike field name.
    * Sync notification is required: the broadcast is set and reset in one tick.
    */
-  subscribeDealKey(
-    $dealStore,
-    "strike",
-    (broadcast) => {
+  track(
+    subscribeDealKey($dealStore, "strike", (broadcast) => {
       if (broadcast === undefined) return;
       productStore.strike = broadcast; // <- local name, e.g. productStore.strikeLevel
-    },
+    }),
   );
 
   const validateField = validateFieldFactory(
@@ -87,9 +107,12 @@ export const createProductStore = (
     productId,
   );
 
-  validateField("productNotionalCcy", ccySchema);
-  validateField("productPremiumCcy", ccySchema);
-  validateField("strike", strikeSchema);
+  track(validateField("productNotionalCcy", ccySchema));
+  track(validateField("productPremiumCcy", ccySchema));
+  track(validateField("strike", strikeSchema));
 
-  return productStore;
+  return {
+    productStore,
+    dispose: () => subscriptions.forEach((unsubscribe) => unsubscribe()),
+  };
 };

@@ -26,6 +26,7 @@ export const validateFieldFactory = <T extends object>(
   const validateField = (path: LeafPath<T>, schema: ZodType) => {
     const fullPath = toValidationKey(`products.${productId}.${path}`);
     const { parent, key } = resolveParent(productStore, path);
+    if (!parent) throw new Error(`validateField: no parent for "${path}"`);
 
     const validate = () => {
       const result = schema.safeParse(parent[key]);
@@ -40,7 +41,7 @@ export const validateFieldFactory = <T extends object>(
     };
 
     validate();
-    subscribeKey(parent, key, validate, true);
+    return subscribeKey(parent, key, validate, true);
   };
 
   return validateField;

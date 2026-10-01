@@ -27,10 +27,11 @@ export const daysUntil = (isoDate: string): number => {
   return Math.round((target - today) / MS_PER_DAY);
 };
 
-export const getValueByPath =(target: object, path: string): unknown => {
+/** `undefined` when any segment is missing, instead of throwing. */
+export const getValueByPath = (target: object, path: string): unknown => {
   return path.split(".").reduce((currentTarget, part) => {
     // @ts-expect-error YOLO
-    return currentTarget[part];
+    return currentTarget?.[part];
   }, target);
 };
 
@@ -43,7 +44,7 @@ export const resolveParent = (target: object, path: string) => {
   const key = parts.pop() as string;
   const parent = (
     parts.length ? getValueByPath(target, parts.join(".")) : target
-  ) as Record<string, unknown>;
+  ) as Record<string, unknown> | undefined;
   return { parent, key };
 };
 

@@ -1,23 +1,20 @@
 import { memo } from "react";
 import { Input } from "./Input.tsx";
 import { DateInput } from "./DateInput.tsx";
-import { useDealValue } from "../hooks/useDealValue.ts";
+import { ProductColumnHeader } from "./ProductColumnHeader.tsx";
 
 type Props = {
   productId: string;
 };
 
 export const VanillaProductColumn = memo(({ productId }: Props) => {
-  // subscribed on the product's `ui` object, which field edits never touch
-  const title = useDealValue(`products.${productId}.ui.title`) as string;
-
   const data = `products.${productId}.data`;
   const optionsCommon = `${data}.optionsCommon`;
   const base = `${optionsCommon}.base`;
 
   return (
     <div className="column">
-      <h5>{title}</h5>
+      <ProductColumnHeader productId={productId} />
       <Input label="Notional Ccy" path={`${base}.notional.notionalCcy`} />
       <Input
         label="Notional Amount"

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Input } from "./Input.tsx";
+import { ProductColumnHeader } from "./ProductColumnHeader.tsx";
 
 type Props = {
   productId: string;
@@ -8,7 +9,7 @@ type Props = {
 export const ProductColumn = memo(({ productId }: Props) => {
   return (
     <div className="column">
-      <h5>Product Column</h5>
+      <ProductColumnHeader productId={productId} />
       <Input
         label="Notional Ccy"
         path={`products.${productId}.productNotionalCcy`}

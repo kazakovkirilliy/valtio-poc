@@ -5,7 +5,7 @@ import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import { DealHeader } from "./DealHeader.tsx";
 import { memo, type ComponentType } from "react";
 import { useOnMount } from "../hooks/useOnMount.ts";
-import { useProxyKeys } from "../hooks/useProxyValue.ts";
+import { useProxyArray } from "../hooks/useProxyValue.ts";
 import {
   type ProductType,
   getProductType,
@@ -35,9 +35,10 @@ const SingleProduct = memo(
 SingleProduct.displayName = "SingleProduct";
 
 export const Deal = memo(() => {
-  const { products, actions } = useDealStore();
-  // re-renders only when products are added or removed, not on field edits
-  const productIds = useProxyKeys(products);
+  const dealStore = useDealStore();
+  const { products, actions } = dealStore;
+  // re-renders only when products are added, cloned, removed or reordered
+  const productIds = useProxyArray(dealStore.productIds);
 
   useOnMount(() => {
     actions.addNewProduct("Product");

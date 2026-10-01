@@ -20,17 +20,27 @@ export const useProxyValue = <T extends object, K extends keyof T>(
 };
 
 /**
- * Own keys of a proxy; re-renders only when keys are added or removed,
- * not when values inside the entries change.
+ * A list of strings read from a proxy, re-rendering only when the list
+ * itself changes — a string signature is compared by value.
  */
-export const useProxyKeys = (proxyObject: object): string[] => {
+const useProxyStrings = (
+  proxyObject: object,
+  read: () => readonly string[],
+): string[] => {
   const subscribeToProxy = useCallback(
     (onChange: () => void) => subscribe(proxyObject, onChange),
     [proxyObject],
   );
-  // a string is compared by value, so unchanged keys never re-render
   const signature = useSyncExternalStore(subscribeToProxy, () =>
-    Object.keys(proxyObject).join(","),
+    read().join(","),
   );
   return useMemo(() => (signature ? signature.split(",") : []), [signature]);
 };
+
+/** Own keys of a proxy; re-renders only when keys are added or removed. */
+export const useProxyKeys = (proxyObject: object): string[] =>
+  useProxyStrings(proxyObject, () => Object.keys(proxyObject));
+
+/** Items of a proxied string array; re-renders only when they change. */
+export const useProxyArray = (proxyArray: readonly string[]): string[] =>
+  useProxyStrings(proxyArray, () => proxyArray);

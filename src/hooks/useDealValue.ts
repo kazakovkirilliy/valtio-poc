@@ -1,8 +1,12 @@
 import { useMemo } from "react";
+import { proxy } from "valtio";
 import type { $ZodIssue } from "zod/v4/core";
 import { useDealStore } from "../contexts/DealStoreProvider.tsx";
 import { resolveParent, toValidationKey } from "../utils/utils.ts";
 import { useProxyValue } from "./useProxyValue.ts";
+
+// stand-in parent for a path that no longer exists (e.g. a removed product)
+const missingParent = proxy<Record<string, unknown>>({});
 
 /**
  * Value at a deal path, subscribed on the nested proxy that owns it: typing
@@ -14,7 +18,8 @@ export const useDealValue = (path: string): unknown => {
     () => resolveParent(dealStore, path),
     [dealStore, path],
   );
-  return useProxyValue(parent, key);
+  // a removed product's fields can render once more before they unmount
+  return useProxyValue(parent ?? missingParent, key);
 };
 
 /**

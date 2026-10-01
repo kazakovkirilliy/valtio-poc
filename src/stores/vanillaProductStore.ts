@@ -67,6 +67,7 @@ const expiryDaysSchema = optionalNumber(
   z.number().int().min(0, "Expiry date is in the past"),
 );
 
+
 /**
  * Vanilla product factory.
  *
@@ -74,80 +75,91 @@ const expiryDaysSchema = optionalNumber(
  * so each `subscribeKey` targets the nested proxy that owns the field.
  * Those subscriptions are bound to the nested objects created here — write
  * leaf values (as `setValueByPath` does), never replace the objects wholesale.
+ *
+ * `initial` (a plain deep copy) seeds a clone. `dispose` drops every
+ * subscription, so a removed product is never written to again.
  */
 export const createVanillaProductStore = (
   $dealStore: DealStore,
   productId: string,
+  initial?: VanillaProductStore,
 ) => {
-  // position in the deal at creation time
-  const index = Object.keys($dealStore.products).length;
-
-  const productStore = proxy<VanillaProductStore>({
-    ui: {
-      title: `Vanilla #${index + 1}`,
-      index,
-    },
-    data: {
-      productType: "VanillaProduct",
-      cashSettlement: {
-        settlementCcy: "",
-        settlementFixingSource: "",
-      },
-      optionsCommon: {
-        base: {
-          buySell: "",
-          ccyPair: "",
-          deliveryDate: "",
-          expiryCut: "",
-          expiryDate: "",
-          expiryDays: NaN, // derived from expiryDate
-          notional: {
-            notionalCcy: $dealStore.notionalCcy,
-            amount: NaN,
-          },
-          premiumCcy: $dealStore.premiumCcy,
-          premiumDate: "",
+  const productStore = proxy<VanillaProductStore>(
+    initial ?? {
+      ui: { title: "", index: 0 }, // set by the deal on insert
+      data: {
+        productType: "VanillaProduct",
+        cashSettlement: {
+          settlementCcy: "",
+          settlementFixingSource: "",
         },
-        callPut: "",
-        strike: "",
+        optionsCommon: {
+          base: {
+            buySell: "",
+            ccyPair: "",
+            deliveryDate: "",
+            expiryCut: "",
+            expiryDate: "",
+            expiryDays: NaN, // derived from expiryDate
+            notional: {
+              notionalCcy: $dealStore.notionalCcy,
+              amount: NaN,
+            },
+            premiumCcy: $dealStore.premiumCcy,
+            premiumDate: "",
+          },
+          callPut: "",
+          strike: "",
+        },
+        settlementStyle: "",
       },
-      settlementStyle: "",
     },
-  });
+  );
 
   const optionsCommon = productStore.data.optionsCommon;
   const base = optionsCommon.base;
   const notional = base.notional;
 
+  const subscriptions: Array<() => void> = [];
+  const track = (unsubscribe: () => void) => subscriptions.push(unsubscribe);
+
   /**
    * Two-way Sync
    * Valtio ignores same-value writes, so the echo back stops after one hop.
    */
-  subscribeDealKey(
-    $dealStore,
-    "premiumCcy",
-    (value) => (base.premiumCcy = value),
+  track(
+    subscribeDealKey(
+      $dealStore,
+      "premiumCcy",
+      (value) => (base.premiumCcy = value),
+    ),
   );
-  subscribeKey(
-    base,
-    "premiumCcy",
-    (value) => ($dealStore.premiumCcy = value),
-    true,
+  track(
+    subscribeKey(
+      base,
+      "premiumCcy",
+      (value) => ($dealStore.premiumCcy = value),
+      true,
+    ),
   );
 
   /**
    * Two-way Sync
    */
-  subscribeDealKey(
-    $dealStore,
-    "notionalCcy",
-    (value) => (notional.notionalCcy = value),
+  track(
+    subscribeDealKey(
+      $dealStore,
+      "notionalCcy",
+      (value) => (notional.notionalCcy = value),
+    ),
   );
-  subscribeKey(
-    notional,
-    "notionalCcy",
-    (value) => ($dealStore.notionalCcy = value),
-    true,
+  track(
+    subscribeKey(
+      notional,
+      "notionalCcy",
+      (value) => ($dealStore.notionalCcy = value),
+      true,
+    ),
   );
 
   /**
@@ -155,13 +167,11 @@ export const createVanillaProductStore = (
    * Consume the broadcast command into this product's own strike field.
    * Sync notification is required: the broadcast is set and reset in one tick.
    */
-  subscribeDealKey(
-    $dealStore,
-    "strike",
-    (broadcast) => {
+  track(
+    subscribeDealKey($dealStore, "strike", (broadcast) => {
       if (broadcast === undefined) return;
       optionsCommon.strike = broadcast;
-    },
+    }),
   );
 
   /**
@@ -169,11 +179,13 @@ export const createVanillaProductStore = (
    * Days from today until expiry, recomputed whenever expiryDate changes.
    * Sync, so expiryDays and its validation settle within the same keystroke.
    */
-  subscribeKey(
-    base,
-    "expiryDate",
-    (expiryDate) => (base.expiryDays = daysUntil(expiryDate)),
-    true,
+  track(
+    subscribeKey(
+      base,
+      "expiryDate",
+      (expiryDate) => (base.expiryDays = daysUntil(expiryDate)),
+      true,
+    ),
   );
 
   const validateField = validateFieldFactory(
@@ -182,24 +194,29 @@ export const createVanillaProductStore = (
     productId,
   );
 
-  validateField("data.optionsCommon.base.notional.notionalCcy", ccySchema);
-  validateField("data.optionsCommon.base.notional.amount", amountSchema);
-  validateField("data.optionsCommon.base.premiumCcy", ccySchema);
-  validateField("data.optionsCommon.base.premiumDate", dateSchema);
-  validateField("data.optionsCommon.base.buySell", buySellSchema);
-  validateField("data.optionsCommon.base.ccyPair", ccyPairSchema);
-  validateField("data.optionsCommon.base.expiryDate", dateSchema);
-  validateField("data.optionsCommon.base.expiryDays", expiryDaysSchema);
-  validateField("data.optionsCommon.base.expiryCut", expiryCutSchema);
-  validateField("data.optionsCommon.base.deliveryDate", dateSchema);
-  validateField("data.optionsCommon.strike", strikeSchema);
-  validateField("data.optionsCommon.callPut", callPutSchema);
-  validateField("data.settlementStyle", settlementStyleSchema);
-  validateField("data.cashSettlement.settlementCcy", ccySchema);
-  validateField(
-    "data.cashSettlement.settlementFixingSource",
-    fixingSourceSchema,
-  );
+  [
+    validateField("data.optionsCommon.base.notional.notionalCcy", ccySchema),
+    validateField("data.optionsCommon.base.notional.amount", amountSchema),
+    validateField("data.optionsCommon.base.premiumCcy", ccySchema),
+    validateField("data.optionsCommon.base.premiumDate", dateSchema),
+    validateField("data.optionsCommon.base.buySell", buySellSchema),
+    validateField("data.optionsCommon.base.ccyPair", ccyPairSchema),
+    validateField("data.optionsCommon.base.expiryDate", dateSchema),
+    validateField("data.optionsCommon.base.expiryDays", expiryDaysSchema),
+    validateField("data.optionsCommon.base.expiryCut", expiryCutSchema),
+    validateField("data.optionsCommon.base.deliveryDate", dateSchema),
+    validateField("data.optionsCommon.strike", strikeSchema),
+    validateField("data.optionsCommon.callPut", callPutSchema),
+    validateField("data.settlementStyle", settlementStyleSchema),
+    validateField("data.cashSettlement.settlementCcy", ccySchema),
+    validateField(
+      "data.cashSettlement.settlementFixingSource",
+      fixingSourceSchema,
+    ),
+  ].forEach(track);
 
-  return productStore;
+  return {
+    productStore,
+    dispose: () => subscriptions.forEach((unsubscribe) => unsubscribe()),
+  };
 };

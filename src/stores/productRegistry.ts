@@ -7,10 +7,17 @@ import {
 
 export type AnyProductStore = ProductStore | VanillaProductStore;
 
+export type ProductHandle = {
+  productStore: AnyProductStore;
+  /** Drops the product's subscriptions; call when it leaves the deal. */
+  dispose(): void;
+};
+
 type ProductFactory = (
   $dealStore: DealStore,
   productId: string,
-) => AnyProductStore;
+  initial?: never,
+) => ProductHandle;
 
 /**
  * Every product type the deal can hold. Adding a product type means adding
@@ -37,3 +44,21 @@ export const getProductType = (
     | { data: Pick<VanillaProductStore["data"], "productType"> },
 ): ProductType =>
   "data" in product ? product.data.productType : product.productType;
+
+/**
+ * Creates a product of `productType`. `initial` seeds a clone and must be a
+ * plain copy of a product of that same type.
+ */
+export const createProduct = (
+  productType: ProductType,
+  $dealStore: DealStore,
+  productId: string,
+  initial?: AnyProductStore,
+): ProductHandle => {
+  const factory = productFactories[productType] as (
+    $dealStore: DealStore,
+    productId: string,
+    initial?: AnyProductStore,
+  ) => ProductHandle;
+  return factory($dealStore, productId, initial);
+};
