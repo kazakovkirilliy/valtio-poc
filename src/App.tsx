@@ -1,5 +1,4 @@
-import "./App.css";
-import { MultiDeal } from "./components/MultiDeal.tsx";
+import { MultiDeal } from "./multiDeal/MultiDeal.tsx";
 import { memo } from "react";
 
 const App = memo(() => {
