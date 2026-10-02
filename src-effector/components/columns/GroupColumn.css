@@ -1,0 +1,22 @@
+/*
+ * A group spans every row of the columns layout (see fields/columns.css);
+ * its grid columns — one per product — are set inline by GroupColumn.
+ */
+
+.group {
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  border: 1px solid var(--border);
+  padding: 0 var(--space) var(--space);
+}
+
+.group__header {
+  grid-row: 1;
+  grid-column: 1 / -1;
+}
+
+/* product columns start below the group header */
+.group > .column {
+  grid-row: 2 / -1;
+}

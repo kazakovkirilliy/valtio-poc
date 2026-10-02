@@ -1,0 +1,74 @@
+/*
+ * Columns layout.
+ *
+ * Rows (set inline from `columnsGridTemplateRows` in fields.ts): group
+ * header, product header, then one per field. Every column — including
+ * product columns nested in a group — uses `subgrid`, so each field row has
+ * one shared height and lines up with the label column. Columns scroll
+ * horizontally instead of wrapping: a wrapped column could not line up with
+ * the labels.
+ */
+
+.columns {
+  margin-top: var(--space);
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: start;
+  overflow-x: auto;
+}
+
+/* column */
+
+.column {
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  border: 1px solid var(--border);
+  padding-inline: var(--space);
+}
+
+.column--labels {
+  white-space: nowrap;
+}
+
+.column__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space);
+  width: 100%;
+}
+
+/* deal and label columns have no group header: theirs spans both header rows */
+.column__header--span {
+  grid-row: span 2;
+}
+
+.column__title {
+  text-align: center;
+  width: 100%;
+}
+
+/* cell: one per field row */
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  min-height: var(--row-min-height);
+}
+
+.cell--label {
+  justify-content: start;
+}
+
+/* input */
+
+.input {
+  width: var(--input-width);
+  outline: 0;
+}
+
+.input--error {
+  border-color: var(--error);
+}

@@ -1,0 +1,7 @@
+.multi-deal__tabs {
+  display: flex;
+}
+
+.multi-deal__tabs .button {
+  min-width: 100px;
+}

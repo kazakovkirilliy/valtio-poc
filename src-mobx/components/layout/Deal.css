@@ -1,0 +1,9 @@
+.deal {
+  background: var(--surface);
+  padding-top: var(--space);
+}
+
+.deal__toolbar {
+  display: flex;
+  gap: var(--space);
+}

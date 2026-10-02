@@ -1,0 +1,68 @@
+/* Design tokens, app shell and shared base components. */
+
+:root {
+  /* colors */
+  --text: #6b6375;
+  --bg: #fff;
+  --surface: #f4f3ec;
+  --border: #e5e4e7;
+  --error: red;
+
+  /* layout */
+  --space: 8px;
+  --input-width: 125px;
+  --row-min-height: 32px;
+
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --bg: #16171d;
+    --surface: #1f2028;
+    --border: #2e303a;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* button */
+
+.button {
+  padding: var(--space);
+  border: 0;
+  cursor: pointer;
+  background: var(--bg);
+}
+
+.button--active {
+  background: var(--surface);
+}
