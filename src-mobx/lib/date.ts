@@ -15,3 +15,10 @@ export const daysUntil = (isoDate: string): number => {
 
   return Math.round((target - today) / MS_PER_DAY);
 };
+
+/**
+ * Whether ISO date `date` is on or after `reference`. ISO `YYYY-MM-DD`
+ * strings compare correctly as strings; an empty date never fails.
+ */
+export const isOnOrAfter = (date: string, reference: string) =>
+  !date || !reference || date >= reference;

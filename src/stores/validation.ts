@@ -7,6 +7,16 @@ import { resolveParent, type LeafPath } from "../lib/path.ts";
 /** `validationErrors` key for a field path relative to the deal. */
 export const toValidationKey = (path: string) => path.replaceAll(".", "_");
 
+/**
+ * A rule across fields, reported on the field it is attached to. It re-runs
+ * when that field or any `dependsOn` field (paths from the product) changes.
+ */
+export type CrossFieldRule<T> = {
+  dependsOn: LeafPath<T>[];
+  message: string;
+  isValid: (productStore: T) => boolean;
+};
+
 const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
   if (!a && !b?.length) return true;
   if (!a || !b) return false;
@@ -20,21 +30,37 @@ export const validateFieldFactory = <T extends object>(
   productStore: T,
   productPath: string, // the product's path from the deal
 ) => {
+  const ownerOf = (path: string) => {
+    const { parent, key } = resolveParent(productStore, path);
+    if (!parent) throw new Error(`validateField: no parent for "${path}"`);
+    return { parent, key };
+  };
+
   /**
    * Per-field validation: runs once now, then only when this product's own
-   * field changes — never on unrelated deal or product changes.
-   * `path` is relative to the product and may be nested (`a.b.c`); the
+   * field — or a field one of its `rules` depends on — changes; never on
+   * unrelated deal or product changes. The field's schema and its rules are
+   * checked together, so one entry holds all of the field's issues.
+   * `path` is relative to the product and may be nested (`a.b.c`); each
    * subscription is placed on the nested proxy that owns the leaf key.
    * Returns the unsubscribe.
    */
-  const validateField = (path: LeafPath<T>, schema: ZodType) => {
+  const validateField = (
+    path: LeafPath<T>,
+    schema: ZodType,
+    rules: readonly CrossFieldRule<T>[] = [],
+  ) => {
     const fullPath = toValidationKey(`${productPath}.${path}`);
-    const { parent, key } = resolveParent(productStore, path);
-    if (!parent) throw new Error(`validateField: no parent for "${path}"`);
+    const { parent, key } = ownerOf(path);
 
     const validate = () => {
-      const result = schema.safeParse(parent[key]);
-      const issues = result.success ? [] : result.error.issues;
+      const value = parent[key];
+      const result = schema.safeParse(value);
+      const issues: $ZodIssue[] = result.success ? [] : [...result.error.issues];
+      for (const rule of rules) {
+        if (rule.isValid(productStore)) continue;
+        issues.push({ code: "custom", path: [], message: rule.message, input: value });
+      }
 
       // Only write if the content actually changed — avoids new
       // array identities and needless notifications.
@@ -45,7 +71,13 @@ export const validateFieldFactory = <T extends object>(
     };
 
     validate();
-    return subscribeKey(parent, key, validate, true);
+    const unsubscribes = [path, ...rules.flatMap((rule) => rule.dependsOn)].map(
+      (watched) => {
+        const owner = ownerOf(watched);
+        return subscribeKey(owner.parent, owner.key, validate, true);
+      },
+    );
+    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
   };
 
   return validateField;

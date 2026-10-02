@@ -1,7 +1,7 @@
 import { proxy } from "valtio";
 import { subscribeKey } from "valtio/utils";
 import { z, type ZodType } from "zod";
-import { daysUntil } from "../../lib/date.ts";
+import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import type { LeafPath } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
 import type { DealStore } from "../dealStore.ts";
@@ -10,7 +10,7 @@ import {
   subscribeDealBroadcasts,
   subscribeDealKey,
 } from "../subscribeDealKey.ts";
-import { validateFieldFactory } from "../validation.ts";
+import { type CrossFieldRule, validateFieldFactory } from "../validation.ts";
 
 export type AverageProductStore = {
   ui: {
@@ -93,6 +93,26 @@ const averageSchemas: Record<ProductFieldId, ZodType> = {
   settlementStyle: optionalString(z.enum(["Physical", "Cash"])),
   settlementCcy: ccySchema,
   settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
+};
+
+/**
+ * Rules across fields, listed under the field that shows the issue. Each
+ * re-runs when that field or a `dependsOn` field changes.
+ */
+const averageCrossFieldRules: Partial<
+  Record<ProductFieldId, CrossFieldRule<AverageProductStore>[]>
+> = {
+  deliveryDate: [
+    {
+      dependsOn: [averageFieldPaths.expiryDate],
+      message: "Delivery date can't be before expiry date",
+      isValid: ({ data }) =>
+        isOnOrAfter(
+          data.avroCommon.base.deliveryDate,
+          data.avroCommon.base.expiryDate,
+        ),
+    },
+  ],
 };
 
 const createDefaults = ($dealStore: DealStore): AverageProductStore => ({
@@ -219,7 +239,7 @@ export const createAverageProductStore = (
 
   /**
    * Validation
-   * Every field, against its schema above.
+   * Every field, against its schema and its cross-field rules above.
    */
   const validateField = validateFieldFactory(
     $dealStore,
@@ -227,7 +247,13 @@ export const createAverageProductStore = (
     productPath,
   );
   (Object.keys(averageSchemas) as ProductFieldId[]).forEach((fieldId) =>
-    track(validateField(averageFieldPaths[fieldId], averageSchemas[fieldId])),
+    track(
+      validateField(
+        averageFieldPaths[fieldId],
+        averageSchemas[fieldId],
+        averageCrossFieldRules[fieldId],
+      ),
+    ),
   );
 
   return {

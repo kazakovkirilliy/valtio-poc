@@ -1,7 +1,7 @@
 import { proxy } from "valtio";
 import { subscribeKey } from "valtio/utils";
 import { z, type ZodType } from "zod";
-import { daysUntil } from "../../lib/date.ts";
+import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import type { LeafPath } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
 import type { DealStore } from "../dealStore.ts";
@@ -10,7 +10,7 @@ import {
   subscribeDealBroadcasts,
   subscribeDealKey,
 } from "../subscribeDealKey.ts";
-import { validateFieldFactory } from "../validation.ts";
+import { type CrossFieldRule, validateFieldFactory } from "../validation.ts";
 
 export type VanillaProductStore = {
   ui: {
@@ -93,6 +93,26 @@ const vanillaSchemas: Record<ProductFieldId, ZodType> = {
   settlementStyle: optionalString(z.enum(["Physical", "Cash"])),
   settlementCcy: ccySchema,
   settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
+};
+
+/**
+ * Rules across fields, listed under the field that shows the issue. Each
+ * re-runs when that field or a `dependsOn` field changes.
+ */
+const vanillaCrossFieldRules: Partial<
+  Record<ProductFieldId, CrossFieldRule<VanillaProductStore>[]>
+> = {
+  deliveryDate: [
+    {
+      dependsOn: [vanillaFieldPaths.expiryDate],
+      message: "Delivery date can't be before expiry date",
+      isValid: ({ data }) =>
+        isOnOrAfter(
+          data.optionsCommon.base.deliveryDate,
+          data.optionsCommon.base.expiryDate,
+        ),
+    },
+  ],
 };
 
 const createDefaults = ($dealStore: DealStore): VanillaProductStore => ({
@@ -219,7 +239,7 @@ export const createVanillaProductStore = (
 
   /**
    * Validation
-   * Every field, against its schema above.
+   * Every field, against its schema and its cross-field rules above.
    */
   const validateField = validateFieldFactory(
     $dealStore,
@@ -227,7 +247,13 @@ export const createVanillaProductStore = (
     productPath,
   );
   (Object.keys(vanillaSchemas) as ProductFieldId[]).forEach((fieldId) =>
-    track(validateField(vanillaFieldPaths[fieldId], vanillaSchemas[fieldId])),
+    track(
+      validateField(
+        vanillaFieldPaths[fieldId],
+        vanillaSchemas[fieldId],
+        vanillaCrossFieldRules[fieldId],
+      ),
+    ),
   );
 
   return {

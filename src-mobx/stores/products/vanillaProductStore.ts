@@ -1,6 +1,6 @@
 import { observable } from "mobx";
 import { z, type ZodType } from "zod";
-import { daysUntil } from "../../lib/date.ts";
+import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import {
   type LeafPath,
   getValueByPath,
@@ -9,7 +9,11 @@ import {
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
 import { uuid } from "../../lib/uuid.ts";
 import { type ProductOwner, isSyncedField } from "../dealFields.ts";
-import { type FieldModel, createFieldModel } from "../fieldModel.ts";
+import {
+  type CrossFieldRule,
+  type FieldModel,
+  createFieldModel,
+} from "../fieldModel.ts";
 import type { ProductFieldId } from "../fields.ts";
 
 export type VanillaProductStore = {
@@ -101,6 +105,25 @@ const schemas: Record<ProductFieldId, ZodType> = {
   settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
 };
 
+/**
+ * Rules across fields, listed under the field that shows the issue. MobX
+ * tracks the dates each rule reads, so it re-runs when either changes.
+ */
+const crossFieldRules: Partial<
+  Record<ProductFieldId, CrossFieldRule<VanillaProductStore>[]>
+> = {
+  deliveryDate: [
+    {
+      message: "Delivery date can't be before expiry date",
+      isValid: ({ data }) =>
+        isOnOrAfter(
+          data.optionsCommon.base.deliveryDate,
+          data.optionsCommon.base.expiryDate,
+        ),
+    },
+  ],
+};
+
 const createData = (owner: ProductOwner): VanillaProductStore["data"] => ({
   productType: "VanillaProduct",
   cashSettlement: {
@@ -160,6 +183,10 @@ export const createVanillaProduct = (
       createFieldModel({
         read: () => getValueByPath(product, fieldPaths[id]),
         schema: schemas[id],
+        rules: crossFieldRules[id]?.map(({ message, isValid }) => ({
+          message,
+          isValid: () => isValid(product),
+        })),
         readOnly: readOnlyFields.has(id),
         // ccy commits go through the deal, which writes every product
         commit: (value) =>
