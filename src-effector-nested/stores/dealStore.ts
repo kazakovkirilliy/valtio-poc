@@ -26,7 +26,7 @@ import {
   productOf,
   productsOf,
 } from "./groupStore.ts";
-import { loadAllOptionsFx, loadOptionsFx } from "./optionsStore.ts";
+import { loadAllOptionsEffect, loadOptionsEffect } from "./optionsStore.ts";
 import {
   optionsRequestsFor,
   optionsRequestsOf,
@@ -155,23 +155,23 @@ export const createDealStore = (devtools: DealDevtools) => {
   connect({
     clock: groupCreated,
     fn: ({ group }) => optionsRequestsOf(Object.values(group.products)),
-    target: loadAllOptionsFx,
+    target: loadAllOptionsEffect,
   });
   // … and reload them whenever that field changes, in one product or broadcast to all
   connect({
     clock: actions.commitProductFieldAction,
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
-    target: loadAllOptionsFx,
+    target: loadAllOptionsEffect,
   });
   connect({
     clock: actions.broadcastFieldAction,
     filter: ({ value }) => !isEmptyBroadcast(value),
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
-    target: loadAllOptionsFx,
+    target: loadAllOptionsEffect,
   });
   // options arrived: products still on that parameter keep their value if it's
   // an option, else take the first (stale responses: ignored)
-  $groups.on(loadOptionsFx.done, (groups, { params, result }) =>
+  $groups.on(loadOptionsEffect.done, (groups, { params, result }) =>
     mapProducts(groups, (product) =>
       reconcileProductOptions(product, params, result),
     ),

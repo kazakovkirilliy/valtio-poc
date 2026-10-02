@@ -12,13 +12,13 @@ import {
 export type OptionsRequest = { source: OptionsSource; param: string };
 
 /** (Re)loads one list of options. */
-export const loadOptionsFx = createEffect(({ source, param }: OptionsRequest) =>
+export const loadOptionsEffect = createEffect(({ source, param }: OptionsRequest) =>
   source.load(param),
 );
 
 /** Loads several lists at once (e.g. a new group's); each settles on its own. */
-export const loadAllOptionsFx = createEffect((requests: OptionsRequest[]) =>
-  Promise.allSettled(requests.map((request) => loadOptionsFx(request))),
+export const loadAllOptionsEffect = createEffect((requests: OptionsRequest[]) =>
+  Promise.allSettled(requests.map((request) => loadOptionsEffect(request))),
 );
 
 /** Writes one entry; an unchanged entry leaves the whole store unchanged. */
@@ -34,8 +34,8 @@ const withEntry = (
 
 /** Every async dropdown's options, per source and parameter; shared by every deal. */
 export const $optionsByKey = createStore<Record<string, OptionsState>>({})
-  .on(loadOptionsFx, (byKey, request) => withEntry(byKey, request, optionsLoading))
-  .on(loadOptionsFx.done, (byKey, { params, result }) =>
+  .on(loadOptionsEffect, (byKey, request) => withEntry(byKey, request, optionsLoading))
+  .on(loadOptionsEffect.done, (byKey, { params, result }) =>
     withEntry(byKey, params, (prev) => optionsLoaded(prev, result)),
   )
-  .on(loadOptionsFx.fail, (byKey, { params }) => withEntry(byKey, params, optionsFailed));
+  .on(loadOptionsEffect.fail, (byKey, { params }) => withEntry(byKey, params, optionsFailed));

@@ -12,7 +12,7 @@
 import { attachReduxDevTools } from "@effector/redux-devtools-adapter";
 import type { Unit } from "effector";
 import { debug } from "patronum";
-import { $optionsByKey, loadOptionsFx } from "./stores/optionsStore.ts";
+import { $optionsByKey, loadOptionsEffect } from "./stores/optionsStore.ts";
 import { $deals } from "./stores/multiTabStore.ts";
 
 // the adapter logs an error when the extension is missing: attach only if it's
@@ -27,7 +27,7 @@ if ("__REDUX_DEVTOOLS_EXTENSION__" in window) {
 }
 
 if (new URLSearchParams(location.search).has("debug")) {
-  debug({ trace: true }, { $optionsByKey, loadOptionsFx });
+  debug({ trace: true }, { $optionsByKey, loadOptionsEffect });
 
   // every deal's units are named after their variables, the same in every
   // deal: prefix them with the deal's tab

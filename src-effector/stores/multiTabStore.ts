@@ -37,7 +37,7 @@ persist({
 const dealModels = new Map<string, DealStore>();
 export const getDealStore = (dealId: string) => dealModels.get(dealId)!;
 
-const createDealFx = createEffect(() => {
+const createDealEffect = createEffect(() => {
   const dealId = uuid();
   // the deal gets only the settings it reads
   dealModels.set(dealId, createDealStore({ $isSpotPriceStreamEnabled }));
@@ -47,12 +47,12 @@ const createDealFx = createEffect(() => {
 export const addNewDealAction = createEvent();
 export const setActiveDealAction = createEvent<string>();
 
-connect({ clock: addNewDealAction, target: createDealFx });
+connect({ clock: addNewDealAction, target: createDealEffect });
 
 export const $dealIds = createStore<string[]>([]).on(
-  createDealFx.doneData,
+  createDealEffect.doneData,
   (dealIds, dealId) => [...dealIds, dealId],
 );
 export const $activeDealId = createStore("")
-  .on(createDealFx.doneData, (_, dealId) => dealId)
+  .on(createDealEffect.doneData, (_, dealId) => dealId)
   .on(setActiveDealAction, (_, dealId) => dealId);
