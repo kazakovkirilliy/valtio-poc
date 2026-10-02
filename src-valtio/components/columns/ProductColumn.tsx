@@ -32,6 +32,10 @@ export const ProductColumn = memo(({ productPath, productType }: Props) => {
         readOnly: readOnlyFields.includes(fieldId),
       };
     }
+    // its options depend on this product's settlement style
+    if (result.settlementFixingSource && fieldPaths.settlementStyle) {
+      result.settlementFixingSource.settlementStylePath = `${productPath}.${fieldPaths.settlementStyle}`;
+    }
     return result;
   }, [productPath, productType]);
 

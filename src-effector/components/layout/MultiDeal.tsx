@@ -10,7 +10,6 @@ import {
   getDealStore,
   setActiveDealAction,
 } from "../../stores/multiTabStore.ts";
-import { loadSettlementStylesAction } from "../../stores/settlementStyleStore.ts";
 import { Deal } from "./Deal.tsx";
 import { DealStoreProvider } from "../providers/DealStoreProvider.tsx";
 
@@ -34,10 +33,7 @@ export const MultiDeal = memo(() => {
   const onAddNewDeal = useAction(addNewDealAction);
   const onSetActiveDeal = useAction(setActiveDealAction);
 
-  const loadSettlementStyles = useAction(loadSettlementStylesAction);
-
   useOnMount(() => {
-    loadSettlementStyles(); // shared by every deal
     onAddNewDeal();
   });
 

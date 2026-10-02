@@ -1,5 +1,4 @@
 import {
-  combine,
   createEvent,
   createStore,
   merge,
@@ -9,7 +8,6 @@ import {
 import {
   type BroadcastFieldId,
   type DealFieldsState,
-  type ProductDefaults,
   type SyncedFieldId,
   isSyncedField,
 } from "./dealFields.ts";
@@ -29,11 +27,11 @@ import {
   validateProducts,
 } from "./products/productRegistry.ts";
 import { createSpotPriceStream } from "./spotPriceStream.ts";
-import { toSettlementStyleValue } from "../api/settlementStyles.ts";
+import { reconcileFixingSource } from "../api/fixingSources.ts";
 import {
-  $firstSettlementStyleValue,
-  loadSettlementStylesFx,
-} from "./settlementStyleStore.ts";
+  loadFixingSourcesForStylesFx,
+  loadFixingSourcesFx,
+} from "./fixingSourceStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
 type DealDevtools = { $isSpotPriceStreamEnabled: Store<boolean> };
@@ -94,12 +92,6 @@ export const createDealStore = (devtools: DealDevtools) => {
 
   // --- derived
   const $groupOrder = $groups.map((groups) => groups.order);
-  /** What a new product starts from: the deal's ccys + the default settlement style. */
-  const $productDefaults = combine(
-    $dealFields,
-    $firstSettlementStyleValue,
-    (deal, settlementStyle): ProductDefaults => ({ ...deal, settlementStyle }),
-  );
   const $hedgeTypes = $isInternal.map((isInternal) =>
     isInternal ? ["abc"] : ["def"],
   );
@@ -113,12 +105,12 @@ export const createDealStore = (devtools: DealDevtools) => {
   const groupCreated = merge([
     connect({
       clock: addGroupAction,
-      source: { defaults: $productDefaults, groups: $groups },
+      source: { defaults: $dealFields, groups: $groups },
       fn: addGroupReducer,
     }),
     connect({
       clock: cloneGroupAction,
-      source: { defaults: $productDefaults, groups: $groups, products: $products },
+      source: { defaults: $dealFields, groups: $groups, products: $products },
       filter: ({ groups }, groupId) => groupId in groups.byId,
       fn: cloneGroupReducer,
     }),
@@ -174,17 +166,46 @@ export const createDealStore = (devtools: DealDevtools) => {
     );
   });
 
-  // default Settlement Style: when the options load, every product still
-  // without one gets the first option (products created later start with it)
-  $products.on(loadSettlementStylesFx.doneData, (products, [first]) => {
-    if (!first) return products;
-    const value = toSettlementStyleValue(first);
-    return mapProducts(products, (product) =>
-      readProductField(product, "settlementStyle")
-        ? product
-        : setProductField(product, "settlementStyle", value),
-    );
+  // --- fixing sources: their options depend on the product's settlement style
+  // load them for a new group's styles (one request per style) …
+  connect({
+    clock: groupCreated,
+    fn: ({ products }) => [
+      ...new Set(
+        products.map((product) => String(readProductField(product, "settlementStyle"))),
+      ),
+    ],
+    target: loadFixingSourcesForStylesFx,
   });
+  // … and reload them whenever a style changes, in one product or broadcast to all
+  connect({
+    clock: commitProductFieldAction,
+    filter: ({ fieldId }) => fieldId === "settlementStyle",
+    fn: ({ value }) => String(value),
+    target: loadFixingSourcesFx,
+  });
+  connect({
+    clock: broadcastFieldAction,
+    filter: ({ fieldId, value }) => fieldId === "settlementStyle" && value !== "",
+    fn: ({ value }) => String(value),
+    target: loadFixingSourcesFx,
+  });
+  // options arrived for a style: products still on that style keep their fixing
+  // source if it's an option, else reset to the first (stale responses: ignored)
+  $products.on(loadFixingSourcesFx.done, (products, { params: style, result }) =>
+    mapProducts(products, (product) =>
+      readProductField(product, "settlementStyle") === style
+        ? setProductField(
+            product,
+            "settlementFixingSource",
+            reconcileFixingSource(
+              String(readProductField(product, "settlementFixingSource") ?? ""),
+              result,
+            ),
+          )
+        : product,
+    ),
+  );
 
   // --- spot price: kept outside the stores, ticks never notify subscribers
   const spotPriceStream = createSpotPriceStream();

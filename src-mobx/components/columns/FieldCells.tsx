@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { type FieldId, fields as fieldDefinitions } from "../../stores/fields.ts";
 import type { FieldModel } from "../../stores/fieldModel.ts";
 import { Input } from "../fields/Input.tsx";
+import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
 import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 
 type Props = {
@@ -23,8 +24,16 @@ export const FieldCells = ({ fields, custom }: Props) =>
         {!field ? (
           custom?.[id]
         ) : input === "select" ? (
-          // the only select field: its options come from the API
-          <SettlementStyleSelect field={field} label={label} />
+          id === "settlementStyle" ? (
+            <SettlementStyleSelect field={field} label={label} />
+          ) : (
+            // its options depend on the column's settlement style
+            <FixingSourceSelect
+              field={field}
+              label={label}
+              settlementStyleField={fields.settlementStyle}
+            />
+          )
         ) : (
           <Input field={field} label={label} type={input} />
         )}

@@ -1,4 +1,4 @@
-import { autorun, observable, reaction } from "mobx";
+import { autorun, observable } from "mobx";
 import {
   type BroadcastFieldId,
   type SyncedFieldId,
@@ -13,7 +13,6 @@ import {
   groupDefinitions,
 } from "./groupStore.ts";
 import type { AnyProduct } from "./products/productRegistry.ts";
-import { settlementStyleStore } from "./settlementStyleStore.ts";
 import {
   type SpotPriceStream,
   createSpotPriceStream,
@@ -41,7 +40,6 @@ export type DealStore = {
   removeGroup(groupId: string): void;
   setSynced(id: SyncedFieldId, value: string): void;
   broadcast(id: BroadcastFieldId, value: unknown): void;
-  applyDefaultSettlementStyle(value: string): void;
   dispose(): void;
 };
 
@@ -148,17 +146,8 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       broadcast(id, value) {
         deal.products.forEach((product) => product.setField(id, value));
       },
-      /** Gives every product with no settlement style the default one. */
-      applyDefaultSettlementStyle(value) {
-        deal.products.forEach((product) => {
-          if (!product.fields.settlementStyle.value) {
-            product.setField("settlementStyle", value);
-          }
-        });
-      },
       dispose() {
         stopSpotPriceStream();
-        stopDefaultSettlementStyle();
         spotPriceStream.stop();
       },
     },
@@ -170,15 +159,6 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     devtools.isSpotPriceStreamEnabled
       ? spotPriceStream.start()
       : spotPriceStream.stop(),
-  );
-
-  /**
-   * Default Settlement Style: when the options load, every product still
-   * without one gets the first option. Products created later start with it.
-   */
-  const stopDefaultSettlementStyle = reaction(
-    () => settlementStyleStore.firstValue,
-    (value) => value && deal.applyDefaultSettlementStyle(value),
   );
 
   return deal;

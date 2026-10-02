@@ -10,7 +10,9 @@ import { fieldInputTypes, fieldLabels } from "../../stores/fields.ts";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { FieldCells } from "./FieldCells.tsx";
 import { Input } from "../fields/Input.tsx";
+import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
 import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
+import { DEFAULT_SETTLEMENT_STYLE } from "../../stores/settlementStyles.ts";
 import { SpotPriceField } from "../fields/SpotPriceField.tsx";
 
 /** Shows the deal value; a commit syncs the deal and every product. */
@@ -42,11 +44,21 @@ const BroadcastField = memo(({ fieldId }: { fieldId: BroadcastFieldId }) => {
   const type = fieldInputTypes[fieldId];
 
   return type === "select" ? (
-    <SettlementStyleSelect
-      label={fieldLabels[fieldId]}
-      value={undefined}
-      onCommit={onCommit}
-    />
+    fieldId === "settlementStyle" ? (
+      <SettlementStyleSelect
+        label={fieldLabels[fieldId]}
+        value={undefined}
+        onCommit={onCommit}
+      />
+    ) : (
+      // the deal holds no style of its own: it offers the default style's options
+      <FixingSourceSelect
+        label={fieldLabels[fieldId]}
+        settlementStyle={DEFAULT_SETTLEMENT_STYLE}
+        value={undefined}
+        onCommit={onCommit}
+      />
+    )
   ) : (
     <Input
       label={fieldLabels[fieldId]}

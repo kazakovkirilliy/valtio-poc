@@ -32,5 +32,5 @@ export type BroadcastFieldId = (typeof broadcastFieldIds)[number];
 /** The deal's own values: the synced fields. New products start from them. */
 export type DealFieldsState = Record<SyncedFieldId, string>;
 
-/** What a new product starts from: the deal's values and the defaults. */
-export type ProductDefaults = DealFieldsState & { settlementStyle: string };
+/** What a new product starts from: the deal's values. */
+export type ProductDefaults = DealFieldsState;

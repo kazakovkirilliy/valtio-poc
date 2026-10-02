@@ -20,7 +20,7 @@ export const fields = [
   { id: "premiumDate", label: "Premium Date", input: "date" },
   { id: "settlementStyle", label: "Settlement Style", input: "select" },
   { id: "settlementCcy", label: "Settlement Ccy", input: "text" },
-  { id: "settlementFixingSource", label: "Fixing Source", input: "text" },
+  { id: "settlementFixingSource", label: "Fixing Source", input: "select" },
   { id: "spotStream", label: "Spot Stream", input: "number" },
 ] as const satisfies readonly { id: string; label: string; input: InputType }[];
 

@@ -2,6 +2,7 @@ import { z, type ZodType } from "zod";
 import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import { type LeafPath, setIn } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
+import { DEFAULT_SETTLEMENT_STYLE, settlementStyles } from "../settlementStyles.ts";
 import type { ProductDefaults } from "../dealFields.ts";
 import type { ProductFieldId } from "../fields.ts";
 import {
@@ -87,10 +88,10 @@ const schemas: Record<ProductFieldId, ZodType> = {
   expiryCut: z.string().max(10, "Must be at most 10 characters"),
   deliveryDate: dateSchema,
   premiumDate: dateSchema,
-  // an option id; the options themselves come from the API
-  settlementStyle: z.string(),
+  settlementStyle: z.enum(settlementStyles),
   settlementCcy: ccySchema,
-  settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
+  // an option id; the options come from the API, per settlement style
+  settlementFixingSource: z.string(),
 };
 
 /** Rules across fields, listed under the field that shows the issue. */
@@ -130,8 +131,7 @@ export const createAverageData = (defaults: ProductDefaults): AverageData => ({
     callPut: "",
     strike: "",
   },
-  // the first option once loaded; until then the deal fills it in on load
-  settlementStyle: defaults.settlementStyle,
+  settlementStyle: DEFAULT_SETTLEMENT_STYLE,
 });
 
 /**

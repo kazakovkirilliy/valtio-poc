@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { type FieldId, fields } from "../../stores/fields.ts";
 import { Input } from "../fields/Input.tsx";
+import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
 import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 
 /** Binds a field to a store path; the input type comes from `fields.ts`. */
@@ -8,6 +9,8 @@ export type FieldBinding = {
   path: string;
   isBroadcasting?: boolean;
   readOnly?: boolean;
+  /** Fixing source: the product's settlement style, which picks its options. */
+  settlementStylePath?: string;
 };
 
 export type FieldBindings = Partial<Record<FieldId, FieldBinding>>;
@@ -30,12 +33,20 @@ export const FieldCells = ({ bindings, custom }: Props) =>
         {!binding ? (
           custom?.[id]
         ) : input === "select" ? (
-          // the only select field: its options come from the API
-          <SettlementStyleSelect
-            label={label}
-            path={binding.path}
-            isBroadcasting={binding.isBroadcasting}
-          />
+          id === "settlementStyle" ? (
+            <SettlementStyleSelect
+              label={label}
+              path={binding.path}
+              isBroadcasting={binding.isBroadcasting}
+            />
+          ) : (
+            <FixingSourceSelect
+              label={label}
+              path={binding.path}
+              isBroadcasting={binding.isBroadcasting}
+              settlementStylePath={binding.settlementStylePath}
+            />
+          )
         ) : (
           <Input
             label={label}

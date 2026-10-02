@@ -1,7 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { toSettlementStyleValue } from "../../api/settlementStyles.ts";
 import type { FieldModel } from "../../stores/fieldModel.ts";
-import { settlementStyleStore } from "../../stores/settlementStyleStore.ts";
+import { settlementStyleOptions } from "../../stores/settlementStyles.ts";
 import { Select } from "./Select.tsx";
 
 type Props = {
@@ -10,25 +9,18 @@ type Props = {
 };
 
 /**
- * Settlement Style, as a dropdown over the options loaded from the API. What
- * picking an option does (write the product, broadcast) is the field model's.
+ * Settlement Style: a fixed list (Cash, Delivery). What picking does (write
+ * the product and reload its fixing sources, or broadcast) is the field's.
  */
-export const SettlementStyleSelect = observer(({ field, label }: Props) => {
-  const { status, options } = settlementStyleStore;
-
-  return (
-    <Select
-      label={label}
-      value={field.value}
-      options={options.map((option) => ({
-        value: toSettlementStyleValue(option),
-        label: option.name,
-      }))}
-      status={status === "loaded" || status === "error" ? status : "loading"}
-      hasError={field.issues.length > 0}
-      onCommit={(value) => field.commit(value)}
-    />
-  );
-});
+export const SettlementStyleSelect = observer(({ field, label }: Props) => (
+  <Select
+    label={label}
+    value={field.value}
+    options={settlementStyleOptions}
+    status="loaded"
+    hasError={field.issues.length > 0}
+    onCommit={(value) => field.commit(value)}
+  />
+));
 
 SettlementStyleSelect.displayName = "SettlementStyleSelect";

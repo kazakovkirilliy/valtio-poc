@@ -4,6 +4,7 @@ import { z, type ZodType } from "zod";
 import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import type { LeafPath } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
+import { DEFAULT_SETTLEMENT_STYLE, settlementStyles } from "../settlementStyles.ts";
 import type { DealStore } from "../dealStore.ts";
 import type { ProductFieldId } from "../fields.ts";
 import {
@@ -11,7 +12,8 @@ import {
   subscribeDealKey,
 } from "../subscribeDealKey.ts";
 import { type CrossFieldRule, validateFieldFactory } from "../validation.ts";
-import { firstSettlementStyleValue } from "../settlementStyleStore.ts";
+import { fixingSourceStore } from "../fixingSourceStore.ts";
+import { reconcileFixingSource } from "../../api/fixingSources.ts";
 
 export type VanillaProductStore = {
   ui: {
@@ -91,10 +93,10 @@ const vanillaSchemas: Record<ProductFieldId, ZodType> = {
   expiryCut: z.string().max(10, "Must be at most 10 characters"),
   deliveryDate: dateSchema,
   premiumDate: dateSchema,
-  // an option id; the options themselves come from the API
-  settlementStyle: z.string(),
+  settlementStyle: z.enum(settlementStyles),
   settlementCcy: ccySchema,
-  settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
+  // an option id; the options come from the API, per settlement style
+  settlementFixingSource: z.string(),
 };
 
 /**
@@ -143,8 +145,7 @@ const createDefaults = ($dealStore: DealStore): VanillaProductStore => ({
       callPut: "",
       strike: "",
     },
-    // the first option once loaded; until then the deal fills it in on load
-    settlementStyle: firstSettlementStyleValue(),
+    settlementStyle: DEFAULT_SETTLEMENT_STYLE,
   },
 });
 
@@ -239,6 +240,35 @@ export const createVanillaProductStore = (
       true,
     ),
   );
+
+  /**
+   * Async dependent field
+   * Fixing source options depend on the settlement style: they load for the
+   * current style now and reload on every change. When they arrive, the
+   * fixing source is kept if it is still an option, else reset to the first.
+   * A response for a style the product no longer has is ignored.
+   */
+  let disposed = false;
+  const reloadFixingSources = async (settlementStyle: string) => {
+    const options = await fixingSourceStore.actions.load(settlementStyle);
+    if (!options || disposed) return;
+    if (productStore.data.settlementStyle !== settlementStyle) return; // stale
+    const { cashSettlement } = productStore.data;
+    cashSettlement.settlementFixingSource = reconcileFixingSource(
+      cashSettlement.settlementFixingSource,
+      options,
+    );
+  };
+  void reloadFixingSources(productStore.data.settlementStyle);
+  track(
+    subscribeKey(
+      productStore.data,
+      "settlementStyle",
+      (settlementStyle) => void reloadFixingSources(settlementStyle),
+      true,
+    ),
+  );
+  track(() => (disposed = true));
 
   /**
    * Validation

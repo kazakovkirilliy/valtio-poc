@@ -14,7 +14,9 @@ import {
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { FieldCells } from "./FieldCells.tsx";
 import { Input } from "../fields/Input.tsx";
+import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
 import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
+import { DEFAULT_SETTLEMENT_STYLE } from "../../stores/settlementStyles.ts";
 
 type FieldProps = {
   productId: string;
@@ -46,13 +48,22 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
   const type = fieldInputTypes[fieldId];
 
   return type === "select" ? (
-    // the only select field: its options come from the API
-    <SettlementStyleSelect
-      label={fieldLabels[fieldId]}
-      value={value}
-      hasError={hasError}
-      onCommit={onCommit}
-    />
+    fieldId === "settlementStyle" ? (
+      <SettlementStyleSelect
+        label={fieldLabels[fieldId]}
+        value={value}
+        hasError={hasError}
+        onCommit={onCommit}
+      />
+    ) : (
+      <ProductFixingSourceSelect
+        productId={productId}
+        label={fieldLabels[fieldId]}
+        value={value}
+        hasError={hasError}
+        onCommit={onCommit}
+      />
+    )
   ) : (
     <Input
       label={fieldLabels[fieldId]}
@@ -66,6 +77,38 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
 });
 
 ProductField.displayName = "ProductField";
+
+type FixingSourceProps = {
+  productId: string;
+  label: string;
+  value: unknown;
+  hasError: boolean;
+  onCommit: (value: unknown) => void;
+};
+
+/** Fixing Source: shows the options loaded for this product's settlement style. */
+const ProductFixingSourceSelect = memo(
+  ({ productId, ...props }: FixingSourceProps) => {
+    const { $products } = useDealStore();
+    const settlementStyle = useStoreMap({
+      store: $products,
+      keys: [productId],
+      fn: (products, [id]) => {
+        const product = products[id];
+        return product ? String(readProductField(product, "settlementStyle") ?? "") : "";
+      },
+    });
+
+    return (
+      <FixingSourceSelect
+        {...props}
+        settlementStyle={settlementStyle || DEFAULT_SETTLEMENT_STYLE}
+      />
+    );
+  },
+);
+
+ProductFixingSourceSelect.displayName = "ProductFixingSourceSelect";
 
 /**
  * Any product's column: its title and every field it maps. Which fields a

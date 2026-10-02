@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { proxy } from "valtio";
 import type { $ZodIssue } from "zod/v4/core";
 import { useDealStore } from "../components/providers/DealStoreProvider.tsx";
@@ -34,4 +34,21 @@ export const useValidationError = (path: string) => {
     | undefined;
 
   return { hasError: !!issues?.length, issues };
+};
+
+/**
+ * Commits a value to a deal path. A broadcast field holds nothing: the value
+ * is written (reaching every product) and reset in the same tick.
+ */
+export const useDealCommit = (path: string, isBroadcasting = false) => {
+  const { actions } = useDealStore();
+  return useCallback(
+    (value: unknown) => {
+      if (!isBroadcasting) return actions.setValueByPath(path, value);
+      if (value === "" || value === undefined) return; // nothing to broadcast
+      actions.setValueByPath(path, value);
+      actions.setValueByPath(path, undefined);
+    },
+    [actions, path, isBroadcasting],
+  );
 };

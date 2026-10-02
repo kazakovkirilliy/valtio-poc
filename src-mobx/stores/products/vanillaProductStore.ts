@@ -7,6 +7,7 @@ import {
   setValueByPath,
 } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
+import { DEFAULT_SETTLEMENT_STYLE, settlementStyles } from "../settlementStyles.ts";
 import { uuid } from "../../lib/uuid.ts";
 import { type ProductOwner, isSyncedField } from "../dealFields.ts";
 import {
@@ -14,7 +15,8 @@ import {
   type FieldModel,
   createFieldModel,
 } from "../fieldModel.ts";
-import { settlementStyleStore } from "../settlementStyleStore.ts";
+import { fixingSourceStore } from "../fixingSourceStore.ts";
+import { reconcileFixingSource } from "../../api/fixingSources.ts";
 import type { ProductFieldId } from "../fields.ts";
 
 export type VanillaProductStore = {
@@ -101,10 +103,10 @@ const schemas: Record<ProductFieldId, ZodType> = {
   expiryCut: z.string().max(10, "Must be at most 10 characters"),
   deliveryDate: dateSchema,
   premiumDate: dateSchema,
-  // an option id; the options themselves come from the API
-  settlementStyle: z.string(),
+  settlementStyle: z.enum(settlementStyles),
   settlementCcy: ccySchema,
-  settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
+  // an option id; the options come from the API, per settlement style
+  settlementFixingSource: z.string(),
 };
 
 /**
@@ -150,8 +152,7 @@ const createData = (owner: ProductOwner): VanillaProductStore["data"] => ({
     callPut: "",
     strike: "",
   },
-  // the first option once loaded; until then the deal fills it in on load
-  settlementStyle: settlementStyleStore.firstValue,
+  settlementStyle: DEFAULT_SETTLEMENT_STYLE,
 });
 
 /**
@@ -200,6 +201,27 @@ export const createVanillaProduct = (
     ]),
   ) as Record<ProductFieldId, FieldModel>;
 
+  /**
+   * Async dependent field
+   * Fixing source options depend on the settlement style: they load for the
+   * product's style on creation and reload whenever `setField` changes it.
+   * When they arrive, the fixing source is kept if it is still an option,
+   * else reset to the first. A response for a style the product no longer
+   * has is ignored.
+   */
+  const reloadFixingSources = async (settlementStyle: string) => {
+    const options = await fixingSourceStore.load(settlementStyle);
+    if (!options) return; // failed: keep the current value
+    if (product.data.settlementStyle !== settlementStyle) return; // stale
+    product.setField(
+      "settlementFixingSource",
+      reconcileFixingSource(
+        product.data.cashSettlement.settlementFixingSource,
+        options,
+      ),
+    );
+  };
+
   const product: VanillaProduct = observable<VanillaProduct>(
     {
       id: uuid(),
@@ -212,11 +234,13 @@ export const createVanillaProduct = (
       setField(id, value) {
         if (readOnlyFields.has(id)) return; // derived: never written
         setValueByPath(product, fieldPaths[id], value);
+        if (id === "settlementStyle") void reloadFixingSources(String(value));
       },
     },
     { id: false, fields: false },
     { autoBind: true },
   );
 
+  void reloadFixingSources(product.data.settlementStyle);
   return product;
 };
