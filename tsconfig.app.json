@@ -22,5 +22,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "src-mobx", "src-effector"]
+  "include": ["src-valtio", "src-mobx", "src-effector"]
 }
