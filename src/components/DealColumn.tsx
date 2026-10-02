@@ -1,14 +1,14 @@
 import { memo } from "react";
-import { Input } from "./Input.tsx";
+import { BroadcastStrikeField, Input } from "./Input.tsx";
 import { SpotPriceField } from "./SpotPriceField.tsx";
 
 export const DealColumn = memo(() => {
   return (
-    <div className="column">
-      <h5>Deal Column</h5>
+    <div className="column" aria-label="Deal fields">
+      <h2>Deal</h2>
       <Input label="Notional Ccy" path="notionalCcy" />
       <Input label="Premium Ccy" path="premiumCcy" />
-      <Input label="Strike" path="strike" isBroadcasting />
+      <BroadcastStrikeField />
       <SpotPriceField />
     </div>
   );

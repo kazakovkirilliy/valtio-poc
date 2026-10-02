@@ -8,19 +8,16 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
-    "clsx": "latest",
+    "jotai": "^3.0.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-use": "^17.6.1",
     "valtio": "latest",
-    "valtio-auto-persist": "^2.2.3",
-    "valtio-persist": "^2.2.5",
-    "valtio-plugin": "^1.11.4",
-    "valtio-reactive": "0.2.0",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

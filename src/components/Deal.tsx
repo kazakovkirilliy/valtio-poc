@@ -1,41 +1,22 @@
 import { DealColumn } from "./DealColumn.tsx";
 import { ProductColumn } from "./ProductColumn.tsx";
-import {
-  useDealStoreSnapshot,
-  useDealStore,
-} from "../contexts/DealStoreProvider.tsx";
+import { useDealId, useStoreBindings } from "../contexts/StoreProvider.tsx";
 import { DealHeader } from "./DealHeader.tsx";
 import { memo } from "react";
-import { useOnMount } from "../hooks/useOnMount.ts";
-
-const SingleProduct = memo(({ productId }: { productId: string }) => (
-  <ProductColumn key={productId} productId={productId} />
-));
-
-SingleProduct.displayName = "SingleProduct";
 
 export const Deal = memo(() => {
-  const snap = useDealStoreSnapshot();
-
-  const actions = useDealStore().actions;
-
-  useOnMount(() => {
-    actions.addNewProduct();
-  });
-
+  const bindings = useStoreBindings();
+  const productIds = bindings.useProductIds(useDealId());
   return (
-    <>
-      <section className="deal">
+      <section className="deal" aria-label="Active deal">
         <DealHeader />
-
         <div className="columnsContainer">
           <DealColumn />
-          {Object.keys(snap.products).map((productId) => (
-            <SingleProduct key={productId} productId={productId} />
+          {productIds.map((productId, index) => (
+            <ProductColumn key={productId} productId={productId} number={index + 1} />
           ))}
         </div>
       </section>
-    </>
   );
 });
 

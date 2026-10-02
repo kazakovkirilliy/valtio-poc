@@ -3,12 +3,13 @@ import { Input } from "./Input.tsx";
 
 type Props = {
   productId: string;
+  number: number;
 };
 
-export const ProductColumn = memo(({ productId }: Props) => {
+export const ProductColumn = memo(({ productId, number }: Props) => {
   return (
-    <div className="column">
-      <h5>Product Column</h5>
+    <div className="column" aria-label={`Product ${number}`}>
+      <h2>Product {number}</h2>
       <Input
         label="Notional Ccy"
         path={`products.${productId}.productNotionalCcy`}

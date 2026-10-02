@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useRef } from "react";
-import { useDealStore } from "../contexts/DealStoreProvider.tsx";
+import { useDealId, useStoreBindings } from "../contexts/StoreProvider.tsx";
 
 /**
  * Read-only spot price. Ticks are written straight to the DOM node, so the
@@ -7,29 +7,31 @@ import { useDealStore } from "../contexts/DealStoreProvider.tsx";
  */
 export const SpotPriceField = memo(() => {
   const id = useId();
-  const { spotPriceStream } = useDealStore();
+  const bindings = useStoreBindings();
+  const spotPriceStream = bindings.getSpotPriceStream(useDealId());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(
-    () =>
-      spotPriceStream.subscribe(() => {
+  useEffect(() => {
+    const update = () => {
         if (inputRef.current) {
           inputRef.current.value = spotPriceStream.getValue().toString();
         }
-      }),
-    [spotPriceStream],
-  );
+    };
+    update();
+    return spotPriceStream.subscribe(update);
+  }, [spotPriceStream]);
 
   return (
-    <div>
+    <div className="field">
       <label htmlFor={id}>Spot Stream</label>
       <input
         ref={inputRef}
         id={id}
         defaultValue={spotPriceStream.getValue()}
-        disabled
         readOnly
+        aria-describedby={`${id}-hint`}
       />
+      <small id={`${id}-hint`}>Ticks every 500 ms. Zero React commits.</small>
     </div>
   );
 });

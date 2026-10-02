@@ -8,8 +8,8 @@ export type SpotPriceStream = {
 };
 
 /**
- * High-frequency, display-only value kept outside valtio: a tick notifies only
- * its own subscribers, never the deal proxy's (snapshots, effects, devtools).
+ * Display-only value kept outside every store. Ticks notify only this stream's
+ * subscribers, never React or a deal's state subscriptions.
  */
 export const createSpotPriceStream = (): SpotPriceStream => {
   let value = 0;
@@ -37,3 +37,25 @@ export const createSpotPriceStream = (): SpotPriceStream => {
     },
   };
 };
+
+/** Only the selected implementation runs timers. Safe to reconnect in StrictMode. */
+export function connectSpotPriceStreams(
+  getStreams: () => SpotPriceStream[],
+  isEnabled: () => boolean,
+  subscribeChanges: (listener: () => void) => () => void,
+) {
+  const connected = new Set<SpotPriceStream>();
+  const sync = () => {
+    for (const stream of getStreams()) {
+      connected.add(stream);
+      if (isEnabled()) stream.start();
+      else stream.stop();
+    }
+  };
+  const unsubscribe = subscribeChanges(sync);
+  sync();
+  return () => {
+    unsubscribe();
+    connected.forEach((stream) => stream.stop());
+  };
+}
