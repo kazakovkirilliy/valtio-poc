@@ -15,9 +15,15 @@ import { debug } from "patronum";
 import { $optionsByKey, loadOptionsFx } from "./stores/optionsStore.ts";
 import { $dealIds, getDealStore } from "./stores/multiTabStore.ts";
 
-// the adapter logs an error when the extension is missing: attach only if it's installed
+// the adapter logs an error when the extension is missing: attach only if it's
+// installed, and say so otherwise (e.g. its site access doesn't cover this page)
 if ("__REDUX_DEVTOOLS_EXTENSION__" in window) {
-  attachReduxDevTools({ name: "Deal editor (Effector)", trace: true });
+  // stateTab: every store's value in the State/Diff tabs (off by default)
+  attachReduxDevTools({ name: "Deal editor (Effector)", trace: true, stateTab: true });
+} else {
+  console.info(
+    "[devtools] Redux DevTools extension not found on this page: install it, or allow it on this site, then reload.",
+  );
 }
 
 if (new URLSearchParams(location.search).has("debug")) {

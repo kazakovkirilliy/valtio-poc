@@ -15,9 +15,15 @@ import { debug } from "patronum";
 import { $optionsByKey, loadOptionsFx } from "./stores/optionsStore.ts";
 import { $deals } from "./stores/multiTabStore.ts";
 
-// the adapter logs an error when the extension is missing: attach only if it's installed
+// the adapter logs an error when the extension is missing: attach only if it's
+// installed, and say so otherwise (e.g. its site access doesn't cover this page)
 if ("__REDUX_DEVTOOLS_EXTENSION__" in window) {
-  attachReduxDevTools({ name: "Deal editor (Effector, nested)", trace: true });
+  // stateTab: every store's value in the State/Diff tabs (off by default)
+  attachReduxDevTools({ name: "Deal editor (Effector, nested)", trace: true, stateTab: true });
+} else {
+  console.info(
+    "[devtools] Redux DevTools extension not found on this page: install it, or allow it on this site, then reload.",
+  );
 }
 
 if (new URLSearchParams(location.search).has("debug")) {
@@ -27,14 +33,25 @@ if (new URLSearchParams(location.search).has("debug")) {
   // deal: prefix them with the deal's tab
   const debugged = new Set<string>();
   $deals.watch((deals) =>
-    Object.entries(deals).forEach(([dealId, { actions, $dealFields, $groups }], index) => {
-      if (debugged.has(dealId)) return;
-      debugged.add(dealId);
-      const units: Record<string, Unit<unknown>> = { ...actions, $dealFields, $groups };
-      debug(
-        { trace: true },
-        Object.fromEntries(Object.entries(units).map(([name, unit]) => [`Tab ${index + 1} ${name}`, unit])),
-      );
-    }),
+    Object.entries(deals).forEach(
+      ([dealId, { actions, $dealFields, $groups }], index) => {
+        if (debugged.has(dealId)) return;
+        debugged.add(dealId);
+        const units: Record<string, Unit<unknown>> = {
+          ...actions,
+          $dealFields,
+          $groups,
+        };
+        debug(
+          { trace: true },
+          Object.fromEntries(
+            Object.entries(units).map(([name, unit]) => [
+              `Tab ${index + 1} ${name}`,
+              unit,
+            ]),
+          ),
+        );
+      },
+    ),
   );
 }
