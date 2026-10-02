@@ -15,9 +15,10 @@ import type { ProductFieldId } from "./fields.ts";
 import {
   type GroupType,
   type GroupsState,
-  createGroup,
-  withGroup,
-  withoutGroup,
+  addGroupReducer,
+  cloneGroupReducer,
+  groupCreatedReducer,
+  groupRemovedReducer,
 } from "./groupStore.ts";
 import {
   type ProductState,
@@ -99,26 +100,16 @@ export const createDealStore = (devtools: DealDevtools) => {
     connect({
       clock: addGroupAction,
       source: { deal: $dealFields, groups: $groups },
-      fn: ({ deal, groups }, groupType) =>
-        createGroup(groupType, deal, groups.order.length),
+      fn: addGroupReducer,
     }),
     connect({
       clock: cloneGroupAction,
       source: { deal: $dealFields, groups: $groups, products: $products },
       filter: ({ groups }, groupId) => groupId in groups.byId,
-      fn: ({ deal, groups, products }, groupId) => {
-        // the copy goes right after the original
-        const source = groups.byId[groupId];
-        return createGroup(
-          source.groupType,
-          deal,
-          groups.order.indexOf(groupId) + 1,
-          source.productIds.map((productId) => products[productId]),
-        );
-      },
+      fn: cloneGroupReducer,
     }),
   ]);
-  $groups.on(groupCreated, withGroup);
+  $groups.on(groupCreated, groupCreatedReducer);
   $products.on(groupCreated, (products, { products: created }) => ({
     ...products,
     ...Object.fromEntries(created.map((product) => [product.id, product])),
@@ -131,7 +122,7 @@ export const createDealStore = (devtools: DealDevtools) => {
     filter: (groups, groupId) => groupId in groups.byId,
     fn: (groups, groupId) => groups.byId[groupId],
   });
-  $groups.on(groupRemoved, (groups, group) => withoutGroup(groups, group.id));
+  $groups.on(groupRemoved, groupRemovedReducer);
   $products.on(groupRemoved, (products, group) => {
     const next = { ...products };
     group.productIds.forEach((productId) => delete next[productId]);

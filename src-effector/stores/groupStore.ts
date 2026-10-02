@@ -50,7 +50,7 @@ export type CreatedGroup = {
  * Builds a group and its products, with new ids. `sourceProducts` (a group
  * to clone) are copied by position. Products are numbered within the group.
  */
-export const createGroup = (
+const buildGroup = (
   groupType: GroupType,
   deal: DealFieldsState,
   position: number,
@@ -69,7 +69,7 @@ export const createGroup = (
     group: {
       id: uuid(),
       groupType,
-      ui: { title: "", index: 0 }, // set by reindexGroups
+      ui: { title: "", index: 0 }, // set by reindexGroupsReducer
       productIds: products.map((product) => product.id),
     },
     products,
@@ -77,12 +77,43 @@ export const createGroup = (
   };
 };
 
+/** `addGroupAction`: a new group of `groupType`, placed last. */
+export const addGroupReducer = (
+  { deal, groups }: { deal: DealFieldsState; groups: GroupsState },
+  groupType: GroupType,
+): CreatedGroup => buildGroup(groupType, deal, groups.order.length);
+
+/**
+ * `cloneGroupAction`: a copy of the group and its products, placed right
+ * after the original.
+ */
+export const cloneGroupReducer = (
+  {
+    deal,
+    groups,
+    products,
+  }: {
+    deal: DealFieldsState;
+    groups: GroupsState;
+    products: Record<string, ProductState>;
+  },
+  groupId: string,
+): CreatedGroup => {
+  const source = groups.byId[groupId];
+  return buildGroup(
+    source.groupType,
+    deal,
+    groups.order.indexOf(groupId) + 1,
+    source.productIds.map((productId) => products[productId]),
+  );
+};
+
 /**
  * Re-derives every group's index and title from its position. Groups whose
  * position did not change keep their identity, so their columns don't
  * re-render.
  */
-const reindexGroups = ({ byId, order }: GroupsState): GroupsState => {
+const reindexGroupsReducer = ({ byId, order }: GroupsState): GroupsState => {
   const next: Record<string, GroupState> = {};
   order.forEach((groupId, index) => {
     const group = byId[groupId];
@@ -95,25 +126,28 @@ const reindexGroups = ({ byId, order }: GroupsState): GroupsState => {
   return { byId: next, order };
 };
 
-/** The groups with `group` inserted at its position. */
-export const withGroup = (
+/** `groupCreated`: the groups with the new group inserted at its position. */
+export const groupCreatedReducer = (
   groups: GroupsState,
   { group, position }: CreatedGroup,
 ): GroupsState => {
   const order = [...groups.order];
   order.splice(position, 0, group.id);
-  return reindexGroups({ byId: { ...groups.byId, [group.id]: group }, order });
+  return reindexGroupsReducer({
+    byId: { ...groups.byId, [group.id]: group },
+    order,
+  });
 };
 
-/** The groups without `groupId`. */
-export const withoutGroup = (
+/** `groupRemoved`: the groups without the removed group. */
+export const groupRemovedReducer = (
   groups: GroupsState,
-  groupId: string,
+  removed: GroupState,
 ): GroupsState => {
-  const { [groupId]: _removed, ...byId } = groups.byId;
+  const { [removed.id]: _removed, ...byId } = groups.byId;
   void _removed;
-  return reindexGroups({
+  return reindexGroupsReducer({
     byId,
-    order: groups.order.filter((id) => id !== groupId),
+    order: groups.order.filter((id) => id !== removed.id),
   });
 };
