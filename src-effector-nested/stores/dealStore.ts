@@ -26,7 +26,6 @@ import {
   productOf,
   productsOf,
 } from "./groupStore.ts";
-import { keysOf } from "./keys.ts";
 import { loadAllOptionsFx, loadOptionsFx } from "./optionsStore.ts";
 import {
   optionsRequestsFor,
@@ -50,27 +49,29 @@ type DealDevtools = { $isSpotPriceStreamEnabled: Store<boolean> };
  * derives for itself (e.g. `groupCreated`) stay inside.
  */
 export const createDealStore = (devtools: DealDevtools) => {
-  // --- actions: the requests the UI (or anything else) can make
-  const addGroupAction = createEvent<GroupType>();
-  const cloneGroupAction = createEvent<string>();
-  const removeGroupAction = createEvent<string>();
-  /** Writes one field of one product, addressed by its group. */
-  const commitProductFieldAction = createEvent<{
-    groupId: string;
-    productId: string;
-    fieldId: ProductFieldId;
-    value: unknown;
-  }>();
-  /** Two-way sync: the deal value and every product's copy, in one event. */
-  const commitSyncedFieldAction = createEvent<{
-    fieldId: SyncedFieldId;
-    value: string;
-  }>();
-  /** Pushes one value into every product; the deal keeps nothing. */
-  const broadcastFieldAction = createEvent<{
-    fieldId: BroadcastFieldId;
-    value: unknown;
-  }>();
+  const actions = {
+    // --- actions: the requests the UI (or anything else) can make
+    addGroupAction: createEvent<GroupType>(),
+    cloneGroupAction: createEvent<string>(),
+    removeGroupAction: createEvent<string>(),
+    /** Writes one field of one product, addressed by its group. */
+    commitProductFieldAction: createEvent<{
+      groupId: string;
+      productId: string;
+      fieldId: ProductFieldId;
+      value: unknown;
+    }>(),
+    /** Two-way sync: the deal value and every product's copy, in one event. */
+    commitSyncedFieldAction: createEvent<{
+      fieldId: SyncedFieldId;
+      value: string;
+    }>(),
+    /** Pushes one value into every product; the deal keeps nothing. */
+    broadcastFieldAction: createEvent<{
+      fieldId: BroadcastFieldId;
+      value: unknown;
+    }>(),
+  };
 
   // --- state
   const $dealFields = createStore<DealFieldsState>({
@@ -81,13 +82,13 @@ export const createDealStore = (devtools: DealDevtools) => {
   const $isInternal = createStore(true);
 
   // --- derived
-  /** The group ids in order; changes only when groups are added or removed. */
-  const $groupIds = keysOf($groups);
   const $hedgeTypes = $isInternal.map((isInternal) =>
     isInternal ? ["abc"] : ["def"],
   );
   /** Issues per product, per field — only changed products are re-validated. */
-  const $validation = $groups.map((groups) => validateProducts(productsOf(groups)));
+  const $validation = $groups.map((groups) =>
+    validateProducts(productsOf(groups)),
+  );
   const $hasValidationErrors = $validation.map((validation) =>
     Object.values(validation).some((issues) => Object.keys(issues).length > 0),
   );
@@ -95,12 +96,12 @@ export const createDealStore = (devtools: DealDevtools) => {
   // --- groups: build (new ids) from the current deal values, then insert
   const groupCreated = merge([
     connect({
-      clock: addGroupAction,
+      clock: actions.addGroupAction,
       source: { defaults: $dealFields, groups: $groups },
       fn: addGroupReducer,
     }),
     connect({
-      clock: cloneGroupAction,
+      clock: actions.cloneGroupAction,
       source: { defaults: $dealFields, groups: $groups },
       filter: ({ groups }, groupId) => groupId in groups,
       fn: cloneGroupReducer,
@@ -108,35 +109,45 @@ export const createDealStore = (devtools: DealDevtools) => {
   ]);
   $groups.on(groupCreated, groupCreatedReducer);
   // nothing to dispose: the group's products, and their issues, go with it
-  $groups.on(removeGroupAction, groupRemovedReducer);
+  $groups.on(actions.removeGroupAction, groupRemovedReducer);
 
   // --- fields
   // a product's ccy commit is the two-way sync: it writes the deal and every product
   connect({
-    clock: commitProductFieldAction,
+    clock: actions.commitProductFieldAction,
     filter: ({ fieldId }) => isSyncedField(fieldId),
     fn: ({ fieldId, value }) => ({
       fieldId: fieldId as SyncedFieldId,
       value: String(value),
     }),
-    target: commitSyncedFieldAction,
-  });
-  $groups.on(commitProductFieldAction, (groups, { groupId, productId, fieldId, value }) => {
-    const product = productOf(groups, groupId, productId);
-    if (!product || isSyncedField(fieldId)) return groups;
-    // copies only the path to the product: the groups, its group, its products
-    return setIn(groups, `${groupId}.products.${productId}`, setProductField(product, fieldId, value));
+    target: actions.commitSyncedFieldAction,
   });
 
-  $dealFields.on(commitSyncedFieldAction, (deal, { fieldId, value }) =>
+  $groups.on(
+    actions.commitProductFieldAction,
+    (groups, { groupId, productId, fieldId, value }) => {
+      const product = productOf(groups, groupId, productId);
+      if (!product || isSyncedField(fieldId)) return groups;
+      // copies only the path to the product: the groups, its group, its products
+      return setIn(
+        groups,
+        `${groupId}.products.${productId}`,
+        setProductField(product, fieldId, value),
+      );
+    },
+  );
+
+  $dealFields.on(actions.commitSyncedFieldAction, (deal, { fieldId, value }) =>
     deal[fieldId] === value ? deal : { ...deal, [fieldId]: value },
   );
-  $groups.on(commitSyncedFieldAction, (groups, { fieldId, value }) =>
+  $groups.on(actions.commitSyncedFieldAction, (groups, { fieldId, value }) =>
     mapProducts(groups, (product) => setProductField(product, fieldId, value)),
   );
-  $groups.on(broadcastFieldAction, (groups, { fieldId, value }) => {
+  $groups.on(actions.broadcastFieldAction, (groups, { fieldId, value }) => {
     if (isEmptyBroadcast(value)) return groups; // nothing to send
-    return mapProducts(groups, (product) => setProductField(product, fieldId, value));
+    return mapProducts(groups, (product) =>
+      setProductField(product, fieldId, value),
+    );
   });
 
   // --- async options (e.g. Fixing Source): each depends on another product field
@@ -148,12 +159,12 @@ export const createDealStore = (devtools: DealDevtools) => {
   });
   // … and reload them whenever that field changes, in one product or broadcast to all
   connect({
-    clock: commitProductFieldAction,
+    clock: actions.commitProductFieldAction,
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
     target: loadAllOptionsFx,
   });
   connect({
-    clock: broadcastFieldAction,
+    clock: actions.broadcastFieldAction,
     filter: ({ value }) => !isEmptyBroadcast(value),
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
     target: loadAllOptionsFx,
@@ -161,7 +172,9 @@ export const createDealStore = (devtools: DealDevtools) => {
   // options arrived: products still on that parameter keep their value if it's
   // an option, else take the first (stale responses: ignored)
   $groups.on(loadOptionsFx.done, (groups, { params, result }) =>
-    mapProducts(groups, (product) => reconcileProductOptions(product, params, result)),
+    mapProducts(groups, (product) =>
+      reconcileProductOptions(product, params, result),
+    ),
   );
 
   // --- spot price: kept outside the stores, ticks never notify subscribers
@@ -171,18 +184,10 @@ export const createDealStore = (devtools: DealDevtools) => {
   );
 
   return {
-    actions: {
-      addGroupAction,
-      cloneGroupAction,
-      removeGroupAction,
-      commitProductFieldAction,
-      commitSyncedFieldAction,
-      broadcastFieldAction,
-    },
+    actions,
     // stores
     $dealFields,
     $groups,
-    $groupIds,
     $isInternal,
     $hedgeTypes,
     $validation,

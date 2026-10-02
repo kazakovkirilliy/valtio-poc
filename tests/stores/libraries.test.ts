@@ -104,7 +104,6 @@ describe("effector-nested", () => {
     const [edited, sibling] = Object.keys(groups[strategyId].products);
     const averageProductId = Object.keys(groups[averageId].products)[0];
     const validation = deal.$validation.getState();
-    const groupIds = deal.$groupIds.getState();
 
     deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
     const next = deal.$groups.getState();
@@ -116,7 +115,6 @@ describe("effector-nested", () => {
     expect(Object.keys(next)).toEqual([strategyId, averageId]); // order kept
     expect(deal.$validation.getState()[sibling]).toBe(validation[sibling]); // not re-validated
     expect(deal.$validation.getState()[averageProductId]).toBe(validation[averageProductId]);
-    expect(deal.$groupIds.getState()).toBe(groupIds); // the id list didn't change
 
     deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
     expect(deal.$groups.getState()).toBe(next); // same value: no update at all
@@ -129,9 +127,9 @@ describe("effector-nested", () => {
     const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
     deal.actions.addGroupAction("VanillaGroup");
     deal.actions.addGroupAction("Average");
-    const [first, last] = deal.$groupIds.getState();
+    const [first, last] = Object.keys(deal.$groups.getState());
     deal.actions.cloneGroupAction(first);
-    const ids = deal.$groupIds.getState();
+    const ids = Object.keys(deal.$groups.getState());
     expect(ids).toHaveLength(3);
     expect([ids[0], ids[2]]).toEqual([first, last]);
     expect(Object.values(deal.$groups.getState()).map((group) => group.ui.title)).toEqual([

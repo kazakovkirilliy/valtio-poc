@@ -8,7 +8,6 @@ import { persist } from "effector-storage/local";
 import { z } from "zod";
 import { uuid } from "@shared/lib/uuid.ts";
 import { type DealStore, createDealStore } from "./dealStore.ts";
-import { keysOf } from "./keys.ts";
 
 // --- developer settings, persisted to localStorage
 export const toggleSpotPriceStreamEnabledAction = createEvent();
@@ -54,8 +53,6 @@ export const $deals = createStore<Record<string, DealStore>>({}).on(
   createDealFx.doneData,
   (deals, { dealId, deal }) => ({ ...deals, [dealId]: deal }),
 );
-/** The deal ids in order; changes only when a deal is added. */
-export const $dealIds = keysOf($deals);
 
 export const $activeDealId = createStore("")
   .on(createDealFx.doneData, (_, { dealId }) => dealId)

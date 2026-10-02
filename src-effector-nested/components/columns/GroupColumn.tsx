@@ -1,8 +1,7 @@
 import "@shared/styles/group.css";
 import { memo } from "react";
 import { useStoreMap } from "effector-react";
-import { useAction } from "../../hooks/units.ts";
-import { sameKeys } from "../../stores/keys.ts";
+import { useAction, useKeys } from "../../hooks/units.ts";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { ProductColumn } from "./ProductColumn.tsx";
 
@@ -18,12 +17,7 @@ export const GroupColumn = memo(({ groupId }: { groupId: string }) => {
     keys: [groupId],
     fn: (groups, [id]) => groups[id]?.ui ?? null,
   });
-  const productIds = useStoreMap({
-    store: deal.$groups,
-    keys: [groupId],
-    fn: (groups, [id]) => (groups[id] ? Object.keys(groups[id].products) : []),
-    updateFilter: (next, current) => !sameKeys(next, current),
-  });
+  const productIds = useKeys(deal.$groups, (groups) => groups[groupId]?.products, [groupId]);
   const cloneGroup = useAction(deal.actions.cloneGroupAction);
   const removeGroup = useAction(deal.actions.removeGroupAction);
 
