@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "clsx": "latest",
+    "mobx": "^7.0.5",
+    "mobx-react-lite": "^5.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-use": "^17.6.1",
