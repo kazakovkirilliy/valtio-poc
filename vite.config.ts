@@ -6,8 +6,14 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rolldownOptions: {
-      // two apps: the valtio version and its MobX migration (src-mobx/)
-      input: { main: 'index.html', mobx: 'mobx.html' },
+      // index.html links to the three versions of the app: valtio (src/),
+      // MobX (src-mobx/) and Effector (src-effector/)
+      input: {
+        index: 'index.html',
+        valtio: 'valtio.html',
+        mobx: 'mobx.html',
+        effector: 'effector.html',
+      },
     },
   },
 })
