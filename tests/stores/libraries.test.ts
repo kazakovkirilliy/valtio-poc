@@ -86,3 +86,57 @@ describe("effector", () => {
     deal.dispose();
   });
 });
+
+describe("effector-nested", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("copies only the path to an edited product", async () => {
+    const { createStore } = await import("effector");
+    const { createDealStore } = await import("../../src-effector-nested/stores/dealStore.ts");
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    deal.actions.addGroupAction("Strategy");
+    deal.actions.addGroupAction("Average");
+    const groups = deal.$groups.getState();
+    const [strategyId, averageId] = Object.keys(groups);
+    const [edited, sibling] = Object.keys(groups[strategyId].products);
+    const averageProductId = Object.keys(groups[averageId].products)[0];
+    const validation = deal.$validation.getState();
+    const groupIds = deal.$groupIds.getState();
+
+    deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
+    const next = deal.$groups.getState();
+    expect(next[strategyId]).not.toBe(groups[strategyId]); // the path to the product is copied …
+    expect(next[strategyId].products[edited]).not.toBe(groups[strategyId].products[edited]);
+    expect(next[strategyId].ui).toBe(groups[strategyId].ui); // … nothing else
+    expect(next[strategyId].products[sibling]).toBe(groups[strategyId].products[sibling]);
+    expect(next[averageId]).toBe(groups[averageId]);
+    expect(Object.keys(next)).toEqual([strategyId, averageId]); // order kept
+    expect(deal.$validation.getState()[sibling]).toBe(validation[sibling]); // not re-validated
+    expect(deal.$validation.getState()[averageProductId]).toBe(validation[averageProductId]);
+    expect(deal.$groupIds.getState()).toBe(groupIds); // the id list didn't change
+
+    deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
+    expect(deal.$groups.getState()).toBe(next); // same value: no update at all
+    deal.dispose();
+  });
+
+  it("inserts a clone right after its source, in key order", async () => {
+    const { createStore } = await import("effector");
+    const { createDealStore } = await import("../../src-effector-nested/stores/dealStore.ts");
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    deal.actions.addGroupAction("VanillaGroup");
+    deal.actions.addGroupAction("Average");
+    const [first, last] = deal.$groupIds.getState();
+    deal.actions.cloneGroupAction(first);
+    const ids = deal.$groupIds.getState();
+    expect(ids).toHaveLength(3);
+    expect([ids[0], ids[2]]).toEqual([first, last]);
+    expect(Object.values(deal.$groups.getState()).map((group) => group.ui.title)).toEqual([
+      "Vanilla Group #1", "Vanilla Group #2", "Average #3",
+    ]);
+    deal.dispose();
+  });
+});

@@ -6,8 +6,8 @@ import { vi } from "vitest";
  * so every scenario runs unchanged against valtio, MobX and Effector. This is
  * the only test code that knows the apps' internals.
  */
-export type AppName = "valtio" | "mobx" | "effector";
-export const appNames: AppName[] = ["valtio", "mobx", "effector"];
+export type AppName = "valtio" | "mobx" | "effector" | "effector-nested";
+export const appNames: AppName[] = ["valtio", "mobx", "effector", "effector-nested"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -228,8 +228,67 @@ const effector = async (): Promise<DealAdapter> => {
   };
 };
 
+const effectorNested = async (): Promise<DealAdapter> => {
+  const { createStore } = await import("effector");
+  const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
+  const { readProductField } = await import("../../../src-effector-nested/stores/productStore.ts");
+  const { $optionsByKey } = await import("../../../src-effector-nested/stores/optionsStore.ts");
+  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+  type Product = Parameters<typeof readProductField>[0];
+  type FieldId = Parameters<typeof readProductField>[1];
+
+  // key order is display order, for groups and for each group's products
+  const groupList = () => Object.values(deal.$groups.getState());
+  const list = () =>
+    groupList().flatMap((group) => Object.values(group.products).map((product) => ({ groupId: group.id, product })));
+  const handle = (product: Product): ProductHandle => ({
+    read: (fieldId) => readProductField(product, fieldId as FieldId),
+    dataKeys: () => Object.keys(product.data),
+  });
+
+  return {
+    addGroup: (type) => deal.actions.addGroupAction(type),
+    cloneGroup: (i) => deal.actions.cloneGroupAction(groupList()[i].id),
+    removeGroup: (i) => deal.actions.removeGroupAction(groupList()[i]?.id ?? "unknown"),
+    groupTitles: () => {
+      const groups = deal.$groups.getState();
+      return Object.keys(groups).map((id, i) => {
+        if (groups[id].ui.index !== i || groups[id].id !== id) throw new Error("bad group index/id");
+        return groups[id].ui.title;
+      });
+    },
+    groupProductTitles: (i) =>
+      Object.entries(groupList()[i].products).map(([id, product], index) => {
+        if (product.ui.index !== index || product.id !== id) throw new Error("bad product index/id");
+        return product.ui.title;
+      }),
+    groupCount: () => groupList().length,
+    productCount: () => list().length,
+    product: (i) => handle(list()[i].product),
+    productType: (i) => list()[i].product.data.productType,
+    productIdsOfGroup: (i) => Object.keys(groupList()[i].products),
+    read: (i, fieldId) => readProductField(list()[i].product, fieldId as FieldId),
+    commit: (i, fieldId, value) => {
+      const { groupId, product } = list()[i];
+      deal.actions.commitProductFieldAction({ groupId, productId: product.id, fieldId: fieldId as FieldId, value });
+    },
+    sync: (fieldId, value) =>
+      deal.actions.commitSyncedFieldAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
+    dealValue: (fieldId) => (deal.$dealFields.getState() as Record<string, unknown>)[fieldId],
+    broadcast: (fieldId, value) =>
+      deal.actions.broadcastFieldAction({ fieldId: fieldId as never, value }),
+    issues: (i, fieldId) =>
+      ((deal.$validation.getState()[list()[i].product.id] as Record<string, { message: string }[]> | undefined)?.[fieldId] ?? []).map(
+        (issue) => issue.message,
+      ),
+    hasValidationErrors: () => deal.$hasValidationErrors.getState(),
+    optionsFor: (style) => optionsView($optionsByKey.getState()[`fixingSources:${style}`]),
+    dispose: () => deal.dispose(),
+  };
+};
+
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, effector }[app]();
+  return { valtio, mobx, effector, "effector-nested": effectorNested }[app]();
 };

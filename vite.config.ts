@@ -11,13 +11,15 @@ export default defineConfig({
   },
   build: {
     rolldownOptions: {
-      // index.html links to the three versions of the app: valtio (src-valtio/),
-      // MobX (src-mobx/) and Effector (src-effector/)
+      // index.html links to every version of the app: valtio (src-valtio/),
+      // MobX (src-mobx/), Effector (src-effector/) and nested Effector
+      // (src-effector-nested/)
       input: {
         index: 'index.html',
         valtio: 'valtio.html',
         mobx: 'mobx.html',
         effector: 'effector.html',
+        'effector-nested': 'effector-nested.html',
       },
     },
   },
