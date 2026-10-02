@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { apps, commitText, expect, openApp, test } from "./support/fixtures.ts";
+import { FIXING_SOURCES_URL, apps, commitText, expect, openApp, test } from "./support/fixtures.ts";
 
 /**
  * Counts component renders the way React DevTools' "highlight updates" does:
@@ -67,10 +67,14 @@ for (const app of apps) {
   test.describe(app, () => {
     test.beforeEach(async ({ page }) => {
       await page.addInitScript(installRenderLog);
+      // answered at once, so no response can land while a test is recording
+      await page.route(`${FIXING_SOURCES_URL}?*`, (route) =>
+        route.fulfill({ json: [{ id: 1, name: "Source A" }, { id: 2, name: "Source B" }] }),
+      );
       await openApp(page, app);
       await page.getByRole("button", { name: "Add Strategy" }).click();
       await expect(page.getByText("Strategy #2")).toBeVisible();
-      await page.waitForTimeout(800); // let the fixing sources settle
+      await page.waitForLoadState("networkidle"); // every fixing source loaded and applied
     });
 
     test("adding a group re-renders nothing that already exists", async ({ page }) => {

@@ -212,9 +212,9 @@ const effector = async (): Promise<DealAdapter> => {
     productIdsOfGroup: (i) => [...groups().byId[groups().order[i]].productIds],
     read: (i, fieldId) => readProductField(list()[i], fieldId as FieldId),
     commit: (i, fieldId, value) =>
-      deal.actions.commitProductFieldAction({ productId: list()[i].id, fieldId: fieldId as FieldId, value }),
+      deal.actions.setProductFieldAction({ productId: list()[i].id, fieldId: fieldId as FieldId, value }),
     sync: (fieldId, value) =>
-      deal.actions.commitSyncedFieldAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
+      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
     dealValue: (fieldId) => (deal.$dealFields.getState() as Record<string, unknown>)[fieldId],
     broadcast: (fieldId, value) =>
       deal.actions.broadcastFieldAction({ fieldId: fieldId as never, value }),
@@ -270,10 +270,10 @@ const effectorNested = async (): Promise<DealAdapter> => {
     read: (i, fieldId) => readProductField(list()[i].product, fieldId as FieldId),
     commit: (i, fieldId, value) => {
       const { groupId, product } = list()[i];
-      deal.actions.commitProductFieldAction({ groupId, productId: product.id, fieldId: fieldId as FieldId, value });
+      deal.actions.setProductFieldAction({ groupId, productId: product.id, fieldId: fieldId as FieldId, value });
     },
     sync: (fieldId, value) =>
-      deal.actions.commitSyncedFieldAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
+      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
     dealValue: (fieldId) => (deal.$dealFields.getState() as Record<string, unknown>)[fieldId],
     broadcast: (fieldId, value) =>
       deal.actions.broadcastFieldAction({ fieldId: fieldId as never, value }),

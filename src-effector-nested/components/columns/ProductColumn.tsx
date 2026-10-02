@@ -56,7 +56,7 @@ const ProductField = memo(({ groupId, productId, fieldId, readOnly }: FieldProps
     keys: [productId, fieldId],
     fn: (validation, [id, field]) => (validation[id]?.[field]?.length ?? 0) > 0,
   });
-  const commit = useAction(actions.commitProductFieldAction);
+  const setField = useAction(actions.setProductFieldAction);
 
   return (
     <Field
@@ -65,7 +65,7 @@ const ProductField = memo(({ groupId, productId, fieldId, readOnly }: FieldProps
       hasError={hasError}
       readOnly={readOnly}
       param={param}
-      onCommit={(next) => commit({ groupId, productId, fieldId, value: next })}
+      onCommit={(next) => setField({ groupId, productId, fieldId, value: next })}
     />
   );
 });

@@ -55,14 +55,14 @@ export const createDealStore = (devtools: DealDevtools) => {
     cloneGroupAction: createEvent<string>(),
     removeGroupAction: createEvent<string>(),
     /** Writes one field of one product, addressed by its group. */
-    commitProductFieldAction: createEvent<{
+    setProductFieldAction: createEvent<{
       groupId: string;
       productId: string;
       fieldId: ProductFieldId;
       value: unknown;
     }>(),
     /** Two-way sync: the deal value and every product's copy, in one event. */
-    commitSyncedFieldAction: createEvent<{
+    setTwoWaySyncAction: createEvent<{
       fieldId: SyncedFieldId;
       value: string;
     }>(),
@@ -112,19 +112,19 @@ export const createDealStore = (devtools: DealDevtools) => {
   $groups.on(actions.removeGroupAction, groupRemovedReducer);
 
   // --- fields
-  // a product's ccy commit is the two-way sync: it writes the deal and every product
+  // setting a product's ccy is the two-way sync: it writes the deal and every product
   connect({
-    clock: actions.commitProductFieldAction,
+    clock: actions.setProductFieldAction,
     filter: ({ fieldId }) => isSyncedField(fieldId),
     fn: ({ fieldId, value }) => ({
       fieldId: fieldId as SyncedFieldId,
       value: String(value),
     }),
-    target: actions.commitSyncedFieldAction,
+    target: actions.setTwoWaySyncAction,
   });
 
   $groups.on(
-    actions.commitProductFieldAction,
+    actions.setProductFieldAction,
     (groups, { groupId, productId, fieldId, value }) => {
       const product = productOf(groups, groupId, productId);
       if (!product || isSyncedField(fieldId)) return groups;
@@ -137,10 +137,10 @@ export const createDealStore = (devtools: DealDevtools) => {
     },
   );
 
-  $dealFields.on(actions.commitSyncedFieldAction, (deal, { fieldId, value }) =>
+  $dealFields.on(actions.setTwoWaySyncAction, (deal, { fieldId, value }) =>
     deal[fieldId] === value ? deal : { ...deal, [fieldId]: value },
   );
-  $groups.on(actions.commitSyncedFieldAction, (groups, { fieldId, value }) =>
+  $groups.on(actions.setTwoWaySyncAction, (groups, { fieldId, value }) =>
     mapProducts(groups, (product) => setProductField(product, fieldId, value)),
   );
   $groups.on(actions.broadcastFieldAction, (groups, { fieldId, value }) => {
@@ -159,7 +159,7 @@ export const createDealStore = (devtools: DealDevtools) => {
   });
   // … and reload them whenever that field changes, in one product or broadcast to all
   connect({
-    clock: actions.commitProductFieldAction,
+    clock: actions.setProductFieldAction,
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
     target: loadAllOptionsEffect,
   });

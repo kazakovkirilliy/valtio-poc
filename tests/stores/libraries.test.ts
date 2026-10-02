@@ -62,7 +62,7 @@ describe("effector", () => {
 
     const products = deal.$products.getState();
     const validation = deal.$validation.getState();
-    deal.actions.commitProductFieldAction({ productId: edited, fieldId: "expiryCut", value: "TK15" });
+    deal.actions.setProductFieldAction({ productId: edited, fieldId: "expiryCut", value: "TK15" });
     for (const id of productIds.slice(1)) {
       expect(deal.$products.getState()[id]).toBe(products[id]);
       expect(deal.$validation.getState()[id]).toBe(validation[id]); // not re-validated
@@ -70,7 +70,7 @@ describe("effector", () => {
     expect(deal.$products.getState()[edited]).not.toBe(products[edited]);
 
     const unchanged = deal.$products.getState();
-    deal.actions.commitProductFieldAction({ productId: edited, fieldId: "expiryCut", value: "TK15" });
+    deal.actions.setProductFieldAction({ productId: edited, fieldId: "expiryCut", value: "TK15" });
     expect(deal.$products.getState()).toBe(unchanged); // same value: no update at all
     deal.dispose();
   });
@@ -81,7 +81,7 @@ describe("effector", () => {
     const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
     expect(Object.keys(deal.actions).sort()).toEqual([
       "addGroupAction", "broadcastFieldAction", "cloneGroupAction",
-      "commitProductFieldAction", "commitSyncedFieldAction", "removeGroupAction",
+      "removeGroupAction", "setProductFieldAction", "setTwoWaySyncAction",
     ]);
     deal.dispose();
   });
@@ -105,7 +105,7 @@ describe("effector-nested", () => {
     const averageProductId = Object.keys(groups[averageId].products)[0];
     const validation = deal.$validation.getState();
 
-    deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
+    deal.actions.setProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
     const next = deal.$groups.getState();
     expect(next[strategyId]).not.toBe(groups[strategyId]); // the path to the product is copied …
     expect(next[strategyId].products[edited]).not.toBe(groups[strategyId].products[edited]);
@@ -116,7 +116,7 @@ describe("effector-nested", () => {
     expect(deal.$validation.getState()[sibling]).toBe(validation[sibling]); // not re-validated
     expect(deal.$validation.getState()[averageProductId]).toBe(validation[averageProductId]);
 
-    deal.actions.commitProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
+    deal.actions.setProductFieldAction({ groupId: strategyId, productId: edited, fieldId: "expiryCut", value: "TK15" });
     expect(deal.$groups.getState()).toBe(next); // same value: no update at all
     deal.dispose();
   });

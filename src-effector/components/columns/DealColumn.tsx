@@ -12,7 +12,7 @@ import { useAction } from "../../hooks/units.ts";
 import { Field } from "../fields/Field.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
-/** Shows the deal value; a commit syncs the deal and every product. */
+/** Shows the deal value; setting it syncs the deal and every product. */
 const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
   const { $dealFields, actions } = useDealStore();
   const value = useStoreMap({
@@ -20,13 +20,13 @@ const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
     keys: [fieldId],
     fn: (deal, [id]) => deal[id],
   });
-  const commit = useAction(actions.commitSyncedFieldAction);
+  const setTwoWaySync = useAction(actions.setTwoWaySyncAction);
 
   return (
     <Field
       fieldId={fieldId}
       value={value}
-      onCommit={(next) => commit({ fieldId, value: String(next) })}
+      onCommit={(next) => setTwoWaySync({ fieldId, value: String(next) })}
     />
   );
 });
@@ -34,13 +34,13 @@ const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
 SyncedField.displayName = "SyncedField";
 
 /**
- * Holds nothing (shows empty); a commit pushes the value into every product.
+ * Holds nothing (shows empty); setting it pushes the value into every product.
  * Async options: the deal has no value of its own to depend on, so it offers
  * the default parameter's options.
  */
 const BroadcastField = memo(({ fieldId }: { fieldId: BroadcastFieldId }) => {
-  const commit = useAction(useDealStore().actions.broadcastFieldAction);
-  return <Field fieldId={fieldId} value={undefined} onCommit={(value) => commit({ fieldId, value })} />;
+  const broadcast = useAction(useDealStore().actions.broadcastFieldAction);
+  return <Field fieldId={fieldId} value={undefined} onCommit={(value) => broadcast({ fieldId, value })} />;
 });
 
 BroadcastField.displayName = "BroadcastField";
