@@ -1,40 +1,15 @@
-import { observable } from "mobx";
-import { uuid } from "../lib/uuid.ts";
-import type { ProductOwner } from "./dealFields.ts";
-import {
-  type AnyProduct,
-  type ProductType,
-  createProduct,
-  productDefinitions,
-} from "./products/productRegistry.ts";
-
-/**
- * Every group type and the products it holds. A group's type and products
- * are fixed at creation; clone/remove act on whole groups only.
- */
-export const groupDefinitions = {
-  VanillaGroup: { label: "Vanilla Group", productTypes: ["VanillaProduct"] },
-  Strategy: {
-    label: "Strategy",
-    productTypes: ["VanillaProduct", "VanillaProduct"],
-  },
-  Average: { label: "Average", productTypes: ["AverageProduct"] },
-} as const satisfies Record<
-  string,
-  { label: string; productTypes: readonly ProductType[] }
->;
-
-export type GroupType = keyof typeof groupDefinitions;
-
-export const groupTypes = Object.keys(groupDefinitions) as GroupType[];
+import { observable, toJS } from "mobx";
+import { type GroupType, groupDefinitions, productUi } from "@shared/groups.ts";
+import { uuid } from "@shared/lib/uuid.ts";
+import { type Product, type ProductOwner, createProduct } from "./productStore.ts";
 
 export type GroupStore = {
   readonly id: string;
   readonly groupType: GroupType;
   ui: { title: string; index: number }; // set by the deal on insert
-  products: Record<string, AnyProduct>;
+  products: Record<string, Product>;
   productIds: string[]; // display order; each product's `ui.index` mirrors it
-  readonly productList: AnyProduct[];
+  readonly productList: Product[];
 };
 
 /**
@@ -47,15 +22,17 @@ export const createGroupStore = (
   owner: ProductOwner,
   source?: GroupStore,
 ): GroupStore => {
-  const products: Record<string, AnyProduct> = {};
+  const products: Record<string, Product> = {};
   const productIds: string[] = [];
 
   groupDefinitions[groupType].productTypes.forEach((productType, index) => {
+    const sourceProduct = source?.products[source.productIds[index]];
     const product = createProduct(
       productType,
       owner,
-      { title: `${productDefinitions[productType].label} #${index + 1}`, index },
-      source?.products[source.productIds[index]],
+      productUi(productType, index),
+      // plain deep copy: the clone gets its own observables and computeds
+      sourceProduct && toJS(sourceProduct.data),
     );
     products[product.id] = product;
     productIds.push(product.id);

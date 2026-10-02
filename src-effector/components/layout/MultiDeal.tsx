@@ -1,8 +1,8 @@
-import "./MultiDeal.css";
+import "@shared/styles/multiDeal.css";
 import { memo } from "react";
 import clsx from "clsx";
 import { useAction, useValue } from "../../hooks/units.ts";
-import { useOnMount } from "../../hooks/useOnMount.ts";
+import { useOnMount } from "@shared/hooks/useOnMount.ts";
 import {
   $activeDealId,
   $dealIds,

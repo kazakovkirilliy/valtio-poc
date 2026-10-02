@@ -6,7 +6,7 @@ import {
 } from "effector";
 import { persist } from "effector-storage/local";
 import { z } from "zod";
-import { uuid } from "../lib/uuid.ts";
+import { uuid } from "@shared/lib/uuid.ts";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 
 // --- developer settings, persisted to localStorage

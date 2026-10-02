@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { useAction, useValue } from "../../hooks/units.ts";
-import { groupDefinitions, groupTypes } from "../../stores/groupStore.ts";
+import { groupDefinitions, groupTypes } from "@shared/groups.ts";
 import {
   $isSpotPriceStreamEnabled,
   toggleSpotPriceStreamEnabledAction,

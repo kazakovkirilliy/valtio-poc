@@ -1,4 +1,4 @@
-import "./GroupColumn.css";
+import "@shared/styles/group.css";
 import { memo } from "react";
 import { useStoreMap } from "effector-react";
 import { useAction } from "../../hooks/units.ts";

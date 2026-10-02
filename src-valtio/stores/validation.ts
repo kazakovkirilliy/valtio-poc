@@ -1,86 +1,46 @@
-import { subscribeKey } from "valtio/utils";
-import type { DealStore } from "./dealStore.ts";
 import type { $ZodIssue } from "zod/v4/core";
-import type { ZodType } from "zod";
-import { resolveParent, type LeafPath } from "../lib/path.ts";
+import type { ProductFieldId } from "@shared/fields.ts";
+import type {
+  GenericProductDefinition,
+  ProductData,
+} from "@shared/products/productRegistry.ts";
+import { fieldIssues, validationDependencies } from "@shared/validation.ts";
+import type { DealStore } from "./dealStore.ts";
+import { subscribePath } from "./subscribe.ts";
 
 /** `validationErrors` key for a field path relative to the deal. */
 export const toValidationKey = (path: string) => path.replaceAll(".", "_");
 
+const isSameIssues = (a: readonly $ZodIssue[] | undefined, b: readonly $ZodIssue[]) =>
+  (a?.length ?? 0) === b.length &&
+  b.every((issue, i) => issue.message === a?.[i].message);
+
 /**
- * A rule across fields, reported on the field it is attached to. It re-runs
- * when that field or any `dependsOn` field (paths from the product) changes.
+ * Validates one product field into the deal's `validationErrors`: now, and
+ * whenever the field — or a field its rules read — changes; never on
+ * unrelated changes. Returns the unsubscribe.
  */
-export type CrossFieldRule<T> = {
-  dependsOn: LeafPath<T>[];
-  message: string;
-  isValid: (productStore: T) => boolean;
-};
-
-const isSameIssues = (a?: $ZodIssue[], b?: $ZodIssue[]) => {
-  if (!a && !b?.length) return true;
-  if (!a || !b) return false;
-  return (
-    a.length === b.length && a.every((i, idx) => i.message === b[idx].message)
-  );
-};
-
-export const validateFieldFactory = <T extends object>(
+export const watchFieldValidation = (
   $dealStore: DealStore,
-  productStore: T,
+  definition: GenericProductDefinition,
+  data: ProductData,
   productPath: string, // the product's path from the deal
+  fieldId: ProductFieldId,
 ) => {
-  const ownerOf = (path: string) => {
-    const { parent, key } = resolveParent(productStore, path);
-    if (!parent) throw new Error(`validateField: no parent for "${path}"`);
-    return { parent, key };
+  const key = toValidationKey(`${productPath}.data.${definition.fieldPaths[fieldId]}`);
+
+  const validate = () => {
+    const issues = fieldIssues(definition, fieldId, data);
+    // only write when the issues changed: no new identities, no notifications
+    if (isSameIssues($dealStore.validationErrors[key], issues)) return;
+    $dealStore.validationErrors[key] = [...issues];
   };
 
-  /**
-   * Per-field validation: runs once now, then only when this product's own
-   * field — or a field one of its `rules` depends on — changes; never on
-   * unrelated deal or product changes. The field's schema and its rules are
-   * checked together, so one entry holds all of the field's issues.
-   * `path` is relative to the product and may be nested (`a.b.c`); each
-   * subscription is placed on the nested proxy that owns the leaf key.
-   * Returns the unsubscribe.
-   */
-  const validateField = (
-    path: LeafPath<T>,
-    schema: ZodType,
-    rules: readonly CrossFieldRule<T>[] = [],
-  ) => {
-    const fullPath = toValidationKey(`${productPath}.${path}`);
-    const { parent, key } = ownerOf(path);
-
-    const validate = () => {
-      const value = parent[key];
-      const result = schema.safeParse(value);
-      const issues: $ZodIssue[] = result.success ? [] : [...result.error.issues];
-      for (const rule of rules) {
-        if (rule.isValid(productStore)) continue;
-        issues.push({ code: "custom", path: [], message: rule.message, input: value });
-      }
-
-      // Only write if the content actually changed — avoids new
-      // array identities and needless notifications.
-      const prev = $dealStore.validationErrors[fullPath];
-      if (isSameIssues(prev, issues)) return;
-
-      $dealStore.validationErrors[fullPath] = issues;
-    };
-
-    validate();
-    const unsubscribes = [path, ...rules.flatMap((rule) => rule.dependsOn)].map(
-      (watched) => {
-        const owner = ownerOf(watched);
-        return subscribeKey(owner.parent, owner.key, validate, true);
-      },
-    );
-    return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
-  };
-
-  return validateField;
+  validate();
+  const unsubscribes = [fieldId, ...validationDependencies(definition, fieldId)].map(
+    (watched) => subscribePath(data, definition.fieldPaths[watched], validate),
+  );
+  return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 };
 
 /** Drops every validation entry under `path` (e.g. a removed group). */

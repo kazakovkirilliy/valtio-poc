@@ -1,9 +1,14 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    // library-independent code shared by the three apps
+    alias: { '@shared': fileURLToPath(new URL('./src-shared', import.meta.url)) },
+  },
   build: {
     rolldownOptions: {
       // index.html links to the three versions of the app: valtio (src-valtio/),

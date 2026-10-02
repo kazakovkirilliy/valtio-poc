@@ -1,20 +1,26 @@
 import { proxy, ref } from "valtio";
 import { effect } from "valtio-reactive";
 import type { $ZodIssue } from "zod/v4/core";
-import {
-  type GroupStore,
-  type GroupType,
-  createGroupStore,
-  groupDefinitions,
-} from "./groupStore.ts";
-import { multiTabStore } from "./multiTabStore.ts";
-import { setValueByPath } from "../lib/path.ts";
-import { type DealBroadcasts, createBroadcasts } from "./dealBroadcasts.ts";
-import { clearValidationErrors } from "./validation.ts";
+import { type BroadcastFieldId, broadcastFieldIds } from "@shared/dealFields.ts";
+import { type GroupType, groupTitle } from "@shared/groups.ts";
+import { setValueByPath } from "@shared/lib/path.ts";
 import {
   type SpotPriceStream,
   createSpotPriceStream,
-} from "./spotPriceStream.ts";
+} from "@shared/spotPriceStream.ts";
+import { type GroupStore, createGroupStore } from "./groupStore.ts";
+import { multiTabStore } from "./multiTabStore.ts";
+import { clearValidationErrors } from "./validation.ts";
+
+/**
+ * Broadcast commands: written on commit, then reset to `undefined` in the
+ * same tick; every product copies the value into its own field. Deal keys
+ * are named after their field ids.
+ */
+type DealBroadcasts = Record<BroadcastFieldId, unknown>;
+
+const createBroadcasts = () =>
+  Object.fromEntries(broadcastFieldIds.map((id) => [id, undefined])) as DealBroadcasts;
 
 export type DealStore = DealBroadcasts & {
   notionalCcy: string;
@@ -26,8 +32,8 @@ export type DealStore = DealBroadcasts & {
     hedgeTypes: string[];
   };
   spotPriceStream: SpotPriceStream;
-  hasValidationErrors: boolean;
-  validationErrors: Record<string, $ZodIssue[]>; // keyed by field name
+  readonly hasValidationErrors: boolean;
+  validationErrors: Record<string, $ZodIssue[]>; // keyed by field path
   actions: {
     addNewGroup(groupType: GroupType): void;
     cloneGroup(groupId: string): void;
@@ -48,7 +54,7 @@ export const createDealStore = (): DealStore => {
       const group = dealStore.groups[groupId];
       // same-value writes are ignored, so unmoved groups don't notify
       group.ui.index = index;
-      group.ui.title = `${groupDefinitions[group.groupType].label} #${index + 1}`;
+      group.ui.title = groupTitle(group.groupType, index);
     });
   };
 
@@ -57,11 +63,7 @@ export const createDealStore = (): DealStore => {
     position: number,
     source?: GroupStore,
   ) => {
-    const { groupStore, dispose } = createGroupStore(
-      dealStore,
-      groupType,
-      source,
-    );
+    const { groupStore, dispose } = createGroupStore(dealStore, groupType, source);
     disposers.set(groupStore.id, dispose);
     // record first, so the id never appears in the order without its group
     dealStore.groups[groupStore.id] = groupStore;
@@ -69,18 +71,20 @@ export const createDealStore = (): DealStore => {
     reindexGroups();
   };
 
-  const dealStore = proxy<DealStore>({
+  const dealStore: DealStore = proxy<DealStore>({
     ...createBroadcasts(),
     notionalCcy: "1xxxxxx",
     premiumCcy: "2",
     groups: {},
     groupIds: [],
     isInternal: true,
-    spotPriceStream: ref(spotPriceStream), // ref(): valtio does not track it, so ticks never notify the deal proxy
+    spotPriceStream: ref(spotPriceStream), // ref(): ticks never notify the deal proxy
     options: {
       hedgeTypes: [],
     },
-    hasValidationErrors: false,
+    get hasValidationErrors() {
+      return Object.values(dealStore.validationErrors).some((issues) => issues.length > 0);
+    },
     validationErrors: {},
     actions: {
       addNewGroup(groupType: GroupType) {

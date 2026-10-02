@@ -3,20 +3,18 @@ import {
   type BroadcastFieldId,
   type SyncedFieldId,
   broadcastFieldIds,
-} from "./dealFields.ts";
-import { type FieldModel, createFieldModel } from "./fieldModel.ts";
-import type { FieldId } from "./fields.ts";
-import {
-  type GroupStore,
-  type GroupType,
-  createGroupStore,
-  groupDefinitions,
-} from "./groupStore.ts";
-import type { AnyProduct } from "./products/productRegistry.ts";
+  isEmptyBroadcast,
+  syncedFieldIds,
+} from "@shared/dealFields.ts";
+import type { FieldId } from "@shared/fields.ts";
+import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
   type SpotPriceStream,
   createSpotPriceStream,
-} from "./spotPriceStream.ts";
+} from "@shared/spotPriceStream.ts";
+import { type FieldModel, createFieldModel } from "./fieldModel.ts";
+import { type GroupStore, createGroupStore } from "./groupStore.ts";
+import type { Product } from "./productStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
 type DealDevtools = { readonly isSpotPriceStreamEnabled: boolean };
@@ -33,7 +31,7 @@ export type DealStore = {
   readonly fields: Partial<Record<FieldId, FieldModel>>;
   readonly hedgeTypes: string[];
   /** Every product of every group, in display order. */
-  readonly products: AnyProduct[];
+  readonly products: Product[];
   readonly hasValidationErrors: boolean;
   addNewGroup(groupType: GroupType): void;
   cloneGroup(groupId: string): void;
@@ -56,15 +54,11 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     deal.groupIds.forEach((groupId, index) => {
       const group = deal.groups[groupId];
       group.ui.index = index;
-      group.ui.title = `${groupDefinitions[group.groupType].label} #${index + 1}`;
+      group.ui.title = groupTitle(group.groupType, index);
     });
   };
 
-  const insertGroup = (
-    groupType: GroupType,
-    position: number,
-    source?: GroupStore,
-  ) => {
+  const insertGroup = (groupType: GroupType, position: number, source?: GroupStore) => {
     const group = createGroupStore(groupType, deal, source);
     // record first, so the id never appears in the order without its group
     deal.groups[group.id] = group;
@@ -73,27 +67,27 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
   };
 
   /**
-   * The deal column's fields. Notional/Premium Ccy show the deal value and
-   * commit through the two-way sync. Every other field is a broadcast: it
-   * holds nothing (shows empty) and commits into every product.
+   * The deal column's fields. Synced ones show the deal value and commit
+   * through the two-way sync. Broadcasts hold nothing (show empty) and
+   * commit into every product.
    */
   const fields: Partial<Record<FieldId, FieldModel>> = {
-    notionalCcy: createFieldModel({
-      read: () => deal.notionalCcy,
-      commit: (value) => deal.setSynced("notionalCcy", String(value)),
-    }),
-    premiumCcy: createFieldModel({
-      read: () => deal.premiumCcy,
-      commit: (value) => deal.setSynced("premiumCcy", String(value)),
-    }),
+    ...Object.fromEntries(
+      syncedFieldIds.map((id) => [
+        id,
+        createFieldModel({
+          read: () => deal[id],
+          commit: (value) => deal.setSynced(id, String(value)),
+        }),
+      ]),
+    ),
     ...Object.fromEntries(
       broadcastFieldIds.map((id) => [
         id,
         createFieldModel({
           read: () => undefined,
           commit: (value) => {
-            if (value === "" || Number.isNaN(value)) return; // nothing to send
-            deal.broadcast(id, value);
+            if (!isEmptyBroadcast(value)) deal.broadcast(id, value);
           },
         }),
       ]),
@@ -156,9 +150,7 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
   );
 
   const stopSpotPriceStream = autorun(() =>
-    devtools.isSpotPriceStreamEnabled
-      ? spotPriceStream.start()
-      : spotPriceStream.stop(),
+    devtools.isSpotPriceStreamEnabled ? spotPriceStream.start() : spotPriceStream.stop(),
   );
 
   return deal;

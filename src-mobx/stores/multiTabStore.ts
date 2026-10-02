@@ -1,5 +1,5 @@
 import { autorun, observable } from "mobx";
-import { uuid } from "../lib/uuid.ts";
+import { uuid } from "@shared/lib/uuid.ts";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 
 const DEVTOOLS_STORAGE_KEY = "mobx-devtools";

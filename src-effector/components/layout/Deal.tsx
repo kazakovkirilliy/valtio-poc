@@ -1,14 +1,14 @@
-import "../columns/columns.css";
-import "./Deal.css";
+import "@shared/styles/columns.css";
+import "@shared/styles/deal.css";
 import { memo } from "react";
-import { columnsGridTemplateRows } from "../../stores/fields.ts";
+import { columnsGridTemplateRows } from "@shared/fields.ts";
 import { useAction, useValue } from "../../hooks/units.ts";
-import { useOnMount } from "../../hooks/useOnMount.ts";
+import { useOnMount } from "@shared/hooks/useOnMount.ts";
 import { DealColumn } from "../columns/DealColumn.tsx";
 import { DealHeader } from "./DealHeader.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { GroupColumn } from "../columns/GroupColumn.tsx";
-import { LabelColumn } from "../columns/LabelColumn.tsx";
+import { LabelColumn } from "@shared/components/LabelColumn.tsx";
 
 export const Deal = memo(() => {
   const deal = useDealStore();

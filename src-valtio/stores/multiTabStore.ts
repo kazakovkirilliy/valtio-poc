@@ -1,7 +1,7 @@
 import { proxy } from "valtio";
 import { devtools } from "valtio/utils";
 import { type DealStore, createDealStore } from "./dealStore.ts";
-import { uuid } from "../lib/uuid.ts";
+import { uuid } from "@shared/lib/uuid.ts";
 
 import { persist } from "valtio-auto-persist";
 
@@ -9,9 +9,15 @@ export type DevToolsStore = {
   isSpotPriceStreamEnabled: boolean;
 };
 
-export const { store: devtoolsStore } = await persist<DevToolsStore>({
-  isSpotPriceStreamEnabled: true,
-});
+const devtoolsDefaults: DevToolsStore = { isSpotPriceStreamEnabled: true };
+
+export const { store: devtoolsStore } = await persist<DevToolsStore>(devtoolsDefaults);
+
+// valtio-auto-persist 2.2.3 returns an empty store when nothing is stored yet,
+// dropping the initial state: fill in the defaults it left out
+for (const key of Object.keys(devtoolsDefaults) as (keyof DevToolsStore)[]) {
+  devtoolsStore[key] ??= devtoolsDefaults[key];
+}
 
 export type MultiTabStore = {
   devtools: DevToolsStore;

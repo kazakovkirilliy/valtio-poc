@@ -1,30 +1,38 @@
-import { memo } from "react";
-import { FieldCells, type FieldBindings } from "./FieldCells.tsx";
-import { dealBroadcastKeys } from "../../stores/dealBroadcasts.ts";
-import { SpotPriceField } from "../fields/SpotPriceField.tsx";
+import { memo, useMemo } from "react";
+import { FieldCells } from "@shared/components/FieldCells.tsx";
+import { SpotPriceField } from "@shared/components/SpotPriceField.tsx";
+import { broadcastFieldIds, syncedFieldIds } from "@shared/dealFields.ts";
+import { BoundField } from "../fields/BoundField.tsx";
+import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
 /**
- * Notional/Premium Ccy sync two-way with every product. All other fields
- * are broadcasts: committed on blur or Enter, pushed into every product of
- * every group, then cleared. Deal keys are named after their field ids.
+ * Synced fields (Notional/Premium Ccy) are two-way with every product. All
+ * others are broadcasts: committed into every product of every group, then
+ * cleared. Deal keys are named after their field ids.
  */
-const bindings: FieldBindings = {
-  notionalCcy: { path: "notionalCcy" },
-  premiumCcy: { path: "premiumCcy" },
-  ...Object.fromEntries(
-    dealBroadcastKeys.map((key) => [key, { path: key, isBroadcasting: true }]),
-  ),
-};
+export const DealColumn = memo(() => {
+  const { spotPriceStream } = useDealStore();
+  const fields = useMemo(
+    () => ({
+      ...Object.fromEntries(
+        syncedFieldIds.map((id) => [id, <BoundField fieldId={id} path={id} />]),
+      ),
+      ...Object.fromEntries(
+        broadcastFieldIds.map((id) => [id, <BoundField fieldId={id} path={id} isBroadcasting />]),
+      ),
+      spotStream: <SpotPriceField spotPriceStream={spotPriceStream} />,
+    }),
+    [spotPriceStream],
+  );
 
-const custom = { spotStream: <SpotPriceField /> };
-
-export const DealColumn = memo(() => (
-  <div className="column">
-    <div className="column__header column__header--span">
-      <h5 className="column__title">Deal Column</h5>
+  return (
+    <div className="column">
+      <div className="column__header column__header--span">
+        <h5 className="column__title">Deal Column</h5>
+      </div>
+      <FieldCells fields={fields} />
     </div>
-    <FieldCells bindings={bindings} custom={custom} />
-  </div>
-));
+  );
+});
 
 DealColumn.displayName = "DealColumn";

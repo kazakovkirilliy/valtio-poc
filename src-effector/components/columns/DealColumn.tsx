@@ -1,19 +1,16 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useStoreMap } from "effector-react";
-import { useAction } from "../../hooks/units.ts";
+import { FieldCells } from "@shared/components/FieldCells.tsx";
+import { SpotPriceField } from "@shared/components/SpotPriceField.tsx";
 import {
   type BroadcastFieldId,
   type SyncedFieldId,
   broadcastFieldIds,
-} from "../../stores/dealFields.ts";
-import { fieldInputTypes, fieldLabels } from "../../stores/fields.ts";
+  syncedFieldIds,
+} from "@shared/dealFields.ts";
+import { useAction } from "../../hooks/units.ts";
+import { Field } from "../fields/Field.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
-import { FieldCells } from "./FieldCells.tsx";
-import { Input } from "../fields/Input.tsx";
-import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
-import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
-import { DEFAULT_SETTLEMENT_STYLE } from "../../stores/settlementStyles.ts";
-import { SpotPriceField } from "../fields/SpotPriceField.tsx";
 
 /** Shows the deal value; a commit syncs the deal and every product. */
 const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
@@ -26,9 +23,8 @@ const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
   const commit = useAction(actions.commitSyncedFieldAction);
 
   return (
-    <Input
-      label={fieldLabels[fieldId]}
-      type={fieldInputTypes[fieldId]}
+    <Field
+      fieldId={fieldId}
       value={value}
       onCommit={(next) => commit({ fieldId, value: String(next) })}
     />
@@ -37,56 +33,37 @@ const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
 
 SyncedField.displayName = "SyncedField";
 
-/** Holds nothing (shows empty); a commit pushes the value into every product. */
+/**
+ * Holds nothing (shows empty); a commit pushes the value into every product.
+ * Async options: the deal has no value of its own to depend on, so it offers
+ * the default parameter's options.
+ */
 const BroadcastField = memo(({ fieldId }: { fieldId: BroadcastFieldId }) => {
   const commit = useAction(useDealStore().actions.broadcastFieldAction);
-  const onCommit = (value: unknown) => commit({ fieldId, value });
-  const type = fieldInputTypes[fieldId];
-
-  return type === "select" ? (
-    fieldId === "settlementStyle" ? (
-      <SettlementStyleSelect
-        label={fieldLabels[fieldId]}
-        value={undefined}
-        onCommit={onCommit}
-      />
-    ) : (
-      // the deal holds no style of its own: it offers the default style's options
-      <FixingSourceSelect
-        label={fieldLabels[fieldId]}
-        settlementStyle={DEFAULT_SETTLEMENT_STYLE}
-        value={undefined}
-        onCommit={onCommit}
-      />
-    )
-  ) : (
-    <Input
-      label={fieldLabels[fieldId]}
-      type={type}
-      value={undefined}
-      onCommit={onCommit}
-    />
-  );
+  return <Field fieldId={fieldId} value={undefined} onCommit={(value) => commit({ fieldId, value })} />;
 });
 
 BroadcastField.displayName = "BroadcastField";
 
-const fields = {
-  notionalCcy: <SyncedField fieldId="notionalCcy" />,
-  premiumCcy: <SyncedField fieldId="premiumCcy" />,
-  ...Object.fromEntries(
-    broadcastFieldIds.map((id) => [id, <BroadcastField fieldId={id} />]),
-  ),
-  spotStream: <SpotPriceField />,
-};
+export const DealColumn = memo(() => {
+  const { spotPriceStream } = useDealStore();
+  const fields = useMemo(
+    () => ({
+      ...Object.fromEntries(syncedFieldIds.map((id) => [id, <SyncedField fieldId={id} />])),
+      ...Object.fromEntries(broadcastFieldIds.map((id) => [id, <BroadcastField fieldId={id} />])),
+      spotStream: <SpotPriceField spotPriceStream={spotPriceStream} />,
+    }),
+    [spotPriceStream],
+  );
 
-export const DealColumn = memo(() => (
-  <div className="column">
-    <div className="column__header column__header--span">
-      <h5 className="column__title">Deal Column</h5>
+  return (
+    <div className="column">
+      <div className="column__header column__header--span">
+        <h5 className="column__title">Deal Column</h5>
+      </div>
+      <FieldCells fields={fields} />
     </div>
-    <FieldCells fields={fields} />
-  </div>
-));
+  );
+});
 
 DealColumn.displayName = "DealColumn";

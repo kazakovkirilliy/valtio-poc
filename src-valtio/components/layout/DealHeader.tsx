@@ -6,7 +6,7 @@ import {
   type GroupType,
   groupTypes,
   groupDefinitions,
-} from "../../stores/groupStore.ts";
+} from "@shared/groups.ts";
 
 export const DealHeader = memo(() => {
   const dealStore = useDealStore();

@@ -1,4 +1,4 @@
-import "./GroupColumn.css";
+import "@shared/styles/group.css";
 import { observer } from "mobx-react-lite";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { ProductColumn } from "./ProductColumn.tsx";

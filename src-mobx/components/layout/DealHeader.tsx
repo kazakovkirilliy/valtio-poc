@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { groupDefinitions, groupTypes } from "../../stores/groupStore.ts";
+import { groupDefinitions, groupTypes } from "@shared/groups.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 

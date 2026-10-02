@@ -2,7 +2,8 @@ import { useCallback, useMemo } from "react";
 import { proxy } from "valtio";
 import type { $ZodIssue } from "zod/v4/core";
 import { useDealStore } from "../components/providers/DealStoreProvider.tsx";
-import { resolveParent } from "../lib/path.ts";
+import { isEmptyBroadcast } from "@shared/dealFields.ts";
+import { resolveParent } from "@shared/lib/path.ts";
 import { toValidationKey } from "../stores/validation.ts";
 import { useProxyValue } from "./useProxyValue.ts";
 
@@ -45,7 +46,7 @@ export const useDealCommit = (path: string, isBroadcasting = false) => {
   return useCallback(
     (value: unknown) => {
       if (!isBroadcasting) return actions.setValueByPath(path, value);
-      if (value === "" || value === undefined) return; // nothing to broadcast
+      if (isEmptyBroadcast(value)) return; // nothing to broadcast
       actions.setValueByPath(path, value);
       actions.setValueByPath(path, undefined);
     },

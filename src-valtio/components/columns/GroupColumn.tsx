@@ -1,8 +1,8 @@
-import "./GroupColumn.css";
+import "@shared/styles/group.css";
 import { memo, useCallback } from "react";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { useDealValue } from "../../hooks/useDealValue.ts";
-import { getProductType } from "../../stores/products/productRegistry.ts";
+import { productTypeOf } from "@shared/products/productRegistry.ts";
 import { ProductColumn } from "./ProductColumn.tsx";
 
 type Props = {
@@ -47,7 +47,7 @@ export const GroupColumn = memo(({ groupId }: Props) => {
         <ProductColumn
           key={productId}
           productPath={`groups.${groupId}.products.${productId}`}
-          productType={getProductType(group.products[productId])}
+          productType={productTypeOf(group.products[productId].data)}
         />
       ))}
     </div>

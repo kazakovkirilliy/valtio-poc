@@ -9,29 +9,28 @@ import {
   type BroadcastFieldId,
   type DealFieldsState,
   type SyncedFieldId,
+  isEmptyBroadcast,
   isSyncedField,
-} from "./dealFields.ts";
-import type { ProductFieldId } from "./fields.ts";
+} from "@shared/dealFields.ts";
+import type { ProductFieldId } from "@shared/fields.ts";
+import type { GroupType } from "@shared/groups.ts";
+import { createSpotPriceStream } from "@shared/spotPriceStream.ts";
 import {
-  type GroupType,
   type GroupsState,
   addGroupReducer,
   cloneGroupReducer,
   groupCreatedReducer,
   groupRemovedReducer,
 } from "./groupStore.ts";
+import { loadAllOptionsFx, loadOptionsFx } from "./optionsStore.ts";
 import {
   type ProductState,
-  readProductField,
+  optionsRequestsFor,
+  optionsRequestsOf,
+  reconcileProductOptions,
   setProductField,
   validateProducts,
-} from "./products/productRegistry.ts";
-import { createSpotPriceStream } from "./spotPriceStream.ts";
-import { reconcileFixingSource } from "../api/fixingSources.ts";
-import {
-  loadFixingSourcesForStylesFx,
-  loadFixingSourcesFx,
-} from "./fixingSourceStore.ts";
+} from "./productStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
 type DealDevtools = { $isSpotPriceStreamEnabled: Store<boolean> };
@@ -52,9 +51,9 @@ const mapProducts = (
 /**
  * One deal's model. State lives in stores keyed by id; every change is an
  * event handled by pure reducers, and derived state (validation, order) is
- * computed from the stores. Products are plain data, written through their
- * own module's `setField`, so a product that didn't change keeps its
- * identity and nothing bound to it re-renders.
+ * computed from the stores. Products are plain data, written through
+ * `setProductField`, so a product that didn't change keeps its identity and
+ * nothing bound to it re-renders.
  *
  * The events the UI may call are returned as `actions`; events the model
  * derives for itself (e.g. `groupCreated`) stay inside.
@@ -160,51 +159,35 @@ export const createDealStore = (devtools: DealDevtools) => {
     mapProducts(products, (product) => setProductField(product, fieldId, value)),
   );
   $products.on(broadcastFieldAction, (products, { fieldId, value }) => {
-    if (value === "" || Number.isNaN(value)) return products; // nothing to send
+    if (isEmptyBroadcast(value)) return products; // nothing to send
     return mapProducts(products, (product) =>
       setProductField(product, fieldId, value),
     );
   });
 
-  // --- fixing sources: their options depend on the product's settlement style
-  // load them for a new group's styles (one request per style) …
+  // --- async options (e.g. Fixing Source): each depends on another product field
+  // load them for a new group's products (one request per source and parameter) …
   connect({
     clock: groupCreated,
-    fn: ({ products }) => [
-      ...new Set(
-        products.map((product) => String(readProductField(product, "settlementStyle"))),
-      ),
-    ],
-    target: loadFixingSourcesForStylesFx,
+    fn: ({ products }) => optionsRequestsOf(products),
+    target: loadAllOptionsFx,
   });
-  // … and reload them whenever a style changes, in one product or broadcast to all
+  // … and reload them whenever that field changes, in one product or broadcast to all
   connect({
     clock: commitProductFieldAction,
-    filter: ({ fieldId }) => fieldId === "settlementStyle",
-    fn: ({ value }) => String(value),
-    target: loadFixingSourcesFx,
+    fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
+    target: loadAllOptionsFx,
   });
   connect({
     clock: broadcastFieldAction,
-    filter: ({ fieldId, value }) => fieldId === "settlementStyle" && value !== "",
-    fn: ({ value }) => String(value),
-    target: loadFixingSourcesFx,
+    filter: ({ value }) => !isEmptyBroadcast(value),
+    fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
+    target: loadAllOptionsFx,
   });
-  // options arrived for a style: products still on that style keep their fixing
-  // source if it's an option, else reset to the first (stale responses: ignored)
-  $products.on(loadFixingSourcesFx.done, (products, { params: style, result }) =>
-    mapProducts(products, (product) =>
-      readProductField(product, "settlementStyle") === style
-        ? setProductField(
-            product,
-            "settlementFixingSource",
-            reconcileFixingSource(
-              String(readProductField(product, "settlementFixingSource") ?? ""),
-              result,
-            ),
-          )
-        : product,
-    ),
+  // options arrived: products still on that parameter keep their value if it's
+  // an option, else take the first (stale responses: ignored)
+  $products.on(loadOptionsFx.done, (products, { params, result }) =>
+    mapProducts(products, (product) => reconcileProductOptions(product, params, result)),
   );
 
   // --- spot price: kept outside the stores, ticks never notify subscribers

@@ -1,22 +1,21 @@
 import { memo, useMemo } from "react";
 import { useStoreMap } from "effector-react";
-import { useAction } from "../../hooks/units.ts";
-import {
-  type ProductFieldId,
-  fieldInputTypes,
-  fieldLabels,
-} from "../../stores/fields.ts";
+import { FieldCells } from "@shared/components/FieldCells.tsx";
+import { type ProductFieldId, asyncOptionFields } from "@shared/fields.ts";
 import {
   type ProductType,
-  productDefinitions,
-  readProductField,
-} from "../../stores/products/productRegistry.ts";
+  definitionOf,
+  isReadOnly,
+} from "@shared/products/productRegistry.ts";
+import { useAction } from "../../hooks/units.ts";
+import { readProductField } from "../../stores/productStore.ts";
+import { Field } from "../fields/Field.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
-import { FieldCells } from "./FieldCells.tsx";
-import { Input } from "../fields/Input.tsx";
-import { FixingSourceSelect } from "../fields/FixingSourceSelect.tsx";
-import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
-import { DEFAULT_SETTLEMENT_STYLE } from "../../stores/settlementStyles.ts";
+
+/** Async option fields, and the field their options depend on. */
+const paramFieldOf = Object.fromEntries(
+  asyncOptionFields.map(({ fieldId, options }) => [fieldId, options.dependsOn]),
+) as Partial<Record<ProductFieldId, ProductFieldId>>;
 
 type FieldProps = {
   productId: string;
@@ -25,8 +24,9 @@ type FieldProps = {
 };
 
 /**
- * One product field. It selects only its own value and whether it has
- * issues, so it re-renders only when one of those two changes.
+ * One product field. It selects only its own value, whether it has issues
+ * and (async options) the value they depend on, so it re-renders only when
+ * one of those changes.
  */
 const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
   const { $products, $validation, actions } = useDealStore();
@@ -38,81 +38,38 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
       return product ? (readProductField(product, field) ?? null) : null;
     },
   });
+  const param = useStoreMap({
+    store: $products,
+    keys: [productId, paramFieldOf[fieldId] ?? null],
+    fn: (products, [id, paramField]) => {
+      const product = products[id];
+      return product && paramField ? String(readProductField(product, paramField) ?? "") : "";
+    },
+  });
   const hasError = useStoreMap({
     store: $validation,
     keys: [productId, fieldId],
     fn: (validation, [id, field]) => (validation[id]?.[field]?.length ?? 0) > 0,
   });
   const commit = useAction(actions.commitProductFieldAction);
-  const onCommit = (next: unknown) => commit({ productId, fieldId, value: next });
-  const type = fieldInputTypes[fieldId];
 
-  return type === "select" ? (
-    fieldId === "settlementStyle" ? (
-      <SettlementStyleSelect
-        label={fieldLabels[fieldId]}
-        value={value}
-        hasError={hasError}
-        onCommit={onCommit}
-      />
-    ) : (
-      <ProductFixingSourceSelect
-        productId={productId}
-        label={fieldLabels[fieldId]}
-        value={value}
-        hasError={hasError}
-        onCommit={onCommit}
-      />
-    )
-  ) : (
-    <Input
-      label={fieldLabels[fieldId]}
-      type={type}
+  return (
+    <Field
+      fieldId={fieldId}
       value={value}
       hasError={hasError}
       readOnly={readOnly}
-      onCommit={onCommit}
+      param={param}
+      onCommit={(next) => commit({ productId, fieldId, value: next })}
     />
   );
 });
 
 ProductField.displayName = "ProductField";
 
-type FixingSourceProps = {
-  productId: string;
-  label: string;
-  value: unknown;
-  hasError: boolean;
-  onCommit: (value: unknown) => void;
-};
-
-/** Fixing Source: shows the options loaded for this product's settlement style. */
-const ProductFixingSourceSelect = memo(
-  ({ productId, ...props }: FixingSourceProps) => {
-    const { $products } = useDealStore();
-    const settlementStyle = useStoreMap({
-      store: $products,
-      keys: [productId],
-      fn: (products, [id]) => {
-        const product = products[id];
-        return product ? String(readProductField(product, "settlementStyle") ?? "") : "";
-      },
-    });
-
-    return (
-      <FixingSourceSelect
-        {...props}
-        settlementStyle={settlementStyle || DEFAULT_SETTLEMENT_STYLE}
-      />
-    );
-  },
-);
-
-ProductFixingSourceSelect.displayName = "ProductFixingSourceSelect";
-
 /**
  * Any product's column: its title and every field it maps. Which fields a
- * product has, and where they live, comes from its own module.
+ * product has comes from its declaration.
  */
 export const ProductColumn = memo(({ productId }: { productId: string }) => {
   const { $products } = useDealStore();
@@ -124,20 +81,19 @@ export const ProductColumn = memo(({ productId }: { productId: string }) => {
   const productType = useStoreMap({
     store: $products,
     keys: [productId],
-    fn: (products, [id]): ProductType | null =>
-      products[id]?.data.productType ?? null,
+    fn: (products, [id]): ProductType | null => products[id]?.data.productType ?? null,
   });
 
   const fields = useMemo(() => {
     if (!productType) return {};
-    const { fieldPaths, readOnlyFields } = productDefinitions[productType];
+    const definition = definitionOf(productType);
     return Object.fromEntries(
-      (Object.keys(fieldPaths) as ProductFieldId[]).map((fieldId) => [
+      (Object.keys(definition.fieldPaths) as ProductFieldId[]).map((fieldId) => [
         fieldId,
         <ProductField
           productId={productId}
           fieldId={fieldId}
-          readOnly={readOnlyFields.includes(fieldId)}
+          readOnly={isReadOnly(definition, fieldId)}
         />,
       ]),
     );
