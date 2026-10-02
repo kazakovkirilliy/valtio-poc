@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rolldownOptions: {
-      // index.html links to the three versions of the app: valtio (src/),
+      // index.html links to the three versions of the app: valtio (src-valtio/),
       // MobX (src-mobx/) and Effector (src-effector/)
       input: {
         index: 'index.html',

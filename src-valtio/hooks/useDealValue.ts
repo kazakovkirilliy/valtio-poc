@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { proxy } from "valtio";
 import type { $ZodIssue } from "zod/v4/core";
-import { useDealStore } from "../components/DealStoreProvider.tsx";
+import { useDealStore } from "../components/providers/DealStoreProvider.tsx";
 import { resolveParent } from "../lib/path.ts";
 import { toValidationKey } from "../stores/validation.ts";
 import { useProxyValue } from "./useProxyValue.ts";
