@@ -3,14 +3,14 @@ import { useAction, useValue } from "../hooks/units.ts";
 import { groupDefinitions, groupTypes } from "../stores/groupStore.ts";
 import {
   $isSpotPriceStreamEnabled,
-  toggleSpotPriceStreamEnabled,
+  toggleSpotPriceStreamEnabledAction,
 } from "../stores/multiTabStore.ts";
 import { useDealStore } from "./DealStoreProvider.tsx";
 
 export const DealHeader = memo(() => {
-  const addGroup = useAction(useDealStore().actions.addGroup);
+  const addGroup = useAction(useDealStore().actions.addGroupAction);
   const isSpotPriceStreamEnabled = useValue($isSpotPriceStreamEnabled);
-  const toggle = useAction(toggleSpotPriceStreamEnabled);
+  const toggle = useAction(toggleSpotPriceStreamEnabledAction);
 
   return (
     <div className="deal__toolbar">

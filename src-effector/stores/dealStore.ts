@@ -54,22 +54,22 @@ const mapProducts = (
  */
 export const createDealStore = (devtools: DealDevtools) => {
   // --- actions: the requests the UI (or anything else) can make
-  const addGroup = createEvent<GroupType>();
-  const cloneGroup = createEvent<string>();
-  const removeGroup = createEvent<string>();
+  const addGroupAction = createEvent<GroupType>();
+  const cloneGroupAction = createEvent<string>();
+  const removeGroupAction = createEvent<string>();
   /** Writes one field of one product. */
-  const commitProductField = createEvent<{
+  const commitProductFieldAction = createEvent<{
     productId: string;
     fieldId: ProductFieldId;
     value: unknown;
   }>();
   /** Two-way sync: the deal value and every product's copy, in one event. */
-  const commitSyncedField = createEvent<{
+  const commitSyncedFieldAction = createEvent<{
     fieldId: SyncedFieldId;
     value: string;
   }>();
   /** Pushes one value into every product; the deal keeps nothing. */
-  const broadcastField = createEvent<{
+  const broadcastFieldAction = createEvent<{
     fieldId: BroadcastFieldId;
     value: unknown;
   }>();
@@ -97,13 +97,13 @@ export const createDealStore = (devtools: DealDevtools) => {
   // --- groups: build (new ids) from the current deal values, then insert
   const groupCreated = merge([
     connect({
-      clock: addGroup,
+      clock: addGroupAction,
       source: { deal: $dealFields, groups: $groups },
       fn: ({ deal, groups }, groupType) =>
         createGroup(groupType, deal, groups.order.length),
     }),
     connect({
-      clock: cloneGroup,
+      clock: cloneGroupAction,
       source: { deal: $dealFields, groups: $groups, products: $products },
       filter: ({ groups }, groupId) => groupId in groups.byId,
       fn: ({ deal, groups, products }, groupId) => {
@@ -126,7 +126,7 @@ export const createDealStore = (devtools: DealDevtools) => {
 
   // nothing to dispose: a removed group's products, and their issues, are just gone
   const groupRemoved = connect({
-    clock: removeGroup,
+    clock: removeGroupAction,
     source: $groups,
     filter: (groups, groupId) => groupId in groups.byId,
     fn: (groups, groupId) => groups.byId[groupId],
@@ -141,28 +141,28 @@ export const createDealStore = (devtools: DealDevtools) => {
   // --- fields
   // a product's ccy commit is the two-way sync: it writes the deal and every product
   connect({
-    clock: commitProductField,
+    clock: commitProductFieldAction,
     filter: ({ fieldId }) => isSyncedField(fieldId),
     fn: ({ fieldId, value }) => ({
       fieldId: fieldId as SyncedFieldId,
       value: String(value),
     }),
-    target: commitSyncedField,
+    target: commitSyncedFieldAction,
   });
-  $products.on(commitProductField, (products, { productId, fieldId, value }) => {
+  $products.on(commitProductFieldAction, (products, { productId, fieldId, value }) => {
     const product = products[productId];
     if (!product || isSyncedField(fieldId)) return products;
     const next = setProductField(product, fieldId, value);
     return next === product ? products : { ...products, [productId]: next };
   });
 
-  $dealFields.on(commitSyncedField, (deal, { fieldId, value }) =>
+  $dealFields.on(commitSyncedFieldAction, (deal, { fieldId, value }) =>
     deal[fieldId] === value ? deal : { ...deal, [fieldId]: value },
   );
-  $products.on(commitSyncedField, (products, { fieldId, value }) =>
+  $products.on(commitSyncedFieldAction, (products, { fieldId, value }) =>
     mapProducts(products, (product) => setProductField(product, fieldId, value)),
   );
-  $products.on(broadcastField, (products, { fieldId, value }) => {
+  $products.on(broadcastFieldAction, (products, { fieldId, value }) => {
     if (value === "" || Number.isNaN(value)) return products; // nothing to send
     return mapProducts(products, (product) =>
       setProductField(product, fieldId, value),
@@ -177,12 +177,12 @@ export const createDealStore = (devtools: DealDevtools) => {
 
   return {
     actions: {
-      addGroup,
-      cloneGroup,
-      removeGroup,
-      commitProductField,
-      commitSyncedField,
-      broadcastField,
+      addGroupAction,
+      cloneGroupAction,
+      removeGroupAction,
+      commitProductFieldAction,
+      commitSyncedFieldAction,
+      broadcastFieldAction,
     },
     // stores
     $dealFields,

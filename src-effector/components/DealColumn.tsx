@@ -20,7 +20,7 @@ const SyncedField = memo(({ fieldId }: { fieldId: SyncedFieldId }) => {
     keys: [fieldId],
     fn: (deal, [id]) => deal[id],
   });
-  const commit = useAction(actions.commitSyncedField);
+  const commit = useAction(actions.commitSyncedFieldAction);
 
   return (
     <Input
@@ -36,7 +36,7 @@ SyncedField.displayName = "SyncedField";
 
 /** Holds nothing (shows empty); a commit pushes the value into every product. */
 const BroadcastField = memo(({ fieldId }: { fieldId: BroadcastFieldId }) => {
-  const commit = useAction(useDealStore().actions.broadcastField);
+  const commit = useAction(useDealStore().actions.broadcastFieldAction);
 
   return (
     <Input

@@ -14,7 +14,7 @@ export const Deal = memo(() => {
   const deal = useDealStore();
   // only the group order: field edits never re-render the deal
   const groupIds = useValue(deal.$groupOrder);
-  const addGroup = useAction(deal.actions.addGroup);
+  const addGroup = useAction(deal.actions.addGroupAction);
 
   useOnMount(() => {
     addGroup("VanillaGroup");

@@ -40,7 +40,7 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
     keys: [productId, fieldId],
     fn: (validation, [id, field]) => (validation[id]?.[field]?.length ?? 0) > 0,
   });
-  const commit = useAction(actions.commitProductField);
+  const commit = useAction(actions.commitProductFieldAction);
 
   return (
     <Input

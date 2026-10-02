@@ -13,8 +13,8 @@ export const GroupColumn = memo(({ groupId }: { groupId: string }) => {
     keys: [groupId],
     fn: (groups, [id]) => groups.byId[id] ?? null,
   });
-  const cloneGroup = useAction(deal.actions.cloneGroup);
-  const removeGroup = useAction(deal.actions.removeGroup);
+  const cloneGroup = useAction(deal.actions.cloneGroupAction);
+  const removeGroup = useAction(deal.actions.removeGroupAction);
 
   // the group may be gone for one render after removal
   if (!group) return null;

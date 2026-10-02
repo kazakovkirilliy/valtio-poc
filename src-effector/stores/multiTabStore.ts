@@ -10,9 +10,9 @@ import { uuid } from "../lib/uuid.ts";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 
 // --- developer settings, persisted to localStorage
-export const toggleSpotPriceStreamEnabled = createEvent();
+export const toggleSpotPriceStreamEnabledAction = createEvent();
 export const $isSpotPriceStreamEnabled = createStore(true).on(
-  toggleSpotPriceStreamEnabled,
+  toggleSpotPriceStreamEnabledAction,
   (enabled) => !enabled,
 );
 
@@ -44,10 +44,10 @@ const createDealFx = createEffect(() => {
   return dealId;
 });
 
-export const addNewDeal = createEvent();
-export const setActiveDeal = createEvent<string>();
+export const addNewDealAction = createEvent();
+export const setActiveDealAction = createEvent<string>();
 
-connect({ clock: addNewDeal, target: createDealFx });
+connect({ clock: addNewDealAction, target: createDealFx });
 
 export const $dealIds = createStore<string[]>([]).on(
   createDealFx.doneData,
@@ -55,4 +55,4 @@ export const $dealIds = createStore<string[]>([]).on(
 );
 export const $activeDealId = createStore("")
   .on(createDealFx.doneData, (_, dealId) => dealId)
-  .on(setActiveDeal, (_, dealId) => dealId);
+  .on(setActiveDealAction, (_, dealId) => dealId);

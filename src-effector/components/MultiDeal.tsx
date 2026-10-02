@@ -6,9 +6,9 @@ import { useOnMount } from "../hooks/useOnMount.ts";
 import {
   $activeDealId,
   $dealIds,
-  addNewDeal,
+  addNewDealAction,
   getDealStore,
-  setActiveDeal,
+  setActiveDealAction,
 } from "../stores/multiTabStore.ts";
 import { Deal } from "./Deal.tsx";
 import { DealStoreProvider } from "./DealStoreProvider.tsx";
@@ -30,8 +30,8 @@ SingleDeal.displayName = "SingleDeal";
 export const MultiDeal = memo(() => {
   const dealIds = useValue($dealIds);
   const activeDealId = useValue($activeDealId);
-  const onAddNewDeal = useAction(addNewDeal);
-  const onSetActiveDeal = useAction(setActiveDeal);
+  const onAddNewDeal = useAction(addNewDealAction);
+  const onSetActiveDeal = useAction(setActiveDealAction);
 
   useOnMount(() => {
     onAddNewDeal();
