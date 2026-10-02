@@ -95,7 +95,8 @@ const reindexGroups = ({ byId, order }: GroupsState): GroupsState => {
   return { byId: next, order };
 };
 
-export const insertGroup = (
+/** The groups with `group` inserted at its position. */
+export const withGroup = (
   groups: GroupsState,
   { group, position }: CreatedGroup,
 ): GroupsState => {
@@ -104,7 +105,8 @@ export const insertGroup = (
   return reindexGroups({ byId: { ...groups.byId, [group.id]: group }, order });
 };
 
-export const removeGroup = (
+/** The groups without `groupId`. */
+export const withoutGroup = (
   groups: GroupsState,
   groupId: string,
 ): GroupsState => {

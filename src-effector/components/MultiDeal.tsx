@@ -1,7 +1,7 @@
 import "./MultiDeal.css";
 import { memo } from "react";
-import { useUnit } from "effector-react";
 import clsx from "clsx";
+import { useAction, useValue } from "../hooks/units.ts";
 import { useOnMount } from "../hooks/useOnMount.ts";
 import {
   $activeDealId,
@@ -28,12 +28,10 @@ SingleDeal.displayName = "SingleDeal";
 
 /** Reads only the deal ids and the active id: edits inside a deal never re-render it. */
 export const MultiDeal = memo(() => {
-  const [dealIds, activeDealId, onAddNewDeal, onSetActiveDeal] = useUnit([
-    $dealIds,
-    $activeDealId,
-    addNewDeal,
-    setActiveDeal,
-  ]);
+  const dealIds = useValue($dealIds);
+  const activeDealId = useValue($activeDealId);
+  const onAddNewDeal = useAction(addNewDeal);
+  const onSetActiveDeal = useAction(setActiveDeal);
 
   useOnMount(() => {
     onAddNewDeal();

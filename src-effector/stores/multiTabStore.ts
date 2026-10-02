@@ -1,34 +1,31 @@
-import { createEffect, createEvent, createStore, sample } from "effector";
+import {
+  createEffect,
+  createEvent,
+  createStore,
+  sample as connect,
+} from "effector";
+import { persist } from "effector-storage/local";
+import { z } from "zod";
 import { uuid } from "../lib/uuid.ts";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 
-const DEVTOOLS_STORAGE_KEY = "effector-devtools";
-
-type DevtoolsSettings = { isSpotPriceStreamEnabled: boolean };
-
-const loadDevtools = (): Partial<DevtoolsSettings> => {
-  try {
-    return JSON.parse(localStorage.getItem(DEVTOOLS_STORAGE_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-};
-
 // --- developer settings, persisted to localStorage
 export const toggleSpotPriceStreamEnabled = createEvent();
-export const $isSpotPriceStreamEnabled = createStore(
-  loadDevtools().isSpotPriceStreamEnabled ?? true,
-).on(toggleSpotPriceStreamEnabled, (enabled) => !enabled);
+export const $isSpotPriceStreamEnabled = createStore(true).on(
+  toggleSpotPriceStreamEnabled,
+  (enabled) => !enabled,
+);
 
-$isSpotPriceStreamEnabled.watch((isSpotPriceStreamEnabled) => {
-  try {
-    localStorage.setItem(
-      DEVTOOLS_STORAGE_KEY,
-      JSON.stringify({ isSpotPriceStreamEnabled } satisfies DevtoolsSettings),
-    );
-  } catch {
-    // storage unavailable (private mode): keep the in-memory value
-  }
+/**
+ * Restores the setting on load and saves every change (also kept in sync
+ * across browser tabs). A stored value that isn't a boolean is ignored, so
+ * the default applies.
+ */
+persist({
+  store: $isSpotPriceStreamEnabled,
+  keyPrefix: "effector-devtools:",
+  key: "isSpotPriceStreamEnabled",
+  contract: z.boolean(),
 });
 
 // --- deals (tabs)
@@ -50,7 +47,7 @@ const createDealFx = createEffect(() => {
 export const addNewDeal = createEvent();
 export const setActiveDeal = createEvent<string>();
 
-sample({ clock: addNewDeal, target: createDealFx });
+connect({ clock: addNewDeal, target: createDealFx });
 
 export const $dealIds = createStore<string[]>([]).on(
   createDealFx.doneData,

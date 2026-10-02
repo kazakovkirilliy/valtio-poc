@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { useUnit } from "effector-react";
+import { useAction, useValue } from "../hooks/units.ts";
 import { groupDefinitions, groupTypes } from "../stores/groupStore.ts";
 import {
   $isSpotPriceStreamEnabled,
@@ -8,11 +8,9 @@ import {
 import { useDealStore } from "./DealStoreProvider.tsx";
 
 export const DealHeader = memo(() => {
-  const addGroup = useUnit(useDealStore().addGroup);
-  const [isSpotPriceStreamEnabled, toggle] = useUnit([
-    $isSpotPriceStreamEnabled,
-    toggleSpotPriceStreamEnabled,
-  ]);
+  const addGroup = useAction(useDealStore().actions.addGroup);
+  const isSpotPriceStreamEnabled = useValue($isSpotPriceStreamEnabled);
+  const toggle = useAction(toggleSpotPriceStreamEnabled);
 
   return (
     <div className="deal__toolbar">

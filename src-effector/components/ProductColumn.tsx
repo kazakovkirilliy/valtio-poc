@@ -1,5 +1,6 @@
 import { memo, useMemo } from "react";
-import { useStoreMap, useUnit } from "effector-react";
+import { useStoreMap } from "effector-react";
+import { useAction } from "../hooks/units.ts";
 import {
   type ProductFieldId,
   fieldInputTypes,
@@ -25,7 +26,7 @@ type FieldProps = {
  * issues, so it re-renders only when one of those two changes.
  */
 const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
-  const { $products, $validation, productFieldCommitted } = useDealStore();
+  const { $products, $validation, actions } = useDealStore();
   const value = useStoreMap({
     store: $products,
     keys: [productId, fieldId],
@@ -39,7 +40,7 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
     keys: [productId, fieldId],
     fn: (validation, [id, field]) => (validation[id]?.[field]?.length ?? 0) > 0,
   });
-  const commit = useUnit(productFieldCommitted);
+  const commit = useAction(actions.commitProductField);
 
   return (
     <Input

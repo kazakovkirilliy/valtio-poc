@@ -1,6 +1,7 @@
 import "./GroupColumn.css";
 import { memo } from "react";
-import { useStoreMap, useUnit } from "effector-react";
+import { useStoreMap } from "effector-react";
+import { useAction } from "../hooks/units.ts";
 import { useDealStore } from "./DealStoreProvider.tsx";
 import { ProductColumn } from "./ProductColumn.tsx";
 
@@ -12,7 +13,8 @@ export const GroupColumn = memo(({ groupId }: { groupId: string }) => {
     keys: [groupId],
     fn: (groups, [id]) => groups.byId[id] ?? null,
   });
-  const [cloneGroup, removeGroup] = useUnit([deal.cloneGroup, deal.removeGroup]);
+  const cloneGroup = useAction(deal.actions.cloneGroup);
+  const removeGroup = useAction(deal.actions.removeGroup);
 
   // the group may be gone for one render after removal
   if (!group) return null;

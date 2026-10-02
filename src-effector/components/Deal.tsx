@@ -1,8 +1,8 @@
 import "./columns.css";
 import "./Deal.css";
 import { memo } from "react";
-import { useUnit } from "effector-react";
 import { columnsGridTemplateRows } from "../stores/fields.ts";
+import { useAction, useValue } from "../hooks/units.ts";
 import { useOnMount } from "../hooks/useOnMount.ts";
 import { DealColumn } from "./DealColumn.tsx";
 import { DealHeader } from "./DealHeader.tsx";
@@ -13,8 +13,8 @@ import { LabelColumn } from "./LabelColumn.tsx";
 export const Deal = memo(() => {
   const deal = useDealStore();
   // only the group order: field edits never re-render the deal
-  const groupIds = useUnit(deal.$groupOrder);
-  const addGroup = useUnit(deal.addGroup);
+  const groupIds = useValue(deal.$groupOrder);
+  const addGroup = useAction(deal.actions.addGroup);
 
   useOnMount(() => {
     addGroup("VanillaGroup");
