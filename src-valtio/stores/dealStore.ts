@@ -1,4 +1,5 @@
 import { proxy, ref } from "valtio";
+import { subscribeKey } from "valtio/utils";
 import { effect } from "valtio-reactive";
 import type { $ZodIssue } from "zod/v4/core";
 import {
@@ -8,7 +9,10 @@ import {
   groupDefinitions,
 } from "./groupStore.ts";
 import { multiTabStore } from "./multiTabStore.ts";
-import { setValueByPath } from "../lib/path.ts";
+import { getValueByPath, setValueByPath } from "../lib/path.ts";
+import { toSettlementStyleValue } from "../api/settlementStyles.ts";
+import { getProductType, productDefinitions } from "./products/productRegistry.ts";
+import { settlementStyleStore } from "./settlementStyleStore.ts";
 import { type DealBroadcasts, createBroadcasts } from "./dealBroadcasts.ts";
 import { clearValidationErrors } from "./validation.ts";
 import {
@@ -123,6 +127,32 @@ export const createDealStore = (): DealStore => {
 
   const options = dealStore.options;
   effect(() => (options.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]));
+
+  /**
+   * Default Settlement Style: when the options load, every product whose
+   * settlement style is still empty gets the first option (each product
+   * maps the field to its own path). Products created later start with it.
+   */
+  subscribeKey(
+    settlementStyleStore,
+    "options",
+    ([first]) => {
+      if (!first) return;
+      const value = toSettlementStyleValue(first);
+      for (const groupId of dealStore.groupIds) {
+        const { products, productIds } = dealStore.groups[groupId];
+        for (const productId of productIds) {
+          const product = products[productId];
+          const { fieldPaths } = productDefinitions[getProductType(product)];
+          const path = fieldPaths.settlementStyle;
+          if (path && !getValueByPath(product, path)) {
+            setValueByPath(product, path, value);
+          }
+        }
+      }
+    },
+    true,
+  );
 
   return dealStore;
 };

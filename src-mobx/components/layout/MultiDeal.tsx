@@ -7,6 +7,7 @@ import { DealStoreProvider } from "../providers/DealStoreProvider.tsx";
 import type { DealStore } from "../../stores/dealStore.ts";
 import { useOnMount } from "../../hooks/useOnMount.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
+import { settlementStyleStore } from "../../stores/settlementStyleStore.ts";
 
 const SingleDeal = memo(
   ({ isActive, deal }: { isActive: boolean; deal: DealStore }) => {
@@ -26,6 +27,7 @@ export const MultiDeal = observer(() => {
   const { dealIds, activeDealId } = multiTabStore;
 
   useOnMount(() => {
+    settlementStyleStore.load(); // shared by every deal
     multiTabStore.addNewDeal();
   });
 

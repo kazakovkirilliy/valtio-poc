@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { type FieldId, fields } from "../../stores/fields.ts";
 import { Input } from "../fields/Input.tsx";
+import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 
 /** Binds a field to a store path; the input type comes from `fields.ts`. */
 export type FieldBinding = {
@@ -26,7 +27,16 @@ export const FieldCells = ({ bindings, custom }: Props) =>
     const binding = bindings[id];
     return (
       <div key={id} className="cell">
-        {binding ? (
+        {!binding ? (
+          custom?.[id]
+        ) : input === "select" ? (
+          // the only select field: its options come from the API
+          <SettlementStyleSelect
+            label={label}
+            path={binding.path}
+            isBroadcasting={binding.isBroadcasting}
+          />
+        ) : (
           <Input
             label={label}
             type={input}
@@ -34,8 +44,6 @@ export const FieldCells = ({ bindings, custom }: Props) =>
             isBroadcasting={binding.isBroadcasting}
             readOnly={binding.readOnly}
           />
-        ) : (
-          custom?.[id]
         )}
       </div>
     );

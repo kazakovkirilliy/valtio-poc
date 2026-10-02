@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { type FieldId, fields as fieldDefinitions } from "../../stores/fields.ts";
 import type { FieldModel } from "../../stores/fieldModel.ts";
 import { Input } from "../fields/Input.tsx";
+import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 
 type Props = {
   /** Store-backed fields; the input type comes from `fields.ts`. */
@@ -19,10 +20,13 @@ export const FieldCells = ({ fields, custom }: Props) =>
     const field = fields[id];
     return (
       <div key={id} className="cell">
-        {field ? (
-          <Input field={field} label={label} type={input} />
-        ) : (
+        {!field ? (
           custom?.[id]
+        ) : input === "select" ? (
+          // the only select field: its options come from the API
+          <SettlementStyleSelect field={field} label={label} />
+        ) : (
+          <Input field={field} label={label} type={input} />
         )}
       </div>
     );

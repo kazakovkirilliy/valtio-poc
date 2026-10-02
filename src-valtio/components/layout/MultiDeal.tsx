@@ -2,6 +2,7 @@ import "./MultiDeal.css";
 import { Deal } from "./Deal.tsx";
 import { useProxyKeys, useProxyValue } from "../../hooks/useProxyValue.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
+import { settlementStyleStore } from "../../stores/settlementStyleStore.ts";
 import { DealStoreProvider } from "../providers/DealStoreProvider.tsx";
 import clsx from "clsx";
 import { memo } from "react";
@@ -26,6 +27,7 @@ export const MultiDeal = memo(() => {
   const activeDealId = useProxyValue(multiTabStore, "activeDealId");
 
   useOnMount(() => {
+    settlementStyleStore.actions.load(); // shared by every deal
     multiTabStore.actions.addNewDeal();
   });
 

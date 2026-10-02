@@ -14,6 +14,7 @@ import {
   type FieldModel,
   createFieldModel,
 } from "../fieldModel.ts";
+import { settlementStyleStore } from "../settlementStyleStore.ts";
 import type { ProductFieldId } from "../fields.ts";
 
 export type AverageProductStore = {
@@ -100,7 +101,8 @@ const schemas: Record<ProductFieldId, ZodType> = {
   expiryCut: z.string().max(10, "Must be at most 10 characters"),
   deliveryDate: dateSchema,
   premiumDate: dateSchema,
-  settlementStyle: optionalString(z.enum(["Physical", "Cash"])),
+  // an option id; the options themselves come from the API
+  settlementStyle: z.string(),
   settlementCcy: ccySchema,
   settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
 };
@@ -148,7 +150,8 @@ const createData = (owner: ProductOwner): AverageProductStore["data"] => ({
     callPut: "",
     strike: "",
   },
-  settlementStyle: "",
+  // the first option once loaded; until then the deal fills it in on load
+  settlementStyle: settlementStyleStore.firstValue,
 });
 
 /**

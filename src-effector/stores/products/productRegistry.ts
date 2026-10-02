@@ -1,6 +1,6 @@
 import { getValueByPath } from "../../lib/path.ts";
 import { uuid } from "../../lib/uuid.ts";
-import type { DealFieldsState } from "../dealFields.ts";
+import type { ProductDefaults } from "../dealFields.ts";
 import type { ProductFieldId } from "../fields.ts";
 import type { FieldIssues } from "../validation.ts";
 import {
@@ -29,7 +29,7 @@ type ProductUi = ProductState["ui"];
 
 type ProductDefinition<Data> = {
   label: string;
-  createData: (deal: DealFieldsState) => Data;
+  createData: (defaults: ProductDefaults) => Data;
   /** Where each field row lives in this product's data. */
   fieldPaths: Partial<Record<ProductFieldId, string>>;
   readOnlyFields: readonly ProductFieldId[];
@@ -77,7 +77,7 @@ export const definitionOf = (product: ProductState) =>
  */
 export const createProduct = (
   productType: ProductType,
-  deal: DealFieldsState,
+  defaults: ProductDefaults,
   ui: ProductUi,
   source?: ProductState,
 ) =>
@@ -87,7 +87,7 @@ export const createProduct = (
     // plain data, so a clone is a deep copy (NaN and all)
     data: source
       ? structuredClone(source.data)
-      : productDefinitions[productType].createData(deal),
+      : productDefinitions[productType].createData(defaults),
   }) as ProductState;
 
 export const readProductField = (product: ProductState, fieldId: ProductFieldId) => {

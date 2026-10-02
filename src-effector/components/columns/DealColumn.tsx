@@ -10,6 +10,7 @@ import { fieldInputTypes, fieldLabels } from "../../stores/fields.ts";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { FieldCells } from "./FieldCells.tsx";
 import { Input } from "../fields/Input.tsx";
+import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 import { SpotPriceField } from "../fields/SpotPriceField.tsx";
 
 /** Shows the deal value; a commit syncs the deal and every product. */
@@ -37,13 +38,21 @@ SyncedField.displayName = "SyncedField";
 /** Holds nothing (shows empty); a commit pushes the value into every product. */
 const BroadcastField = memo(({ fieldId }: { fieldId: BroadcastFieldId }) => {
   const commit = useAction(useDealStore().actions.broadcastFieldAction);
+  const onCommit = (value: unknown) => commit({ fieldId, value });
+  const type = fieldInputTypes[fieldId];
 
-  return (
+  return type === "select" ? (
+    <SettlementStyleSelect
+      label={fieldLabels[fieldId]}
+      value={undefined}
+      onCommit={onCommit}
+    />
+  ) : (
     <Input
       label={fieldLabels[fieldId]}
-      type={fieldInputTypes[fieldId]}
+      type={type}
       value={undefined}
-      onCommit={(value) => commit({ fieldId, value })}
+      onCommit={onCommit}
     />
   );
 });

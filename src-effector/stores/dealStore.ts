@@ -1,4 +1,5 @@
 import {
+  combine,
   createEvent,
   createStore,
   merge,
@@ -8,6 +9,7 @@ import {
 import {
   type BroadcastFieldId,
   type DealFieldsState,
+  type ProductDefaults,
   type SyncedFieldId,
   isSyncedField,
 } from "./dealFields.ts";
@@ -22,10 +24,16 @@ import {
 } from "./groupStore.ts";
 import {
   type ProductState,
+  readProductField,
   setProductField,
   validateProducts,
 } from "./products/productRegistry.ts";
 import { createSpotPriceStream } from "./spotPriceStream.ts";
+import { toSettlementStyleValue } from "../api/settlementStyles.ts";
+import {
+  $firstSettlementStyleValue,
+  loadSettlementStylesFx,
+} from "./settlementStyleStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
 type DealDevtools = { $isSpotPriceStreamEnabled: Store<boolean> };
@@ -86,6 +94,12 @@ export const createDealStore = (devtools: DealDevtools) => {
 
   // --- derived
   const $groupOrder = $groups.map((groups) => groups.order);
+  /** What a new product starts from: the deal's ccys + the default settlement style. */
+  const $productDefaults = combine(
+    $dealFields,
+    $firstSettlementStyleValue,
+    (deal, settlementStyle): ProductDefaults => ({ ...deal, settlementStyle }),
+  );
   const $hedgeTypes = $isInternal.map((isInternal) =>
     isInternal ? ["abc"] : ["def"],
   );
@@ -99,12 +113,12 @@ export const createDealStore = (devtools: DealDevtools) => {
   const groupCreated = merge([
     connect({
       clock: addGroupAction,
-      source: { deal: $dealFields, groups: $groups },
+      source: { defaults: $productDefaults, groups: $groups },
       fn: addGroupReducer,
     }),
     connect({
       clock: cloneGroupAction,
-      source: { deal: $dealFields, groups: $groups, products: $products },
+      source: { defaults: $productDefaults, groups: $groups, products: $products },
       filter: ({ groups }, groupId) => groupId in groups.byId,
       fn: cloneGroupReducer,
     }),
@@ -157,6 +171,18 @@ export const createDealStore = (devtools: DealDevtools) => {
     if (value === "" || Number.isNaN(value)) return products; // nothing to send
     return mapProducts(products, (product) =>
       setProductField(product, fieldId, value),
+    );
+  });
+
+  // default Settlement Style: when the options load, every product still
+  // without one gets the first option (products created later start with it)
+  $products.on(loadSettlementStylesFx.doneData, (products, [first]) => {
+    if (!first) return products;
+    const value = toSettlementStyleValue(first);
+    return mapProducts(products, (product) =>
+      readProductField(product, "settlementStyle")
+        ? product
+        : setProductField(product, "settlementStyle", value),
     );
   });
 

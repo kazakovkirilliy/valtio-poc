@@ -14,7 +14,7 @@ type Props = {
    *   validation can flag it).
    * - `date`: stores an ISO `YYYY-MM-DD` string (`""` when cleared).
    */
-  type?: InputType;
+  type?: Exclude<InputType, "select">; // selects render as <Select>
   /**
    * Broadcast field: on commit the value is written to the store, where it
    * propagates to the subscribers, and is then dropped — the field is never

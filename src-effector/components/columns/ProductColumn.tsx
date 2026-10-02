@@ -14,6 +14,7 @@ import {
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 import { FieldCells } from "./FieldCells.tsx";
 import { Input } from "../fields/Input.tsx";
+import { SettlementStyleSelect } from "../fields/SettlementStyleSelect.tsx";
 
 type FieldProps = {
   productId: string;
@@ -41,15 +42,25 @@ const ProductField = memo(({ productId, fieldId, readOnly }: FieldProps) => {
     fn: (validation, [id, field]) => (validation[id]?.[field]?.length ?? 0) > 0,
   });
   const commit = useAction(actions.commitProductFieldAction);
+  const onCommit = (next: unknown) => commit({ productId, fieldId, value: next });
+  const type = fieldInputTypes[fieldId];
 
-  return (
+  return type === "select" ? (
+    // the only select field: its options come from the API
+    <SettlementStyleSelect
+      label={fieldLabels[fieldId]}
+      value={value}
+      hasError={hasError}
+      onCommit={onCommit}
+    />
+  ) : (
     <Input
       label={fieldLabels[fieldId]}
-      type={fieldInputTypes[fieldId]}
+      type={type}
       value={value}
       hasError={hasError}
       readOnly={readOnly}
-      onCommit={(next) => commit({ productId, fieldId, value: next })}
+      onCommit={onCommit}
     />
   );
 });

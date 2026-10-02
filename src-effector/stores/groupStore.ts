@@ -1,5 +1,5 @@
 import { uuid } from "../lib/uuid.ts";
-import type { DealFieldsState } from "./dealFields.ts";
+import type { ProductDefaults } from "./dealFields.ts";
 import {
   type ProductState,
   type ProductType,
@@ -52,7 +52,7 @@ export type CreatedGroup = {
  */
 const buildGroup = (
   groupType: GroupType,
-  deal: DealFieldsState,
+  defaults: ProductDefaults,
   position: number,
   sourceProducts?: ProductState[],
 ): CreatedGroup => {
@@ -60,7 +60,7 @@ const buildGroup = (
     (productType, index) =>
       createProduct(
         productType,
-        deal,
+        defaults,
         { title: `${productDefinitions[productType].label} #${index + 1}`, index },
         sourceProducts?.[index],
       ),
@@ -79,9 +79,9 @@ const buildGroup = (
 
 /** `addGroupAction`: a new group of `groupType`, placed last. */
 export const addGroupReducer = (
-  { deal, groups }: { deal: DealFieldsState; groups: GroupsState },
+  { defaults, groups }: { defaults: ProductDefaults; groups: GroupsState },
   groupType: GroupType,
-): CreatedGroup => buildGroup(groupType, deal, groups.order.length);
+): CreatedGroup => buildGroup(groupType, defaults, groups.order.length);
 
 /**
  * `cloneGroupAction`: a copy of the group and its products, placed right
@@ -89,11 +89,11 @@ export const addGroupReducer = (
  */
 export const cloneGroupReducer = (
   {
-    deal,
+    defaults,
     groups,
     products,
   }: {
-    deal: DealFieldsState;
+    defaults: ProductDefaults;
     groups: GroupsState;
     products: Record<string, ProductState>;
   },
@@ -102,7 +102,7 @@ export const cloneGroupReducer = (
   const source = groups.byId[groupId];
   return buildGroup(
     source.groupType,
-    deal,
+    defaults,
     groups.order.indexOf(groupId) + 1,
     source.productIds.map((productId) => products[productId]),
   );

@@ -1,4 +1,4 @@
-export type InputType = "text" | "number" | "date";
+export type InputType = "text" | "number" | "date" | "select";
 
 /**
  * Every field, in display order — the single list the label column, the
@@ -18,7 +18,7 @@ export const fields = [
   { id: "expiryCut", label: "Expiry Cut", input: "text" },
   { id: "deliveryDate", label: "Delivery Date", input: "date" },
   { id: "premiumDate", label: "Premium Date", input: "date" },
-  { id: "settlementStyle", label: "Settlement Style", input: "text" },
+  { id: "settlementStyle", label: "Settlement Style", input: "select" },
   { id: "settlementCcy", label: "Settlement Ccy", input: "text" },
   { id: "settlementFixingSource", label: "Fixing Source", input: "text" },
   { id: "spotStream", label: "Spot Stream", input: "number" },

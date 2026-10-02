@@ -10,7 +10,7 @@ type Props = {
    * - `number`: commits a number (`NaN` when empty, so validation can flag it).
    * - `date`: commits an ISO `YYYY-MM-DD` string (`""` when cleared).
    */
-  type?: InputType;
+  type?: Exclude<InputType, "select">; // selects render as <Select>
   value: unknown;
   hasError?: boolean;
   readOnly?: boolean;

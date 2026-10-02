@@ -2,7 +2,7 @@ import { z, type ZodType } from "zod";
 import { daysUntil, isOnOrAfter } from "../../lib/date.ts";
 import { type LeafPath, setIn } from "../../lib/path.ts";
 import { optionalNumber, optionalString } from "../../lib/schemas.ts";
-import type { DealFieldsState } from "../dealFields.ts";
+import type { ProductDefaults } from "../dealFields.ts";
 import type { ProductFieldId } from "../fields.ts";
 import {
   type CrossFieldRule,
@@ -87,7 +87,8 @@ const schemas: Record<ProductFieldId, ZodType> = {
   expiryCut: z.string().max(10, "Must be at most 10 characters"),
   deliveryDate: dateSchema,
   premiumDate: dateSchema,
-  settlementStyle: optionalString(z.enum(["Physical", "Cash"])),
+  // an option id; the options themselves come from the API
+  settlementStyle: z.string(),
   settlementCcy: ccySchema,
   settlementFixingSource: z.string().max(20, "Must be at most 20 characters"),
 };
@@ -105,7 +106,7 @@ const crossFieldRules: Partial<
   ],
 };
 
-export const createVanillaData = (deal: DealFieldsState): VanillaData => ({
+export const createVanillaData = (defaults: ProductDefaults): VanillaData => ({
   productType: "VanillaProduct",
   cashSettlement: {
     settlementCcy: "",
@@ -120,16 +121,17 @@ export const createVanillaData = (deal: DealFieldsState): VanillaData => ({
       expiryDate: "",
       expiryDays: NaN, // derived from expiryDate (see setVanillaField)
       notional: {
-        notionalCcy: deal.notionalCcy,
+        notionalCcy: defaults.notionalCcy,
         amount: NaN,
       },
-      premiumCcy: deal.premiumCcy,
+      premiumCcy: defaults.premiumCcy,
       premiumDate: "",
     },
     callPut: "",
     strike: "",
   },
-  settlementStyle: "",
+  // the first option once loaded; until then the deal fills it in on load
+  settlementStyle: defaults.settlementStyle,
 });
 
 /**
