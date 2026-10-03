@@ -23,5 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src-shared", "src-valtio", "src-mobx", "src-effector", "src-effector-nested"]
+  "include": ["src-shared", "src-valtio", "src-mobx", "src-effector", "src-effector-nested", "src-effector-model"]
 }

@@ -9,8 +9,8 @@ import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts
  * so every scenario runs unchanged against valtio, MobX and Effector. This is
  * the only test code that knows the apps' internals.
  */
-export type AppName = "valtio" | "mobx" | "effector" | "effector-nested";
-export const appNames: AppName[] = ["valtio", "mobx", "effector", "effector-nested"];
+export type AppName = "valtio" | "mobx" | "effector" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "effector", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -337,8 +337,71 @@ const effectorNested = async (): Promise<DealAdapter> => {
   };
 };
 
+/** Driven only by dot paths: `readPath` and `writePathsAction`, as the app being migrated would. */
+const effectorModel = async (): Promise<DealAdapter> => {
+  const { createEvent, createStore } = await import("effector");
+  const { createDealStore } = await import("../../../src-effector-model/stores/dealStore.ts");
+  const { $optionsByKey } = await import("../../../src-effector-model/stores/optionsStore.ts");
+  const { createGridSource } = await import("../../../src-effector-model/stores/gridSource.ts");
+  const { productPath } = await import("../../../src-effector-model/stores/paths.ts");
+  const setAutocalc = createEvent<boolean>();
+  const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
+  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
+  type Product = ReturnType<typeof deal.$groups.getState>[number]["products"][number];
+
+  const groups = () => deal.$groups.getState();
+  const list = () => groups().flatMap((group) => group.products.map((product) => ({ groupId: group.id, product })));
+  const fieldPathOf = (product: Product, fieldId: string) =>
+    (definitionOf(productTypeOf(product.data!)).fieldPaths as Record<string, string>)[fieldId];
+  const pathOf = (i: number, fieldId: string) => {
+    const { groupId, product } = list()[i];
+    return productPath(groupId, product.id, fieldPathOf(product, fieldId));
+  };
+  const write = (path: string, value: unknown) => deal.actions.writePathsAction([{ path, value }]);
+  const handle = (product: Product): ProductHandle => ({
+    read: (fieldId) => pathGet(product.data, fieldPathOf(product, fieldId)),
+    dataKeys: () => Object.keys(product.data!),
+  });
+
+  return {
+    addGroup: (type) => deal.actions.addGroupAction(type),
+    cloneGroup: (i) => deal.actions.cloneGroupAction(groups()[i].id),
+    removeGroup: (i) => deal.actions.removeGroupAction(groups()[i]?.id ?? "unknown"),
+    groupTitles: () =>
+      groups().map((group, i) => {
+        if (group.ui.index !== i) throw new Error("bad group index");
+        return group.ui.title;
+      }),
+    groupProductTitles: (i) =>
+      groups()[i].products.map((product, index) => {
+        if (product.ui.index !== index) throw new Error("bad product index");
+        return product.ui.title;
+      }),
+    groupCount: () => groups().length,
+    productCount: () => list().length,
+    product: (i) => handle(list()[i].product),
+    productType: (i) => list()[i].product.data!.productType,
+    productIdsOfGroup: (i) => groups()[i].products.map((product) => product.id),
+    read: (i, fieldId) => deal.readPath(pathOf(i, fieldId)),
+    has: (i, fieldId) => hasField(list()[i].product.data!, fieldId),
+    commit: (i, fieldId, value) => write(pathOf(i, fieldId), value),
+    sync: (fieldId, value) => write(fieldId, value),
+    dealValue: (fieldId) => deal.readPath(fieldId),
+    broadcast: (fieldId, value) => write(fieldId, value),
+    issues: (i, fieldId) =>
+      ((list()[i].product.issues as Record<string, { message: string }[]>)[fieldId] ?? []).map((issue) => issue.message),
+    hasValidationErrors: () => deal.$hasValidationErrors.getState(),
+    optionsFor: (style) => optionsView($optionsByKey.getState()[`fixingSources:${style}`]),
+    calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
+    calculate: () => deal.actions.calculateAction(),
+    setAutocalc,
+    grid: () => createGridSource(deal),
+    dispose: () => deal.dispose(),
+  };
+};
+
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, effector, "effector-nested": effectorNested }[app]();
+  return { valtio, mobx, effector, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };
