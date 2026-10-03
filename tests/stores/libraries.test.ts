@@ -54,49 +54,6 @@ describe("mobx", () => {
   });
 });
 
-describe("effector", () => {
-  beforeEach(() => {
-    installFakeApi();
-    vi.resetModules();
-  });
-
-  it("keeps untouched products, and their validation, as the same objects", async () => {
-    const { createStore } = await import("effector");
-    const { createDealStore } = await import("../../src-effector/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
-    deal.actions.addGroupAction("Strategy");
-    deal.actions.addGroupAction("Average");
-    const [strategyId] = deal.$groups.getState().order;
-    const productIds = Object.keys(deal.$products.getState());
-    const edited = deal.$products.getState()[productIds[0]];
-    const write = () => deal.actions.writePathsAction([{ path: fieldPath(strategyId, edited, "expiryCut"), value: "TK15" }]);
-
-    const products = deal.$products.getState();
-    const validation = deal.$validation.getState();
-    write();
-    for (const id of productIds.slice(1)) {
-      expect(deal.$products.getState()[id]).toBe(products[id]);
-      expect(deal.$validation.getState()[id]).toBe(validation[id]); // not re-validated
-    }
-    expect(deal.$products.getState()[edited.id]).not.toBe(products[edited.id]);
-
-    const unchanged = deal.$products.getState();
-    write();
-    expect(deal.$products.getState()).toBe(unchanged); // same value: no update at all
-    deal.dispose();
-  });
-
-  it("exposes only its requests as actions", async () => {
-    const { createStore } = await import("effector");
-    const { createDealStore } = await import("../../src-effector/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
-    expect(Object.keys(deal.actions).sort()).toEqual([
-      "addGroupAction", "calculateAction", "cloneGroupAction", "removeGroupAction", "writePathsAction",
-    ]);
-    deal.dispose();
-  });
-});
-
 describe("effector-nested", () => {
   beforeEach(() => {
     installFakeApi();

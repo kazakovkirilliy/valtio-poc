@@ -10,7 +10,7 @@ export default defineConfig({
     // Effector apps only: names every store, event and effect after its
     // variable, with its code location, for the devtools and error messages
     babel({
-      include: /[\\/]src-effector(-nested|-model)?[\\/]/,
+      include: /[\\/]src-effector-(nested|model)[\\/]/,
       plugins: [['effector/babel-plugin', { addLoc: true }]],
     }),
   ],
@@ -21,13 +21,12 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       // index.html links to every version of the app: valtio (src-valtio/),
-      // MobX (src-mobx/), Effector (src-effector/), nested Effector
-      // (src-effector-nested/) and @effector/model (src-effector-model/)
+      // MobX (src-mobx/), nested Effector (src-effector-nested/) and
+      // @effector/model (src-effector-model/)
       input: {
         index: 'index.html',
         valtio: 'valtio.html',
         mobx: 'mobx.html',
-        effector: 'effector.html',
         'effector-nested': 'effector-nested.html',
         'effector-model': 'effector-model.html',
       },

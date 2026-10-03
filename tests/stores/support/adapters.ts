@@ -12,8 +12,8 @@ import { type ProductData, definitionOf, productTypeOf } from "@shared/products/
  * the app being migrated would. Each app only adds what isn't on it (the
  * calculation, the autocalc switch, the deal-wide validation flag).
  */
-export type AppName = "valtio" | "mobx" | "effector" | "effector-nested" | "effector-model";
-export const appNames: AppName[] = ["valtio", "mobx", "effector", "effector-nested", "effector-model"];
+export type AppName = "valtio" | "mobx" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -168,22 +168,6 @@ const mobx = async (): Promise<DealAdapter> => {
   });
 };
 
-const effector = async (): Promise<DealAdapter> => {
-  const { createEvent, createStore } = await import("effector");
-  const { createDealStore } = await import("../../../src-effector/stores/dealStore.ts");
-  const { createPathDeal } = await import("../../../src-effector/stores/pathDeal.ts");
-  const setAutocalc = createEvent<boolean>();
-  const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
-  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
-  return pathAdapter(createPathDeal(deal), {
-    hasValidationErrors: () => deal.$hasValidationErrors.getState(),
-    calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
-    calculate: () => deal.actions.calculateAction(),
-    setAutocalc,
-    dispose: () => deal.dispose(),
-  });
-};
-
 const effectorNested = async (): Promise<DealAdapter> => {
   const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
@@ -219,5 +203,5 @@ const effectorModel = async (): Promise<DealAdapter> => {
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, effector, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
+  return { valtio, mobx, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };

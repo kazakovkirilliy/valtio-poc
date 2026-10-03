@@ -35,11 +35,11 @@ for (const app of apps) {
   });
 }
 
-test("effector: the toggle is kept in sync across browser tabs", async ({ context }) => {
+test("effector-nested: the toggle is kept in sync across browser tabs", async ({ context }) => {
   const first = await context.newPage();
-  await openApp(first, "effector");
+  await openApp(first, "effector-nested");
   const second = await context.newPage();
-  await openApp(second, "effector");
+  await openApp(second, "effector-nested");
   await toggle(first).click();
   await expect(toggle(second)).toContainText("Disabled");
   await toggle(first).click();
