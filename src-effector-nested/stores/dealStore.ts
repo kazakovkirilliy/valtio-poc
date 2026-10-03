@@ -105,7 +105,7 @@ export const createDealStore = (devtools: DealDevtools) => {
 
   // --- derived
   const $hedgeTypes = $isInternal.map((isInternal) =>
-    isInternal ? ["abc"] : ["def"],
+    isInternal ? ["a", "b", "c"] : ["d", "e", "f"],
   );
   /** Issues per product, per field — only changed products are re-validated. */
   const $validation = $groups.map((groups) =>
@@ -156,8 +156,11 @@ export const createDealStore = (devtools: DealDevtools) => {
     },
   );
 
-  const withDealField = (deal: DealFieldsState, fieldId: SyncedFieldId, value: unknown) =>
-    Object.is(deal[fieldId], value) ? deal : { ...deal, [fieldId]: value };
+  const withDealField = (
+    deal: DealFieldsState,
+    fieldId: SyncedFieldId,
+    value: unknown,
+  ) => (Object.is(deal[fieldId], value) ? deal : { ...deal, [fieldId]: value });
   $dealFields.on(actions.setTwoWaySyncAction, (deal, { fieldId, value }) =>
     withDealField(deal, fieldId, value),
   );
@@ -175,7 +178,8 @@ export const createDealStore = (devtools: DealDevtools) => {
   // so validation, autocalc and the grid each see the batch once
   $dealFields.on(actions.writeCellsAction, (deal, writes) =>
     writes.reduce(
-      (next, { fieldId, value }) => (isSyncedField(fieldId) ? withDealField(next, fieldId, value) : next),
+      (next, { fieldId, value }) =>
+        isSyncedField(fieldId) ? withDealField(next, fieldId, value) : next,
       deal,
     ),
   );
@@ -184,13 +188,24 @@ export const createDealStore = (devtools: DealDevtools) => {
       if (fieldId === "spotStream") return next;
       const toEvery =
         isSyncedField(fieldId) ||
-        (columnId === DEAL_COLUMN_ID && isBroadcastField(fieldId) && !isEmptyBroadcast(value));
-      if (toEvery) return mapProducts(next, (product) => setProductField(product, fieldId, value));
-      const group = Object.values(next).find((candidate) => columnId in candidate.products);
+        (columnId === DEAL_COLUMN_ID &&
+          isBroadcastField(fieldId) &&
+          !isEmptyBroadcast(value));
+      if (toEvery)
+        return mapProducts(next, (product) =>
+          setProductField(product, fieldId, value),
+        );
+      const group = Object.values(next).find(
+        (candidate) => columnId in candidate.products,
+      );
       if (!group) return next; // the deal column's other fields hold nothing
       const product = group.products[columnId];
       // copies only the path to the product
-      return setIn(next, `${group.id}.products.${columnId}`, setProductField(product, fieldId, value));
+      return setIn(
+        next,
+        `${group.id}.products.${columnId}`,
+        setProductField(product, fieldId, value),
+      );
     }, groups),
   );
 
@@ -213,7 +228,11 @@ export const createDealStore = (devtools: DealDevtools) => {
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
     target: loadAllOptionsEffect,
   });
-  connect({ clock: actions.writeCellsAction, fn: optionsRequestsForWrites, target: loadAllOptionsEffect });
+  connect({
+    clock: actions.writeCellsAction,
+    fn: optionsRequestsForWrites,
+    target: loadAllOptionsEffect,
+  });
   // options arrived: products still on that parameter keep their value if it's
   // an option, else take the first (stale responses: ignored)
   $groups.on(loadOptionsEffect.done, (groups, { params, result }) =>
@@ -231,10 +250,12 @@ export const createDealStore = (devtools: DealDevtools) => {
     $hasValidationErrors,
     loadOptionsEffect.inFlight,
     loadAllOptionsEffect.inFlight,
-    (hasErrors, loading, loadingAll) => isCalcReady(hasErrors, loading + loadingAll),
+    (hasErrors, loading, loadingAll) =>
+      isCalcReady(hasErrors, loading + loadingAll),
   );
   const calculateEffect = createEffect(
-    ({ products }: { requestId: number; products: ProductData[] }) => calculatePrice(products),
+    ({ products }: { requestId: number; products: ProductData[] }) =>
+      calculatePrice(products),
   );
   $calc
     .on($groups, (calc) => calcInputsChanged(calc))
@@ -242,9 +263,17 @@ export const createDealStore = (devtools: DealDevtools) => {
     .on(calculateEffect.done, (calc, { params, result }) =>
       calcSucceeded(calc, params.requestId, result),
     )
-    .on(calculateEffect.fail, (calc, { params }) => calcFailed(calc, params.requestId));
+    .on(calculateEffect.fail, (calc, { params }) =>
+      calcFailed(calc, params.requestId),
+    );
 
-  const calcRequest = ({ calc, groups }: { calc: CalcState; groups: GroupsState }) => ({
+  const calcRequest = ({
+    calc,
+    groups,
+  }: {
+    calc: CalcState;
+    groups: GroupsState;
+  }) => ({
     requestId: calc.requestId + 1,
     products: productsOf(groups).map((product) => product.data),
   });

@@ -1,4 +1,10 @@
-import { autorun, observable, observableRef, reaction, runInAction } from "mobx";
+import {
+  autorun,
+  observable,
+  observableRef,
+  reaction,
+  runInAction,
+} from "mobx";
 import { calculatePrice } from "@shared/api/calculate.ts";
 import {
   type CalcState,
@@ -75,7 +81,11 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     });
   };
 
-  const insertGroup = (groupType: GroupType, position: number, source?: GroupStore) => {
+  const insertGroup = (
+    groupType: GroupType,
+    position: number,
+    source?: GroupStore,
+  ) => {
     const group = createGroupStore(groupType, deal, source);
     // record first, so the id never appears in the order without its group
     deal.groups[group.id] = group;
@@ -91,10 +101,12 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       isInternal: true,
       spotPriceStream,
       get hedgeTypes() {
-        return deal.isInternal ? ["abc"] : ["def"];
+        return deal.isInternal ? ["a", "b", "c"] : ["d", "e", "f"];
       },
       get products() {
-        return deal.groupIds.flatMap((groupId) => deal.groups[groupId].productList);
+        return deal.groupIds.flatMap(
+          (groupId) => deal.groups[groupId].productList,
+        );
       },
       get hasValidationErrors() {
         return deal.products.some((product) => product.hasValidationErrors);
@@ -137,8 +149,12 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
         const requestId = deal.calc.requestId + 1;
         deal.calc = calcStarted(deal.calc, requestId);
         calculatePrice(deal.products.map((product) => product.data)).then(
-          (price) => runInAction(() => (deal.calc = calcSucceeded(deal.calc, requestId, price))),
-          () => runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
+          (price) =>
+            runInAction(
+              () => (deal.calc = calcSucceeded(deal.calc, requestId, price)),
+            ),
+          () =>
+            runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
         );
       },
       markInputsChanged() {
@@ -156,7 +172,9 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
   );
 
   // the deal column's own options (its default parameters), loaded with the deal
-  dealOptionsRequests.forEach(({ source, param }) => void optionsStore.load(source, param));
+  dealOptionsRequests.forEach(
+    ({ source, param }) => void optionsStore.load(source, param),
+  );
 
   // any product edit outdates the price (and supersedes a calculation in flight);
   // serializing reads, so tracks, every field of every product
@@ -169,13 +187,19 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
   // batch that started it, leaving the condition true → true, which a
   // reaction would not fire for. Run as an action: writable, and untracked.
   const stopAutocalc = autorun(() => {
-    if (devtools.isAutocalcEnabled && deal.isReady && needsAutocalc(deal.calc)) {
+    if (
+      devtools.isAutocalcEnabled &&
+      deal.isReady &&
+      needsAutocalc(deal.calc)
+    ) {
       runInAction(() => deal.calculate());
     }
   });
 
   const stopSpotPriceStream = autorun(() =>
-    devtools.isSpotPriceStreamEnabled ? spotPriceStream.start() : spotPriceStream.stop(),
+    devtools.isSpotPriceStreamEnabled
+      ? spotPriceStream.start()
+      : spotPriceStream.stop(),
   );
 
   return deal;

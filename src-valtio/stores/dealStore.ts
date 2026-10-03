@@ -39,30 +39,33 @@ import { clearValidationErrors } from "./validation.ts";
 type DealBroadcasts = Record<BroadcastFieldId, unknown>;
 
 const createBroadcasts = () =>
-  Object.fromEntries(broadcastFieldIds.map((id) => [id, undefined])) as DealBroadcasts;
+  Object.fromEntries(
+    broadcastFieldIds.map((id) => [id, undefined]),
+  ) as DealBroadcasts;
 
-export type DealStore = DealBroadcasts & DealFieldsState & {
-  groups: Record<string, GroupStore>;
-  groupIds: string[]; // display order; each group's `ui.index` mirrors it
-  isInternal: boolean;
-  options: {
-    hedgeTypes: string[];
+export type DealStore = DealBroadcasts &
+  DealFieldsState & {
+    groups: Record<string, GroupStore>;
+    groupIds: string[]; // display order; each group's `ui.index` mirrors it
+    isInternal: boolean;
+    options: {
+      hedgeTypes: string[];
+    };
+    spotPriceStream: SpotPriceStream;
+    readonly hasValidationErrors: boolean;
+    /** No validation errors and no request pending: ready to calculate. */
+    readonly isReady: boolean;
+    calc: CalcState;
+    validationErrors: Record<string, $ZodIssue[]>; // keyed by field path
+    actions: {
+      addNewGroup(groupType: GroupType): void;
+      cloneGroup(groupId: string): void;
+      removeGroup(groupId: string): void;
+      setValueByPath(path: string, value: unknown): void;
+      /** Calculates now, if ready (the manual Calculate). */
+      calculate(): void;
+    };
   };
-  spotPriceStream: SpotPriceStream;
-  readonly hasValidationErrors: boolean;
-  /** No validation errors and no request pending: ready to calculate. */
-  readonly isReady: boolean;
-  calc: CalcState;
-  validationErrors: Record<string, $ZodIssue[]>; // keyed by field path
-  actions: {
-    addNewGroup(groupType: GroupType): void;
-    cloneGroup(groupId: string): void;
-    removeGroup(groupId: string): void;
-    setValueByPath(path: string, value: unknown): void;
-    /** Calculates now, if ready (the manual Calculate). */
-    calculate(): void;
-  };
-};
 
 export const createDealStore = (): DealStore => {
   const spotPriceStream = createSpotPriceStream();
@@ -85,7 +88,11 @@ export const createDealStore = (): DealStore => {
     position: number,
     source?: GroupStore,
   ) => {
-    const { groupStore, dispose } = createGroupStore(dealStore, groupType, source);
+    const { groupStore, dispose } = createGroupStore(
+      dealStore,
+      groupType,
+      source,
+    );
     disposers.set(groupStore.id, dispose);
     // record first, so the id never appears in the order without its group
     dealStore.groups[groupStore.id] = groupStore;
@@ -104,7 +111,9 @@ export const createDealStore = (): DealStore => {
       hedgeTypes: [],
     },
     get hasValidationErrors() {
-      return Object.values(dealStore.validationErrors).some((issues) => issues.length > 0);
+      return Object.values(dealStore.validationErrors).some(
+        (issues) => issues.length > 0,
+      );
     },
     get isReady() {
       return isCalcReady(dealStore.hasValidationErrors, optionsStore.pending);
@@ -145,10 +154,13 @@ export const createDealStore = (): DealStore => {
         dealStore.calc = calcStarted(dealStore.calc, requestId);
         const products = dealStore.groupIds.flatMap((groupId) => {
           const group = dealStore.groups[groupId];
-          return group.productIds.map((productId) => group.products[productId].data);
+          return group.productIds.map(
+            (productId) => group.products[productId].data,
+          );
         });
         calculatePrice(products).then(
-          (price) => (dealStore.calc = calcSucceeded(dealStore.calc, requestId, price)),
+          (price) =>
+            (dealStore.calc = calcSucceeded(dealStore.calc, requestId, price)),
           () => (dealStore.calc = calcFailed(dealStore.calc, requestId)),
         );
       },
@@ -164,7 +176,9 @@ export const createDealStore = (): DealStore => {
   });
 
   // the deal column's own options (its default parameters), loaded with the deal
-  dealOptionsRequests.forEach(({ source, param }) => void optionsStore.actions.load(source, param));
+  dealOptionsRequests.forEach(
+    ({ source, param }) => void optionsStore.actions.load(source, param),
+  );
 
   // any product edit outdates the price (and supersedes a calculation in flight)
   subscribe(
@@ -192,7 +206,12 @@ export const createDealStore = (): DealStore => {
   subscribeKey(multiTabStore.devtools, "isAutocalcEnabled", autocalc);
 
   const options = dealStore.options;
-  effect(() => (options.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]));
+  effect(
+    () =>
+      (options.hedgeTypes = dealStore.isInternal
+        ? ["a", "b", "c"]
+        : ["d", "e", "f"]),
+  );
 
   return dealStore;
 };
