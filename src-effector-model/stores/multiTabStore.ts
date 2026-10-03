@@ -45,7 +45,7 @@ persist({
  * A deal is a set of units (its model), created at runtime — a side effect,
  * so it happens in an effect.
  */
-const createDealEffect = createEffect(() => ({
+const addNewDealEffect = createEffect(() => ({
   dealId: uuid(),
   // the deal gets only the settings it reads
   deal: createDealStore({ $isSpotPriceStreamEnabled, $isAutocalcEnabled }),
@@ -54,7 +54,7 @@ const createDealEffect = createEffect(() => ({
 export const addNewDealAction = createEvent();
 export const setActiveDealAction = createEvent<string>();
 
-connect({ clock: addNewDealAction, target: createDealEffect });
+connect({ clock: addNewDealAction, target: addNewDealEffect });
 
 /**
  * The deals by id, in tab order (key order) — the same shape as groups and
@@ -62,10 +62,10 @@ connect({ clock: addNewDealAction, target: createDealEffect });
  * units, and a deal's own changes happen in its own stores, never here.
  */
 export const $deals = createStore<Record<string, DealStore>>({}).on(
-  createDealEffect.doneData,
+  addNewDealEffect.doneData,
   (deals, { dealId, deal }) => ({ ...deals, [dealId]: deal }),
 );
 
 export const $activeDealId = createStore("")
-  .on(createDealEffect.doneData, (_, { dealId }) => dealId)
+  .on(addNewDealEffect.doneData, (_, { dealId }) => dealId)
   .on(setActiveDealAction, (_, dealId) => dealId);
