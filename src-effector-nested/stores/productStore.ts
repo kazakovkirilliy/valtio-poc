@@ -1,6 +1,12 @@
 import type { DealFieldsState } from "@shared/dealFields.ts";
-import { type ProductFieldId, asyncOptionFields } from "@shared/fields.ts";
-import { setIn } from "@shared/lib/path.ts";
+import {
+  type ProductFieldId,
+  asyncOptionFields,
+  existsForParam,
+  fieldExists,
+  fieldsAbsentFor,
+} from "@shared/fields.ts";
+import { removeIn, setIn } from "@shared/lib/path.ts";
 import { uuid } from "@shared/lib/uuid.ts";
 import { type Option, optionsKey, reconcileOption } from "@shared/options/optionsSource.ts";
 import {
@@ -48,9 +54,11 @@ export const readProductField = (product: ProductState, fieldId: ProductFieldId)
   readField(product.data, fieldId);
 
 /**
- * The product with one field written, and the fields derived from it
- * recomputed; the same object if nothing changed. Only the objects along the
- * path are copied. Derived fields are never written directly.
+ * The product with one field written, the fields derived from it recomputed
+ * and the fields that stop existing removed; the same object if nothing
+ * changed. Only the objects along the path are copied. Derived fields, and
+ * fields the product doesn't have (e.g. a fixing source without Cash), are
+ * never written directly.
  */
 export const setProductField = (
   product: ProductState,
@@ -59,10 +67,14 @@ export const setProductField = (
 ): ProductState => {
   const definition = definitionOfProduct(product);
   if (isReadOnly(definition, fieldId)) return product;
+  if (!fieldExists(fieldId, (id) => readProductField(product, id))) return product;
   let data = setIn(product.data, definition.fieldPaths[fieldId], value);
   if (data === product.data) return product;
   for (const [derivedId, derived] of derivedFieldsOf(definition, fieldId)) {
     data = setIn(data, definition.fieldPaths[derivedId], derived.compute(data));
+  }
+  for (const absentId of fieldsAbsentFor(fieldId, value)) {
+    data = removeIn(data, definition.fieldPaths[absentId]);
   }
   return { ...product, data } as ProductState;
 };
@@ -88,22 +100,30 @@ export const validateProducts = (
 
 // --- async options: each depends on another field of the same product
 
-/** The options the products' async fields need, one request per source and parameter. */
+/**
+ * The options the products' async fields need, one request per source and
+ * parameter; none for a field a product doesn't have.
+ */
 export const optionsRequestsOf = (products: readonly ProductState[]): OptionsRequest[] => {
   const requests = new Map<string, OptionsRequest>();
   for (const product of products) {
     for (const { options } of asyncOptionFields) {
-      const request = { source: options.source, param: String(readProductField(product, options.dependsOn)) };
+      const param = String(readProductField(product, options.dependsOn));
+      if (!existsForParam(options, param)) continue;
+      const request = { source: options.source, param };
       requests.set(optionsKey(request.source, request.param), request);
     }
   }
   return [...requests.values()];
 };
 
-/** The options to reload when `fieldId` takes `value` (nothing depends on it: none). */
+/**
+ * The options to reload when `fieldId` takes `value` (nothing depends on it,
+ * or the dependent field doesn't exist for that value: none).
+ */
 export const optionsRequestsFor = (fieldId: ProductFieldId, value: unknown): OptionsRequest[] =>
   asyncOptionFields
-    .filter(({ options }) => options.dependsOn === fieldId)
+    .filter(({ options }) => options.dependsOn === fieldId && existsForParam(options, value))
     .map(({ options }) => ({ source: options.source, param: String(value) }));
 
 /**

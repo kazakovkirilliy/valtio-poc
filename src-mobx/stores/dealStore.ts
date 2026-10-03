@@ -1,4 +1,15 @@
-import { autorun, observable } from "mobx";
+import { autorun, observable, observableRef, reaction, runInAction } from "mobx";
+import { calculatePrice } from "@shared/api/calculate.ts";
+import {
+  type CalcState,
+  calcFailed,
+  calcInputsChanged,
+  calcStarted,
+  calcSucceeded,
+  initialCalcState,
+  isCalcReady,
+  needsAutocalc,
+} from "@shared/calc.ts";
 import {
   type BroadcastFieldId,
   type SyncedFieldId,
@@ -6,7 +17,7 @@ import {
   isEmptyBroadcast,
   syncedFieldIds,
 } from "@shared/dealFields.ts";
-import type { FieldId } from "@shared/fields.ts";
+import { type FieldId, dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
   type SpotPriceStream,
@@ -14,10 +25,14 @@ import {
 } from "@shared/spotPriceStream.ts";
 import { type FieldModel, createFieldModel } from "./fieldModel.ts";
 import { type GroupStore, createGroupStore } from "./groupStore.ts";
+import { optionsStore } from "./optionsStore.ts";
 import type { Product } from "./productStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
-type DealDevtools = { readonly isSpotPriceStreamEnabled: boolean };
+type DealDevtools = {
+  readonly isSpotPriceStreamEnabled: boolean;
+  readonly isAutocalcEnabled: boolean;
+};
 
 export type DealStore = {
   notionalCcy: string;
@@ -33,11 +48,17 @@ export type DealStore = {
   /** Every product of every group, in display order. */
   readonly products: Product[];
   readonly hasValidationErrors: boolean;
+  calc: CalcState;
+  /** No validation errors and no request pending: ready to calculate. */
+  readonly isReady: boolean;
   addNewGroup(groupType: GroupType): void;
   cloneGroup(groupId: string): void;
   removeGroup(groupId: string): void;
   setSynced(id: SyncedFieldId, value: string): void;
   broadcast(id: BroadcastFieldId, value: unknown): void;
+  /** Calculates now, if ready (the manual Calculate). */
+  calculate(): void;
+  markInputsChanged(): void;
   dispose(): void;
 };
 
@@ -112,6 +133,10 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       get hasValidationErrors() {
         return deal.products.some((product) => product.hasValidationErrors);
       },
+      calc: initialCalcState,
+      get isReady() {
+        return isCalcReady(deal.hasValidationErrors, optionsStore.pending);
+      },
       addNewGroup(groupType) {
         insertGroup(groupType, deal.groupIds.length);
       },
@@ -140,14 +165,47 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       broadcast(id, value) {
         deal.products.forEach((product) => product.setField(id, value));
       },
+      calculate() {
+        if (!deal.isReady) return;
+        const requestId = deal.calc.requestId + 1;
+        deal.calc = calcStarted(deal.calc, requestId);
+        calculatePrice(deal.products.map((product) => product.data)).then(
+          (price) => runInAction(() => (deal.calc = calcSucceeded(deal.calc, requestId, price))),
+          () => runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
+        );
+      },
+      markInputsChanged() {
+        deal.calc = calcInputsChanged(deal.calc);
+      },
       dispose() {
         stopSpotPriceStream();
+        stopInputsReaction();
+        stopAutocalc();
         spotPriceStream.stop();
       },
     },
-    { spotPriceStream: false, fields: false, dispose: false },
+    { spotPriceStream: false, fields: false, dispose: false, calc: observableRef },
     { autoBind: true },
   );
+
+  // the deal column's own options (its default parameters), loaded with the deal
+  dealOptionsRequests.forEach(({ source, param }) => void optionsStore.load(source, param));
+
+  // any product edit outdates the price (and supersedes a calculation in flight);
+  // serializing reads, so tracks, every field of every product
+  const stopInputsReaction = reaction(
+    () => JSON.stringify(deal.products.map((product) => product.data)),
+    () => deal.markInputsChanged(),
+  );
+  // autocalc: whenever the deal is ready and its price missing or outdated.
+  // An autorun, not a reaction: a calculation can be superseded in the same
+  // batch that started it, leaving the condition true → true, which a
+  // reaction would not fire for. Run as an action: writable, and untracked.
+  const stopAutocalc = autorun(() => {
+    if (devtools.isAutocalcEnabled && deal.isReady && needsAutocalc(deal.calc)) {
+      runInAction(() => deal.calculate());
+    }
+  });
 
   const stopSpotPriceStream = autorun(() =>
     devtools.isSpotPriceStreamEnabled ? spotPriceStream.start() : spotPriceStream.stop(),

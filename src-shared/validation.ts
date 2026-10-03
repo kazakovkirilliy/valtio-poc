@@ -1,5 +1,5 @@
 import type { $ZodIssue } from "zod/v4/core";
-import type { ProductFieldId } from "./fields.ts";
+import { type ProductFieldId, existenceDependencies, fieldExists } from "./fields.ts";
 import { getValueByPath } from "./lib/path.ts";
 import type { GenericProductDefinition, ProductData } from "./products/productRegistry.ts";
 
@@ -8,14 +8,18 @@ export type FieldIssues = Partial<Record<ProductFieldId, readonly $ZodIssue[]>>;
 export const noIssues: readonly $ZodIssue[] = [];
 
 /**
- * One field's issues: its schema, then its cross-field rules. Pure, so each
- * app decides when to run it (a subscription, a computed, a derived store).
+ * One field's issues: its schema, then its cross-field rules; none for a
+ * field the product doesn't have. Pure, so each app decides when to run it
+ * (a subscription, a computed, a derived store).
  */
 export const fieldIssues = (
   definition: GenericProductDefinition,
   fieldId: ProductFieldId,
   data: ProductData,
 ): readonly $ZodIssue[] => {
+  if (!fieldExists(fieldId, (id) => getValueByPath(data, definition.fieldPaths[id]))) {
+    return noIssues;
+  }
   const value = getValueByPath(data, definition.fieldPaths[fieldId]);
   const result = definition.schemas[fieldId].safeParse(value);
   const issues: $ZodIssue[] = result.success ? [] : [...result.error.issues];
@@ -40,9 +44,14 @@ export const productIssues = (
   return issues;
 };
 
-/** The fields a field's validation reads besides itself (its rules' dependencies). */
+/**
+ * The fields a field's validation reads besides itself: its rules'
+ * dependencies, and the field its existence depends on.
+ */
 export const validationDependencies = (
   definition: GenericProductDefinition,
   fieldId: ProductFieldId,
-): readonly ProductFieldId[] =>
-  (definition.rules?.[fieldId] ?? []).flatMap((rule) => rule.dependsOn);
+): readonly ProductFieldId[] => [
+  ...(definition.rules?.[fieldId] ?? []).flatMap((rule) => rule.dependsOn),
+  ...existenceDependencies(fieldId),
+];

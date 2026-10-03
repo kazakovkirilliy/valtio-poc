@@ -7,3 +7,14 @@
   display: flex;
   gap: var(--space);
 }
+
+.deal__calc {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  margin-bottom: var(--space);
+}
+
+.deal__calc-hint {
+  font-size: 12px;
+}

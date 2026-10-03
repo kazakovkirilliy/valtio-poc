@@ -1,6 +1,6 @@
 import { fixingSources } from "./api/fixingSources.ts";
 import type { Option, OptionsSource } from "./options/optionsSource.ts";
-import { DEFAULT_SETTLEMENT_STYLE, settlementStyleOptions } from "./settlementStyles.ts";
+import { settlementStyleOptions } from "./settlementStyles.ts";
 
 export type InputType = "text" | "number" | "date" | "select";
 
@@ -13,18 +13,18 @@ export const fields = [
   { id: "notionalCcy", label: "Notional Ccy", input: "text" },
   { id: "notionalAmount", label: "Notional Amount", input: "number" },
   { id: "premiumCcy", label: "Premium Ccy", input: "text" },
+  { id: "expiryDate", label: "Expiry Date", input: "date" },
+  { id: "expiryDays", label: "Expiry Days", input: "number" },
+  { id: "deliveryDate", label: "Delivery Date", input: "date" },
+  { id: "settlementStyle", label: "Settlement Style", input: "select" },
+  { id: "settlementCcy", label: "Settlement Ccy", input: "text" },
+  { id: "settlementFixingSource", label: "Fixing Source", input: "select" },
   { id: "strike", label: "Strike", input: "text" },
   { id: "callPut", label: "Call / Put", input: "text" },
   { id: "buySell", label: "Buy / Sell", input: "text" },
   { id: "ccyPair", label: "Ccy Pair", input: "text" },
-  { id: "expiryDate", label: "Expiry Date", input: "date" },
-  { id: "expiryDays", label: "Expiry Days", input: "number" },
   { id: "expiryCut", label: "Expiry Cut", input: "text" },
-  { id: "deliveryDate", label: "Delivery Date", input: "date" },
   { id: "premiumDate", label: "Premium Date", input: "date" },
-  { id: "settlementStyle", label: "Settlement Style", input: "select" },
-  { id: "settlementCcy", label: "Settlement Ccy", input: "text" },
-  { id: "settlementFixingSource", label: "Fixing Source", input: "select" },
   { id: "spotStream", label: "Spot Stream", input: "number" },
 ] as const satisfies readonly { id: string; label: string; input: InputType }[];
 
@@ -41,11 +41,15 @@ export type SelectFieldId = Extract<FieldDefinition, { input: "select" }>["id"];
  * (`dependsOn`) as the parameter. They reload whenever that field changes,
  * and the field keeps its value if it is still an option, else gets the
  * first. Columns without a `dependsOn` value (the deal) use `defaultParam`.
+ * With `existsFor`, the field exists only for those parameters: for any
+ * other it is absent from the product's data (not just empty), can't be
+ * written, and has no options to load.
  */
 export type AsyncFieldOptions = {
   source: OptionsSource;
   dependsOn: ProductFieldId;
   defaultParam: string;
+  existsFor?: readonly string[];
 };
 
 export type FieldOptions = readonly Option[] | AsyncFieldOptions;
@@ -61,12 +65,16 @@ export const fieldOptions = {
   settlementFixingSource: {
     source: fixingSources,
     dependsOn: "settlementStyle",
-    defaultParam: DEFAULT_SETTLEMENT_STYLE,
+    // only cash-settled products have a fixing source, so the deal's broadcast
+    // offers Cash's options
+    defaultParam: "Cash",
+    existsFor: ["Cash"],
   },
 } satisfies Record<SelectFieldId, FieldOptions>;
 
-export const isAsyncOptions = (options: FieldOptions): options is AsyncFieldOptions =>
-  "source" in options;
+export const isAsyncOptions = (
+  options: FieldOptions,
+): options is AsyncFieldOptions => "source" in options;
 
 /** Every field whose options load asynchronously, with its options. */
 export const asyncOptionFields = (
@@ -74,6 +82,40 @@ export const asyncOptionFields = (
 ).flatMap(([fieldId, options]) =>
   isAsyncOptions(options) ? [{ fieldId, options }] : [],
 );
+
+/** Whether an async field exists while the field it depends on is `param`. */
+export const existsForParam = (options: AsyncFieldOptions, param: unknown) =>
+  !options.existsFor || options.existsFor.includes(String(param));
+
+const asyncOptionsOf = (fieldId: FieldId) =>
+  asyncOptionFields.find((field) => field.fieldId === fieldId)?.options;
+
+/** Whether a product has a field, read through `read`; most fields always do. */
+export const fieldExists = (
+  fieldId: FieldId,
+  read: (fieldId: ProductFieldId) => unknown,
+) => {
+  const options = asyncOptionsOf(fieldId);
+  return !options || existsForParam(options, read(options.dependsOn));
+};
+
+/** The field a field's existence depends on, if it can be absent. */
+export const existenceDependencies = (fieldId: FieldId): ProductFieldId[] => {
+  const options = asyncOptionsOf(fieldId);
+  return options?.existsFor ? [options.dependsOn] : [];
+};
+
+/** The fields that stop existing when `fieldId` takes `value`: remove them. */
+export const fieldsAbsentFor = (fieldId: ProductFieldId, value: unknown): ProductFieldId[] =>
+  asyncOptionFields
+    .filter(({ options }) => options.dependsOn === fieldId && !existsForParam(options, value))
+    .map((field) => field.fieldId);
+
+/** The deal column's options: each async field's, for its default parameter. */
+export const dealOptionsRequests = asyncOptionFields.map(({ options }) => ({
+  source: options.source,
+  param: options.defaultParam,
+}));
 
 export const fieldLabels = Object.fromEntries(
   fields.map(({ id, label }) => [id, label]),

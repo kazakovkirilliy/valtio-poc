@@ -16,8 +16,14 @@ export const $isSpotPriceStreamEnabled = createStore(true).on(
   (enabled) => !enabled,
 );
 
+export const toggleAutocalcEnabledAction = createEvent();
+export const $isAutocalcEnabled = createStore(true).on(
+  toggleAutocalcEnabledAction,
+  (enabled) => !enabled,
+);
+
 /**
- * Restores the setting on load and saves every change (also kept in sync
+ * Restores the settings on load and saves every change (also kept in sync
  * across browser tabs). A stored value that isn't a boolean is ignored, so
  * the default applies.
  */
@@ -25,6 +31,12 @@ persist({
   store: $isSpotPriceStreamEnabled,
   keyPrefix: "effector-devtools:",
   key: "isSpotPriceStreamEnabled",
+  contract: z.boolean(),
+});
+persist({
+  store: $isAutocalcEnabled,
+  keyPrefix: "effector-devtools:",
+  key: "isAutocalcEnabled",
   contract: z.boolean(),
 });
 
@@ -40,7 +52,7 @@ export const getDealStore = (dealId: string) => dealModels.get(dealId)!;
 const createDealEffect = createEffect(() => {
   const dealId = uuid();
   // the deal gets only the settings it reads
-  dealModels.set(dealId, createDealStore({ $isSpotPriceStreamEnabled }));
+  dealModels.set(dealId, createDealStore({ $isSpotPriceStreamEnabled, $isAutocalcEnabled }));
   return dealId;
 });
 

@@ -7,9 +7,13 @@ import { persist } from "valtio-auto-persist";
 
 export type DevToolsStore = {
   isSpotPriceStreamEnabled: boolean;
+  isAutocalcEnabled: boolean;
 };
 
-const devtoolsDefaults: DevToolsStore = { isSpotPriceStreamEnabled: true };
+const devtoolsDefaults: DevToolsStore = {
+  isSpotPriceStreamEnabled: true,
+  isAutocalcEnabled: true,
+};
 
 export const { store: devtoolsStore } = await persist<DevToolsStore>(devtoolsDefaults);
 
@@ -27,6 +31,7 @@ export type MultiTabStore = {
     addNewDeal(): void;
     setActiveDeal(activeDealId: string): void;
     toggleSpotPriceStreamEnabled(): void;
+    toggleAutocalcEnabled(): void;
   };
 };
 
@@ -46,6 +51,9 @@ export const multiTabStore = proxy<MultiTabStore>({
     toggleSpotPriceStreamEnabled() {
       devtoolsStore.isSpotPriceStreamEnabled =
         !devtoolsStore.isSpotPriceStreamEnabled;
+    },
+    toggleAutocalcEnabled() {
+      devtoolsStore.isAutocalcEnabled = !devtoolsStore.isAutocalcEnabled;
     },
   },
 });

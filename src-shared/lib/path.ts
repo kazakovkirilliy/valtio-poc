@@ -49,6 +49,23 @@ export const setIn = <T extends object>(
 };
 
 /**
+ * Immutable delete: returns a copy without the leaf at `path`, copying only
+ * the objects along the path. Without such a leaf, returns `target` itself.
+ */
+export const removeIn = <T extends object>(target: T, path: string): T => {
+  const [head, ...rest] = path.split(".");
+  const record = target as Record<string, unknown>;
+  if (!(head in record)) return target;
+  if (!rest.length) {
+    const { [head]: _, ...copy } = record;
+    return copy as T;
+  }
+  const current = record[head] as object;
+  const next = removeIn(current, rest.join("."));
+  return next === current ? target : { ...target, [head]: next };
+};
+
+/**
  * Splits a path into the object that owns the leaf and the leaf key, so a
  * subscription can target that (nested) object instead of the whole store.
  */
@@ -59,4 +76,10 @@ export const resolveParent = (target: object, path: string) => {
     parts.length ? getValueByPath(target, parts.join(".")) : target
   ) as Record<string, unknown> | undefined;
   return { parent, key };
+};
+
+/** Mutating delete; does nothing (and notifies nothing) without such a leaf. */
+export const deleteValueByPath = (target: object, path: string): void => {
+  const { parent, key } = resolveParent(target, path);
+  if (parent && key in parent) delete parent[key];
 };

@@ -26,41 +26,36 @@ describe.each(appNames)("%s fixing sources", (app) => {
   const fixings = () => Array.from({ length: deal.productCount() }, (_, i) => deal.read(i, "settlementFixingSource"));
   const styles = () => Array.from({ length: deal.productCount() }, (_, i) => deal.read(i, "settlementStyle"));
 
-  it("loads the options for a new product's style (Delivery), sharing one request", async () => {
+  const hasFixing = () => Array.from({ length: deal.productCount() }, (_, i) => deal.has(i, "settlementFixingSource"));
+
+  it("has no fixing source unless Cash: a new (Delivery) product neither stores nor loads one", async () => {
     expect(styles()).toEqual(["Delivery", "Delivery"]);
-    expect(api.requests).toEqual(["Delivery"]);
-    expect(deal.optionsFor("Delivery").status).toBe("loading");
+    expect(api.requests).toEqual(["Cash"]); // the deal column's options only
     await sleep(30);
-    expect(fixings()).toEqual(["1", "1"]); // first option
-    expect(deal.optionsFor("Delivery")).toEqual({ status: "loaded", values: ["1", "2", "3"], labels: ["D1", "D2", "Shared"] });
+    expect(hasFixing()).toEqual([false, false]);
+    expect(deal.optionsFor("Delivery").status).toBeUndefined();
+    expect(deal.optionsFor("Cash")).toEqual({ status: "loaded", values: ["4", "3"], labels: ["C4", "Shared"] });
   });
 
-  it("reloads on a style change: keeps a value that is still an option, else resets to the first", async () => {
+  it("adds the fixing source on Cash (the first option) and removes it on leaving Cash", async () => {
     await sleep(30);
-    deal.commit(0, "settlementFixingSource", "3"); // in both lists
     deal.commit(0, "settlementStyle", "Cash");
-    expect(api.requests.at(-1)).toBe("Cash");
+    expect(api.requests).toEqual(["Cash", "Cash"]); // every change reloads
     await sleep(30);
-    expect(fixings()).toEqual(["3", "1"]); // kept; the other product untouched
-    deal.commit(1, "settlementStyle", "Cash");
+    expect(fixings()).toEqual(["4", undefined]);
+    expect(hasFixing()).toEqual([true, false]);
+    deal.commit(0, "settlementFixingSource", "3");
+    deal.commit(0, "settlementStyle", "Delivery");
+    expect(hasFixing()).toEqual([false, false]); // removed at once, not just emptied
+    expect(deal.issues(0, "settlementFixingSource")).toEqual([]);
     await sleep(30);
-    expect(fixings()).toEqual(["3", "4"]); // 1 isn't a Cash option: first one
-    expect(api.requests.filter((style) => style === "Cash")).toHaveLength(2); // every change reloads
+    expect(api.requests).toEqual(["Cash", "Cash"]); // Delivery has nothing to load
   });
 
-  it("ignores a response for a style the product has already left", async () => {
-    await sleep(30);
-    deal.commit(0, "settlementFixingSource", "2"); // only a Delivery option
-    api.delays.Cash = 80;
-    deal.commit(0, "settlementStyle", "Cash"); // slow
-    deal.commit(0, "settlementStyle", "Delivery"); // fast
-    await sleep(120);
-    expect(styles()[0]).toBe("Delivery");
-    expect(fixings()[0]).toBe("2"); // the late Cash response would have reset it to 4
-  });
-
-  it("broadcasts a style to every product with one request, reconciling each", async () => {
+  it("broadcasts a style with one request, keeping a value that is still an option", async () => {
     deal.addGroup("VanillaGroup");
+    await sleep(30);
+    deal.commit(0, "settlementStyle", "Cash");
     await sleep(30);
     deal.commit(0, "settlementFixingSource", "3");
     const before = api.requests.length;
@@ -71,12 +66,34 @@ describe.each(appNames)("%s fixing sources", (app) => {
     expect(fixings()).toEqual(["3", "4", "4"]);
   });
 
-  it("leaves values alone when a request fails", async () => {
+  it("ignores a response for a style the product has already left", async () => {
     await sleep(30);
-    api.failing.add("Cash");
+    api.delays.Cash = 80;
+    deal.commit(0, "settlementStyle", "Cash"); // slow
+    deal.commit(0, "settlementStyle", "Delivery");
+    await sleep(120);
+    expect(styles()[0]).toBe("Delivery");
+    expect(hasFixing()[0]).toBe(false); // the late Cash response would have added it
+  });
+
+  it("broadcasts a fixing source only to Cash products", async () => {
+    await sleep(30);
     deal.commit(0, "settlementStyle", "Cash");
     await sleep(30);
-    expect(deal.optionsFor("Cash").status).toBe("error");
-    expect(fixings()).toEqual(["1", "1"]);
+    deal.broadcast("settlementFixingSource", "3");
+    expect(fixings()).toEqual(["3", undefined]);
+    expect(hasFixing()).toEqual([true, false]);
+  });
+
+  it("leaves values alone when a request fails", async () => {
+    await sleep(30);
+    deal.commit(0, "settlementStyle", "Cash");
+    await sleep(30);
+    deal.commit(0, "settlementFixingSource", "3");
+    api.failing.add("Cash");
+    deal.commit(1, "settlementStyle", "Cash");
+    await sleep(30);
+    expect(deal.optionsFor("Cash").status).toBe("loaded"); // the list already shown is kept
+    expect(fixings()).toEqual(["3", undefined]); // nothing loaded to pick from
   });
 });

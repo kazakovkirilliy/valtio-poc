@@ -1,10 +1,23 @@
 import {
+  combine,
+  createEffect,
   createEvent,
   createStore,
   merge,
   sample as connect,
   type Store,
 } from "effector";
+import { calculatePrice } from "@shared/api/calculate.ts";
+import {
+  type CalcState,
+  calcFailed,
+  calcInputsChanged,
+  calcStarted,
+  calcSucceeded,
+  initialCalcState,
+  isCalcReady,
+  needsAutocalc,
+} from "@shared/calc.ts";
 import {
   type BroadcastFieldId,
   type DealFieldsState,
@@ -12,8 +25,9 @@ import {
   isEmptyBroadcast,
   isSyncedField,
 } from "@shared/dealFields.ts";
-import type { ProductFieldId } from "@shared/fields.ts";
+import { type ProductFieldId, dealOptionsRequests } from "@shared/fields.ts";
 import type { GroupType } from "@shared/groups.ts";
+import type { ProductData } from "@shared/products/productRegistry.ts";
 import { setIn } from "@shared/lib/path.ts";
 import { createSpotPriceStream } from "@shared/spotPriceStream.ts";
 import {
@@ -36,7 +50,10 @@ import {
 } from "./productStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
-type DealDevtools = { $isSpotPriceStreamEnabled: Store<boolean> };
+type DealDevtools = {
+  $isSpotPriceStreamEnabled: Store<boolean>;
+  $isAutocalcEnabled: Store<boolean>;
+};
 
 /**
  * One deal's model, with nested state: one `$groups` store holds the groups
@@ -71,6 +88,8 @@ export const createDealStore = (devtools: DealDevtools) => {
       fieldId: BroadcastFieldId;
       value: unknown;
     }>(),
+    /** Calculates now, if the deal is ready (the manual Calculate). */
+    calculateAction: createEvent(),
   };
 
   // --- state
@@ -177,6 +196,53 @@ export const createDealStore = (devtools: DealDevtools) => {
     ),
   );
 
+  // the deal column's own options (its default parameters), loaded with the deal
+  loadAllOptionsEffect(dealOptionsRequests);
+
+  // --- calc: whenever the deal is ready, with autocalc; any edit outdates the price
+  const $calc = createStore<CalcState>(initialCalcState);
+  const $isReady = combine(
+    $hasValidationErrors,
+    loadOptionsEffect.inFlight,
+    loadAllOptionsEffect.inFlight,
+    (hasErrors, loading, loadingAll) => isCalcReady(hasErrors, loading + loadingAll),
+  );
+  const calculateEffect = createEffect(
+    ({ products }: { requestId: number; products: ProductData[] }) => calculatePrice(products),
+  );
+  $calc
+    .on($groups, (calc) => calcInputsChanged(calc))
+    .on(calculateEffect, (calc, { requestId }) => calcStarted(calc, requestId))
+    .on(calculateEffect.done, (calc, { params, result }) =>
+      calcSucceeded(calc, params.requestId, result),
+    )
+    .on(calculateEffect.fail, (calc, { params }) => calcFailed(calc, params.requestId));
+
+  const calcRequest = ({ calc, groups }: { calc: CalcState; groups: GroupsState }) => ({
+    requestId: calc.requestId + 1,
+    products: productsOf(groups).map((product) => product.data),
+  });
+  connect({
+    clock: actions.calculateAction,
+    source: { calc: $calc, groups: $groups, isReady: $isReady },
+    filter: ({ isReady }) => isReady,
+    fn: calcRequest,
+    target: calculateEffect,
+  });
+  const $shouldAutocalc = combine(
+    devtools.$isAutocalcEnabled,
+    $isReady,
+    $calc,
+    (enabled, isReady, calc) => enabled && isReady && needsAutocalc(calc),
+  );
+  connect({
+    clock: $shouldAutocalc,
+    source: { calc: $calc, groups: $groups, should: $shouldAutocalc },
+    filter: ({ should }) => should,
+    fn: calcRequest,
+    target: calculateEffect,
+  });
+
   // --- spot price: kept outside the stores, ticks never notify subscribers
   const spotPriceStream = createSpotPriceStream();
   const stopSpotPriceStream = devtools.$isSpotPriceStreamEnabled.watch(
@@ -192,6 +258,8 @@ export const createDealStore = (devtools: DealDevtools) => {
     $hedgeTypes,
     $validation,
     $hasValidationErrors,
+    $calc,
+    $isReady,
     // outside the stores
     spotPriceStream,
     dispose: () => {

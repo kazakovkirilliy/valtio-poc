@@ -60,12 +60,14 @@
 
 .cell--label {
   justify-content: start;
+  font-size: 12px;
 }
 
 /* input */
 
 .input {
   width: var(--input-width);
+  min-width: var(--input-width);
   outline: 0;
 }
 

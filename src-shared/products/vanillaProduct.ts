@@ -10,7 +10,8 @@ export type VanillaProductStore = {
     productType: "VanillaProduct";
     cashSettlement: {
       settlementCcy: string;
-      settlementFixingSource: string;
+      /** Only while `settlementStyle` is Cash (see `fieldOptions`). */
+      settlementFixingSource?: string;
     };
     optionsCommon: {
       base: {
@@ -101,7 +102,7 @@ export const vanillaProduct = defineProduct<VanillaProductStore["data"]>({
     productType: "VanillaProduct",
     cashSettlement: {
       settlementCcy: "",
-      settlementFixingSource: "", // filled in once its options load
+      // no settlementFixingSource: added once Cash's options load
     },
     optionsCommon: {
       base: {

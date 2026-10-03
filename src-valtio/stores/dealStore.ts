@@ -1,7 +1,20 @@
-import { proxy, ref } from "valtio";
+import { proxy, ref, subscribe } from "valtio";
+import { subscribeKey } from "valtio/utils";
 import { effect } from "valtio-reactive";
 import type { $ZodIssue } from "zod/v4/core";
+import { calculatePrice } from "@shared/api/calculate.ts";
+import {
+  type CalcState,
+  calcFailed,
+  calcInputsChanged,
+  calcStarted,
+  calcSucceeded,
+  initialCalcState,
+  isCalcReady,
+  needsAutocalc,
+} from "@shared/calc.ts";
 import { type BroadcastFieldId, broadcastFieldIds } from "@shared/dealFields.ts";
+import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import { setValueByPath } from "@shared/lib/path.ts";
 import {
@@ -10,6 +23,7 @@ import {
 } from "@shared/spotPriceStream.ts";
 import { type GroupStore, createGroupStore } from "./groupStore.ts";
 import { multiTabStore } from "./multiTabStore.ts";
+import { optionsStore } from "./optionsStore.ts";
 import { clearValidationErrors } from "./validation.ts";
 
 /**
@@ -33,12 +47,17 @@ export type DealStore = DealBroadcasts & {
   };
   spotPriceStream: SpotPriceStream;
   readonly hasValidationErrors: boolean;
+  /** No validation errors and no request pending: ready to calculate. */
+  readonly isReady: boolean;
+  calc: CalcState;
   validationErrors: Record<string, $ZodIssue[]>; // keyed by field path
   actions: {
     addNewGroup(groupType: GroupType): void;
     cloneGroup(groupId: string): void;
     removeGroup(groupId: string): void;
     setValueByPath(path: string, value: unknown): void;
+    /** Calculates now, if ready (the manual Calculate). */
+    calculate(): void;
   };
 };
 
@@ -85,6 +104,10 @@ export const createDealStore = (): DealStore => {
     get hasValidationErrors() {
       return Object.values(dealStore.validationErrors).some((issues) => issues.length > 0);
     },
+    get isReady() {
+      return isCalcReady(dealStore.hasValidationErrors, optionsStore.pending);
+    },
+    calc: initialCalcState,
     validationErrors: {},
     actions: {
       addNewGroup(groupType: GroupType) {
@@ -114,6 +137,19 @@ export const createDealStore = (): DealStore => {
       setValueByPath(path: string, value: unknown) {
         setValueByPath(dealStore, path, value);
       },
+      calculate() {
+        if (!dealStore.isReady) return;
+        const requestId = dealStore.calc.requestId + 1;
+        dealStore.calc = calcStarted(dealStore.calc, requestId);
+        const products = dealStore.groupIds.flatMap((groupId) => {
+          const group = dealStore.groups[groupId];
+          return group.productIds.map((productId) => group.products[productId].data);
+        });
+        calculatePrice(products).then(
+          (price) => (dealStore.calc = calcSucceeded(dealStore.calc, requestId, price)),
+          () => (dealStore.calc = calcFailed(dealStore.calc, requestId)),
+        );
+      },
     },
   });
 
@@ -124,6 +160,34 @@ export const createDealStore = (): DealStore => {
       spotPriceStream.stop();
     }
   });
+
+  // the deal column's own options (its default parameters), loaded with the deal
+  dealOptionsRequests.forEach(({ source, param }) => void optionsStore.actions.load(source, param));
+
+  // any product edit outdates the price (and supersedes a calculation in flight)
+  subscribe(
+    dealStore.groups,
+    () => (dealStore.calc = calcInputsChanged(dealStore.calc)),
+    true,
+  );
+  // autocalc: whenever the deal is ready and its price missing or outdated.
+  // Explicit subscriptions, not an `effect`: valtio-reactive only tracks
+  // proxies created after it loads, which the options and devtools stores
+  // may not be. Notified after the write has reached every listener, so an
+  // edit's validation has run by the time this checks.
+  const autocalc = () => {
+    if (
+      multiTabStore.devtools.isAutocalcEnabled &&
+      dealStore.isReady &&
+      needsAutocalc(dealStore.calc)
+    ) {
+      dealStore.actions.calculate();
+    }
+  };
+  subscribeKey(dealStore, "calc", autocalc);
+  subscribe(dealStore.validationErrors, autocalc);
+  subscribeKey(optionsStore, "pending", autocalc);
+  subscribeKey(multiTabStore.devtools, "isAutocalcEnabled", autocalc);
 
   const options = dealStore.options;
   effect(() => (options.hedgeTypes = dealStore.isInternal ? ["abc"] : ["def"]));

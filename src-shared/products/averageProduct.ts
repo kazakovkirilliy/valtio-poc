@@ -10,7 +10,8 @@ export type AverageProductStore = {
     productType: "AverageProduct";
     cashSettlement: {
       settlementCcy: string;
-      settlementFixingSource: string;
+      /** Only while `settlementStyle` is Cash (see `fieldOptions`). */
+      settlementFixingSource?: string;
     };
     avroCommon: {
       base: {
@@ -101,7 +102,7 @@ export const averageProduct = defineProduct<AverageProductStore["data"]>({
     productType: "AverageProduct",
     cashSettlement: {
       settlementCcy: "",
-      settlementFixingSource: "", // filled in once its options load
+      // no settlementFixingSource: added once Cash's options load
     },
     avroCommon: {
       base: {

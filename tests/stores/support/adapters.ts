@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { vi } from "vitest";
+import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts";
 
 /**
  * One adapter per app, mapping a common test API onto each app's own stores,
@@ -31,6 +32,8 @@ export type DealAdapter = {
   productType(i: number): string;
   productIdsOfGroup(groupIndex: number): string[];
   read(i: number, fieldId: string): unknown;
+  /** Whether the product's data has the field at all, not just an empty value. */
+  has(i: number, fieldId: string): boolean;
   /** Commits a product field, as its input would. */
   commit(i: number, fieldId: string, value: unknown): void;
   /** Commits a synced deal field (Notional/Premium Ccy), as its input would. */
@@ -42,6 +45,12 @@ export type DealAdapter = {
   hasValidationErrors(): boolean;
   /** Fixing source options as loaded for a settlement style. */
   optionsFor(settlementStyle: string): { status?: string; values: string[]; labels: string[] };
+  /** The deal's calculation: its status and last price. */
+  calc(): { status: string; price: number | null };
+  /** Presses Calculate. */
+  calculate(): void;
+  /** Flips the autocalc switch (off in a new adapter). */
+  setAutocalc(enabled: boolean): void;
   dispose(): void;
 };
 
@@ -56,13 +65,22 @@ const at = (relative: string) => fileURLToPath(new URL(`../../../${relative}`, i
 const pathGet = (target: unknown, path: string) =>
   path.split(".").reduce<unknown>((value, key) => (value as Record<string, unknown> | undefined)?.[key], target);
 
+const hasField = (data: { productType: string }, fieldId: string) => {
+  const path = (definitionOf(productTypeOf(data)).fieldPaths as Record<string, string>)[fieldId];
+  const parts = path.split(".");
+  const key = parts.pop() as string;
+  const parent = parts.length ? pathGet(data, parts.join(".")) : data;
+  return typeof parent === "object" && parent !== null && key in parent;
+};
+
 const valtio = async (): Promise<DealAdapter> => {
   // the deal reads the devtools flag from the tab store; give it a plain one
   vi.doMock(at("src-valtio/stores/multiTabStore.ts"), async () => {
     const { proxy } = await import("valtio");
-    return { multiTabStore: proxy({ devtools: { isSpotPriceStreamEnabled: false } }) };
+    return { multiTabStore: proxy({ devtools: { isSpotPriceStreamEnabled: false, isAutocalcEnabled: false } }) };
   });
   const { createDealStore } = await import("../../../src-valtio/stores/dealStore.ts");
+  const { multiTabStore } = await import("../../../src-valtio/stores/multiTabStore.ts");
   const { optionsStore } = await import("../../../src-valtio/stores/optionsStore.ts");
   const { definitionOf, productTypeOf } = await import("@shared/products/productRegistry.ts");
   const deal = createDealStore();
@@ -107,6 +125,7 @@ const valtio = async (): Promise<DealAdapter> => {
     productType: (i) => productTypeOf(dataOf(productPaths()[i])),
     productIdsOfGroup: (i) => [...deal.groups[deal.groupIds[i]].productIds],
     read: (i, fieldId) => pathGet(deal, fieldPath(productPaths()[i], fieldId)),
+    has: (i, fieldId) => hasField(dataOf(productPaths()[i]), fieldId),
     commit: (i, fieldId, value) => commit(fieldPath(productPaths()[i], fieldId), value),
     sync: (fieldId, value) => commit(fieldId, value),
     dealValue: (fieldId) => pathGet(deal, fieldId),
@@ -115,12 +134,15 @@ const valtio = async (): Promise<DealAdapter> => {
       (deal.validationErrors[fieldPath(productPaths()[i], fieldId).replaceAll(".", "_")] ?? []).map((issue) => issue.message),
     hasValidationErrors: () => deal.hasValidationErrors,
     optionsFor: (style) => optionsView(optionsStore.byKey[`fixingSources:${style}`]),
+    calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
+    calculate: () => deal.actions.calculate(),
+    setAutocalc: (enabled) => (multiTabStore.devtools.isAutocalcEnabled = enabled),
     dispose: () => {},
   };
 };
 
 const mobx = async (): Promise<DealAdapter> => {
-  const { configure, observable, toJS } = await import("mobx");
+  const { configure, observable, runInAction, toJS } = await import("mobx");
   configure({ enforceActions: "always" });
   // any MobX warning (e.g. a write outside an action) fails the test
   vi.spyOn(console, "warn").mockImplementation((...args) => {
@@ -128,7 +150,8 @@ const mobx = async (): Promise<DealAdapter> => {
   });
   const { createDealStore } = await import("../../../src-mobx/stores/dealStore.ts");
   const { optionsStore } = await import("../../../src-mobx/stores/optionsStore.ts");
-  const deal = createDealStore(observable({ isSpotPriceStreamEnabled: false }));
+  const devtools = observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const deal = createDealStore(devtools);
   type Product = (typeof deal.products)[number];
   const handle = (product: Product): ProductHandle => ({
     read: (fieldId) => product.fields[fieldId as keyof Product["fields"]].value,
@@ -157,6 +180,7 @@ const mobx = async (): Promise<DealAdapter> => {
     productType: (i) => deal.products[i].data.productType,
     productIdsOfGroup: (i) => [...deal.groups[deal.groupIds[i]].productIds],
     read: (i, fieldId) => field(i, fieldId).value,
+    has: (i, fieldId) => hasField(deal.products[i].data, fieldId),
     commit: (i, fieldId, value) => field(i, fieldId).commit(value),
     sync: (fieldId, value) => dealField(fieldId).commit(value),
     dealValue: (fieldId) => dealField(fieldId).value,
@@ -164,16 +188,21 @@ const mobx = async (): Promise<DealAdapter> => {
     issues: (i, fieldId) => field(i, fieldId).issues.map((issue) => issue.message),
     hasValidationErrors: () => deal.hasValidationErrors,
     optionsFor: (style) => optionsView(optionsStore.byKey[`fixingSources:${style}`]),
+    calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
+    calculate: () => deal.calculate(),
+    setAutocalc: (enabled) => runInAction(() => (devtools.isAutocalcEnabled = enabled)),
     dispose: () => deal.dispose(),
   };
 };
 
 const effector = async (): Promise<DealAdapter> => {
-  const { createStore } = await import("effector");
+  const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector/stores/dealStore.ts");
   const { readProductField } = await import("../../../src-effector/stores/productStore.ts");
   const { $optionsByKey } = await import("../../../src-effector/stores/optionsStore.ts");
-  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+  const setAutocalc = createEvent<boolean>();
+  const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
+  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
   type Product = Parameters<typeof readProductField>[0];
   type FieldId = Parameters<typeof readProductField>[1];
 
@@ -211,6 +240,7 @@ const effector = async (): Promise<DealAdapter> => {
     productType: (i) => list()[i].data.productType,
     productIdsOfGroup: (i) => [...groups().byId[groups().order[i]].productIds],
     read: (i, fieldId) => readProductField(list()[i], fieldId as FieldId),
+    has: (i, fieldId) => hasField(list()[i].data, fieldId),
     commit: (i, fieldId, value) =>
       deal.actions.setProductFieldAction({ productId: list()[i].id, fieldId: fieldId as FieldId, value }),
     sync: (fieldId, value) =>
@@ -224,16 +254,21 @@ const effector = async (): Promise<DealAdapter> => {
       ),
     hasValidationErrors: () => deal.$hasValidationErrors.getState(),
     optionsFor: (style) => optionsView($optionsByKey.getState()[`fixingSources:${style}`]),
+    calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
+    calculate: () => deal.actions.calculateAction(),
+    setAutocalc,
     dispose: () => deal.dispose(),
   };
 };
 
 const effectorNested = async (): Promise<DealAdapter> => {
-  const { createStore } = await import("effector");
+  const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
   const { readProductField } = await import("../../../src-effector-nested/stores/productStore.ts");
   const { $optionsByKey } = await import("../../../src-effector-nested/stores/optionsStore.ts");
-  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+  const setAutocalc = createEvent<boolean>();
+  const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
+  const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
   type Product = Parameters<typeof readProductField>[0];
   type FieldId = Parameters<typeof readProductField>[1];
 
@@ -268,6 +303,7 @@ const effectorNested = async (): Promise<DealAdapter> => {
     productType: (i) => list()[i].product.data.productType,
     productIdsOfGroup: (i) => Object.keys(groupList()[i].products),
     read: (i, fieldId) => readProductField(list()[i].product, fieldId as FieldId),
+    has: (i, fieldId) => hasField(list()[i].product.data, fieldId),
     commit: (i, fieldId, value) => {
       const { groupId, product } = list()[i];
       deal.actions.setProductFieldAction({ groupId, productId: product.id, fieldId: fieldId as FieldId, value });
@@ -283,6 +319,9 @@ const effectorNested = async (): Promise<DealAdapter> => {
       ),
     hasValidationErrors: () => deal.$hasValidationErrors.getState(),
     optionsFor: (style) => optionsView($optionsByKey.getState()[`fixingSources:${style}`]),
+    calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
+    calculate: () => deal.actions.calculateAction(),
+    setAutocalc,
     dispose: () => deal.dispose(),
   };
 };

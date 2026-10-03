@@ -4,8 +4,16 @@ import {
   type AsyncFieldOptions,
   type ProductFieldId,
   asyncOptionFields,
+  existsForParam,
+  fieldExists,
+  fieldsAbsentFor,
 } from "@shared/fields.ts";
-import { getValueByPath, resolveParent, setValueByPath } from "@shared/lib/path.ts";
+import {
+  deleteValueByPath,
+  getValueByPath,
+  resolveParent,
+  setValueByPath,
+} from "@shared/lib/path.ts";
 import { uuid } from "@shared/lib/uuid.ts";
 import { reconcileOption } from "@shared/options/optionsSource.ts";
 import {
@@ -77,9 +85,11 @@ export const createProduct = (
   // Async options: load for the current value of the field they depend on,
   // reload whenever `setField` changes it; keep the field's value if it is
   // still an option, else take the first. A response for a value the
-  // product has since left is ignored.
+  // product has since left is ignored; a field the product doesn't have
+  // loads nothing.
   const reload = async (fieldId: ProductFieldId, options: AsyncFieldOptions) => {
     const param = String(read(options.dependsOn));
+    if (!existsForParam(options, param)) return;
     const loaded = await optionsStore.load(options.source, param);
     if (!loaded || read(options.dependsOn) !== param) return;
     product.setField(fieldId, reconcileOption(read(fieldId), loaded));
@@ -112,7 +122,12 @@ export const createProduct = (
       },
       setField(fieldId, value) {
         if (isReadOnly(definition, fieldId)) return; // derived: computed, never written
+        if (!fieldExists(fieldId, read)) return; // e.g. a fixing source without Cash
         setValueByPath(product.data, path(fieldId), value);
+        // fields that stop existing are removed, not just emptied
+        fieldsAbsentFor(fieldId, value).forEach((absentId) =>
+          deleteValueByPath(product.data, path(absentId)),
+        );
         asyncOptionFields
           .filter(({ options }) => options.dependsOn === fieldId)
           .forEach(({ fieldId: dependent, options }) => void reload(dependent, options));

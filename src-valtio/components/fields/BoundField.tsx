@@ -6,6 +6,7 @@ import {
   type SelectFieldId,
   fieldInputTypes,
   fieldLabels,
+  existsForParam,
   fieldOptions,
   isAsyncOptions,
 } from "@shared/fields.ts";
@@ -48,11 +49,12 @@ const BoundSelect = memo(
       isAsyncOptions(options) ? optionsKey(options.source, param) : "",
     );
 
-    return isAsyncOptions(options) ? (
-      <Select {...props} options={loaded?.options ?? []} status={loaded?.status ?? "loading"} />
-    ) : (
-      <Select {...props} options={options} status="loaded" />
-    );
+    if (!isAsyncOptions(options)) {
+      return <Select {...props} options={options} status="loaded" />;
+    }
+    // the product doesn't have the field for this parameter: nothing to show
+    if (!existsForParam(options, param)) return null;
+    return <Select {...props} options={loaded?.options ?? []} status={loaded?.status ?? "loading"} />;
   },
 );
 

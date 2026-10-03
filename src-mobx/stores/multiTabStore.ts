@@ -6,7 +6,9 @@ const DEVTOOLS_STORAGE_KEY = "mobx-devtools";
 
 export type DevtoolsStore = {
   isSpotPriceStreamEnabled: boolean;
+  isAutocalcEnabled: boolean;
   toggleSpotPriceStreamEnabled(): void;
+  toggleAutocalcEnabled(): void;
 };
 
 const loadDevtools = (): Partial<DevtoolsStore> => {
@@ -22,9 +24,13 @@ const createDevtoolsStore = (): DevtoolsStore => {
   const devtools = observable<DevtoolsStore>(
     {
       isSpotPriceStreamEnabled: true,
+      isAutocalcEnabled: true,
       ...loadDevtools(),
       toggleSpotPriceStreamEnabled() {
         devtools.isSpotPriceStreamEnabled = !devtools.isSpotPriceStreamEnabled;
+      },
+      toggleAutocalcEnabled() {
+        devtools.isAutocalcEnabled = !devtools.isAutocalcEnabled;
       },
     },
     {},
@@ -34,6 +40,7 @@ const createDevtoolsStore = (): DevtoolsStore => {
   autorun(() => {
     const settings = {
       isSpotPriceStreamEnabled: devtools.isSpotPriceStreamEnabled,
+      isAutocalcEnabled: devtools.isAutocalcEnabled,
     };
     try {
       localStorage.setItem(DEVTOOLS_STORAGE_KEY, JSON.stringify(settings));

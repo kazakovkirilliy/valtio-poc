@@ -1,7 +1,12 @@
 import { proxy } from "valtio";
 import { broadcastFieldIds, syncedFieldIds } from "@shared/dealFields.ts";
-import { type ProductFieldId, asyncOptionFields } from "@shared/fields.ts";
-import { getValueByPath, setValueByPath } from "@shared/lib/path.ts";
+import {
+  type ProductFieldId,
+  asyncOptionFields,
+  existsForParam,
+  fieldExists,
+} from "@shared/fields.ts";
+import { deleteValueByPath, getValueByPath, setValueByPath } from "@shared/lib/path.ts";
 import { reconcileOption } from "@shared/options/optionsSource.ts";
 import {
   type AnyProductStore,
@@ -45,8 +50,10 @@ export const createProductStore = (
 
   const path = (fieldId: ProductFieldId) => definition.fieldPaths[fieldId];
   const read = (fieldId: ProductFieldId) => getValueByPath(data, path(fieldId));
-  const write = (fieldId: ProductFieldId, value: unknown) =>
-    setValueByPath(data, path(fieldId), value);
+  // a field the product doesn't have (e.g. a fixing source without Cash) isn't written
+  const write = (fieldId: ProductFieldId, value: unknown) => {
+    if (fieldExists(fieldId, read)) setValueByPath(data, path(fieldId), value);
+  };
 
   const subscriptions: Array<() => void> = [];
   const track = (unsubscribe: () => void) => subscriptions.push(unsubscribe);
@@ -78,9 +85,15 @@ export const createProductStore = (
   // Async options: load for the current value of the field they depend on,
   // reload when it changes; keep the field's value if it's still an option,
   // else take the first. A response for a value the product left is ignored.
+  // For a value the field doesn't exist for, it is removed (not just emptied)
+  // and nothing loads.
   let disposed = false;
   for (const { fieldId, options } of asyncOptionFields) {
     const reload = async (param: string) => {
+      if (!existsForParam(options, param)) {
+        deleteValueByPath(data, path(fieldId));
+        return;
+      }
       const loaded = await optionsStore.actions.load(options.source, param);
       if (!loaded || disposed || read(options.dependsOn) !== param) return;
       write(fieldId, reconcileOption(read(fieldId), loaded));

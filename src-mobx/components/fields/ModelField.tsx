@@ -6,6 +6,7 @@ import {
   type SelectFieldId,
   fieldInputTypes,
   fieldLabels,
+  existsForParam,
   fieldOptions,
   isAsyncOptions,
 } from "@shared/fields.ts";
@@ -34,6 +35,8 @@ const ModelSelect = observer(
       return <Select {...props} options={options} status="loaded" />;
     }
     const param = (paramField?.value as string | undefined) || options.defaultParam;
+    // the product doesn't have the field for this parameter: nothing to show
+    if (!existsForParam(options, param)) return null;
     const loaded = optionsStore.byKey[optionsKey(options.source, param)];
     return <Select {...props} options={loaded?.options ?? []} status={loaded?.status ?? "loading"} />;
   },

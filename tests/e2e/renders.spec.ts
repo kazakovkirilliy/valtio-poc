@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { FIXING_SOURCES_URL, apps, commitText, expect, openApp, test } from "./support/fixtures.ts";
+import { FIXING_SOURCES_URL, apps, commitText, control, expect, openApp, test } from "./support/fixtures.ts";
 
 /**
  * Counts component renders the way React DevTools' "highlight updates" does:
@@ -74,7 +74,9 @@ for (const app of apps) {
       await openApp(page, app);
       await page.getByRole("button", { name: "Add Strategy" }).click();
       await expect(page.getByText("Strategy #2")).toBeVisible();
-      await page.waitForLoadState("networkidle"); // every fixing source loaded and applied
+      // the deal's fixing sources loaded (products on Delivery load none); the
+      // fake latency comes before the request, so networkidle could settle first
+      await expect(control(page, "Fixing Source", 0)).toBeEnabled();
     });
 
     test("adding a group re-renders nothing that already exists", async ({ page }) => {

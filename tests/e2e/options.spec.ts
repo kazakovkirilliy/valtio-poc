@@ -12,7 +12,7 @@ const fixingLoaded = (page: Page, n: number) => expect(control(page, "Fixing Sou
 
 for (const app of apps) {
   test.describe(app, () => {
-    test("Fixing Source follows each product's Settlement Style", async ({ page }) => {
+    test("Fixing Source exists only for a Cash Settlement Style", async ({ page }) => {
       await page.route(`${FIXING_SOURCES_URL}?*`, async (route) => {
         const style = new URL(route.request().url()).searchParams.get("settlementStyle") ?? "";
         await new Promise((resolve) => setTimeout(resolve, 500)); // so loading is visible
@@ -24,37 +24,31 @@ for (const app of apps) {
       await expect(control(page, "Settlement Style", 1)).toHaveValue("Delivery");
       expect(await control(page, "Settlement Style", 1).evaluate((el) =>
         [...(el as HTMLSelectElement).options].map((o) => o.value))).toEqual(["Cash", "Delivery"]);
-
-      // Fixing Source: loading, then Delivery's options with the first selected
-      await expect(control(page, "Fixing Source", 1)).toBeDisabled();
-      expect(await selectedText(page, "Fixing Source", 1)).toBe("Loading…");
-      await fixingLoaded(page, 1);
-      expect(await selectedText(page, "Fixing Source", 1)).toBe("Delivery A");
       expect(await selectedText(page, "Settlement Style", 0)).toBe("—"); // the deal holds nothing
+
+      // a Delivery product has no Fixing Source: only the deal's, with Cash's options
+      await expect(page.locator('[aria-label="Fixing Source"]')).toHaveCount(1);
+      expect(await selectedText(page, "Fixing Source", 0)).toBe("Loading…");
+      await fixingLoaded(page, 0);
       expect(await selectedText(page, "Fixing Source", 0)).toBe("—");
 
-      // a style change reloads; a value that is still an option is kept
-      await control(page, "Fixing Source", 1).selectOption("3");
+      // Cash adds it, with the first option
       await control(page, "Settlement Style", 1).selectOption("Cash");
-      await expect(control(page, "Fixing Source", 1)).toBeDisabled();
-      await fixingLoaded(page, 1);
-      expect(await selectedText(page, "Fixing Source", 1)).toBe("Shared C");
+      await expect(control(page, "Fixing Source", 1)).toHaveValue("4");
+      expect(await selectedText(page, "Fixing Source", 1)).toBe("Cash D");
+      await control(page, "Fixing Source", 1).selectOption("3");
 
-      // …and one that isn't is reset to the first option
+      // broadcast the style: new Cash products get the first option, a value
+      // that is still an option is kept
       await page.getByRole("button", { name: "Add Strategy" }).click();
-      await fixingLoaded(page, 2);
-      // Cash is already loaded: the list shows at once (no "Loading…" flash),
-      // and the value is reconciled when the reload settles
-      await control(page, "Settlement Style", 2).selectOption("Cash");
-      await expect(control(page, "Fixing Source", 2)).toBeEnabled();
-      await expect(control(page, "Fixing Source", 2)).toHaveValue("4");
-      expect(await selectedText(page, "Fixing Source", 2)).toBe("Cash D");
-      expect((await values(page, "Fixing Source")).slice(1)).toEqual(["3", "4", "1"]);
-
-      // broadcast the style: every product reloads and reconciles
+      await expect(page.locator('[aria-label="Fixing Source"]')).toHaveCount(2);
       await control(page, "Settlement Style", 0).selectOption("Cash");
       await expect.poll(() => values(page, "Settlement Style")).toEqual(["", "Cash", "Cash", "Cash"]);
       await expect.poll(() => values(page, "Fixing Source")).toEqual(["", "3", "4", "4"]);
+
+      // leaving Cash removes it
+      await control(page, "Settlement Style", 2).selectOption("Delivery");
+      await expect.poll(() => values(page, "Fixing Source")).toEqual(["", "3", "4"]);
     });
 
     test.describe("when the request fails", () => {
@@ -63,8 +57,8 @@ for (const app of apps) {
       test("the dropdown says so and the rest of the app still works", async ({ page }) => {
         await page.route(`${FIXING_SOURCES_URL}?*`, (route) => route.abort());
         await openApp(page, app);
-        await expect.poll(() => selectedText(page, "Fixing Source", 1)).toBe("Failed to load");
-        await expect(control(page, "Fixing Source", 1)).toBeDisabled();
+        await expect.poll(() => selectedText(page, "Fixing Source", 0)).toBe("Failed to load");
+        await expect(control(page, "Fixing Source", 0)).toBeDisabled();
         await control(page, "Strike", 1).fill("1");
         await control(page, "Strike", 1).press("Enter");
         await expect(control(page, "Strike", 1)).toHaveValue("1");
@@ -79,13 +73,12 @@ for (const app of apps) {
         }
       });
       await openApp(page, app);
-      await expect(control(page, "Fixing Source", 1)).toBeEnabled({ timeout: 15000 });
-      expect(sent).toContain("Delivery");
-      expect(await selectedText(page, "Fixing Source", 1)).toBe("Leanne Graham");
-      await control(page, "Settlement Style", 1).selectOption("Cash");
-      await expect(control(page, "Fixing Source", 1)).toBeEnabled({ timeout: 15000 });
+      await expect(control(page, "Fixing Source", 0)).toBeEnabled({ timeout: 15000 }); // the deal's
       expect(sent).toContain("Cash");
-      await expect(control(page, "Fixing Source", 1)).toHaveValue("1"); // same data: kept
+      expect(sent).not.toContain("Delivery"); // a Delivery product loads nothing
+      await control(page, "Settlement Style", 1).selectOption("Cash");
+      await expect(control(page, "Fixing Source", 1)).toHaveValue("1", { timeout: 15000 });
+      expect(await selectedText(page, "Fixing Source", 1)).toBe("Leanne Graham");
     });
   });
 }

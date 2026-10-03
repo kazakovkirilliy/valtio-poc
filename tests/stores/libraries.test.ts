@@ -18,7 +18,7 @@ describe("mobx", () => {
     const { autorun, configure, observable } = await import("mobx");
     configure({ enforceActions: "always" });
     const { createDealStore } = await import("../../src-mobx/stores/dealStore.ts");
-    const deal = createDealStore(observable({ isSpotPriceStreamEnabled: false }));
+    const deal = createDealStore(observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }));
     deal.addNewGroup("Strategy");
     deal.addNewGroup("Average");
     const [watched, sibling, other] = deal.products;
@@ -54,7 +54,7 @@ describe("effector", () => {
   it("keeps untouched products, and their validation, as the same objects", async () => {
     const { createStore } = await import("effector");
     const { createDealStore } = await import("../../src-effector/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
     deal.actions.addGroupAction("Strategy");
     deal.actions.addGroupAction("Average");
     const productIds = Object.keys(deal.$products.getState());
@@ -78,9 +78,9 @@ describe("effector", () => {
   it("exposes only its requests as actions", async () => {
     const { createStore } = await import("effector");
     const { createDealStore } = await import("../../src-effector/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
     expect(Object.keys(deal.actions).sort()).toEqual([
-      "addGroupAction", "broadcastFieldAction", "cloneGroupAction",
+      "addGroupAction", "broadcastFieldAction", "calculateAction", "cloneGroupAction",
       "removeGroupAction", "setProductFieldAction", "setTwoWaySyncAction",
     ]);
     deal.dispose();
@@ -96,7 +96,7 @@ describe("effector-nested", () => {
   it("copies only the path to an edited product", async () => {
     const { createStore } = await import("effector");
     const { createDealStore } = await import("../../src-effector-nested/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
     deal.actions.addGroupAction("Strategy");
     deal.actions.addGroupAction("Average");
     const groups = deal.$groups.getState();
@@ -124,7 +124,7 @@ describe("effector-nested", () => {
   it("inserts a clone right after its source, in key order", async () => {
     const { createStore } = await import("effector");
     const { createDealStore } = await import("../../src-effector-nested/stores/dealStore.ts");
-    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false) });
+    const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
     deal.actions.addGroupAction("VanillaGroup");
     deal.actions.addGroupAction("Average");
     const [first, last] = Object.keys(deal.$groups.getState());

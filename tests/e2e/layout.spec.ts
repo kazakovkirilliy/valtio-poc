@@ -27,7 +27,7 @@ for (const app of apps) {
           columns: columns.length,
           cellsPerColumn: [...new Set(columns.map((c) => c.querySelectorAll(":scope > .cell").length))],
           maxOffset,
-          labelElements: document.querySelectorAll("label").length,
+          labelElements: container.querySelectorAll("label").length,
         };
       });
       expect(report.columns).toBe(6); // deal, labels, 4 products

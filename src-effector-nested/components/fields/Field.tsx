@@ -7,6 +7,7 @@ import {
   type SelectFieldId,
   fieldInputTypes,
   fieldLabels,
+  existsForParam,
   fieldOptions,
   isAsyncOptions,
 } from "@shared/fields.ts";
@@ -26,9 +27,8 @@ type Props = {
 /** A dropdown: a fixed list, or the options loaded for its parameter. */
 const FieldSelect = memo(({ fieldId, param, readOnly: _, ...props }: Props & { fieldId: SelectFieldId }) => {
   const options = fieldOptions[fieldId];
-  const key = isAsyncOptions(options)
-    ? optionsKey(options.source, param || options.defaultParam)
-    : "";
+  const asyncParam = isAsyncOptions(options) ? param || options.defaultParam : "";
+  const key = isAsyncOptions(options) ? optionsKey(options.source, asyncParam) : "";
   const loaded = useStoreMap({
     store: $optionsByKey,
     keys: [key],
@@ -36,11 +36,12 @@ const FieldSelect = memo(({ fieldId, param, readOnly: _, ...props }: Props & { f
   });
   const label = fieldLabels[fieldId];
 
-  return isAsyncOptions(options) ? (
-    <Select {...props} label={label} options={loaded?.options ?? []} status={loaded?.status ?? "loading"} />
-  ) : (
-    <Select {...props} label={label} options={options} status="loaded" />
-  );
+  if (!isAsyncOptions(options)) {
+    return <Select {...props} label={label} options={options} status="loaded" />;
+  }
+  // the product doesn't have the field for this parameter: nothing to show
+  if (!existsForParam(options, asyncParam)) return null;
+  return <Select {...props} label={label} options={loaded?.options ?? []} status={loaded?.status ?? "loading"} />;
 });
 
 FieldSelect.displayName = "FieldSelect";
