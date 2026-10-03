@@ -2,13 +2,14 @@ import "@shared/styles/deal.css";
 import { memo, useMemo } from "react";
 import { DealGrid } from "@shared/grid/DealGrid.tsx";
 import { useOnMount } from "@shared/hooks/useOnMount.ts";
-import { createGridSource } from "../../stores/gridSource.ts";
+import { createPathGridSource } from "@shared/grid/pathGridSource.ts";
+import { createPathDeal } from "../../stores/pathDeal.ts";
 import { DealHeader } from "./DealHeader.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
 export const Deal = memo(() => {
   const dealStore = useDealStore();
-  const source = useMemo(() => createGridSource(dealStore), [dealStore]);
+  const source = useMemo(() => createPathGridSource(createPathDeal(dealStore)), [dealStore]);
 
   useOnMount(() => {
     dealStore.actions.addNewGroup("VanillaGroup");

@@ -1,7 +1,8 @@
 import { observable, toJS } from "mobx";
 import { type GroupType, groupDefinitions, productUi } from "@shared/groups.ts";
 import { uuid } from "@shared/lib/uuid.ts";
-import { type Product, type ProductOwner, createProduct } from "./productStore.ts";
+import type { DealFieldsState } from "@shared/dealFields.ts";
+import { type Product, createProduct } from "./productStore.ts";
 
 export type GroupStore = {
   readonly id: string;
@@ -19,7 +20,7 @@ export type GroupStore = {
  */
 export const createGroupStore = (
   groupType: GroupType,
-  owner: ProductOwner,
+  defaults: DealFieldsState,
   source?: GroupStore,
 ): GroupStore => {
   const products: Record<string, Product> = {};
@@ -29,7 +30,7 @@ export const createGroupStore = (
     const sourceProduct = source?.products[source.productIds[index]];
     const product = createProduct(
       productType,
-      owner,
+      defaults,
       productUi(productType, index),
       // plain deep copy: the clone gets its own observables and computeds
       sourceProduct && toJS(sourceProduct.data),

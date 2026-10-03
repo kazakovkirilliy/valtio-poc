@@ -15,13 +15,13 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    // library-independent code shared by the three apps
+    // library-independent code shared by every app
     alias: { '@shared': fileURLToPath(new URL('./src-shared', import.meta.url)) },
   },
   build: {
     rolldownOptions: {
       // index.html links to every version of the app: valtio (src-valtio/),
-      // MobX (src-mobx/), Effector (src-effector/) and nested Effector
+      // MobX (src-mobx/), Effector (src-effector/), nested Effector
       // (src-effector-nested/) and @effector/model (src-effector-model/)
       input: {
         index: 'index.html',

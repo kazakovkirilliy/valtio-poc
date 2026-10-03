@@ -1,6 +1,6 @@
 import { createEffect, createStore } from "effector";
+import type { OptionsRequest } from "@shared/products/productWrites.ts";
 import {
-  type OptionsSource,
   type OptionsState,
   optionsFailed,
   optionsKey,
@@ -8,8 +8,7 @@ import {
   optionsLoading,
 } from "@shared/options/optionsSource.ts";
 
-/** One list of options: a source, for one parameter. */
-export type OptionsRequest = { source: OptionsSource; param: string };
+export type { OptionsRequest };
 
 /** (Re)loads one list of options. */
 export const loadOptionsEffect = createEffect(({ source, param }: OptionsRequest) =>

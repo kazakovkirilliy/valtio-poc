@@ -16,21 +16,21 @@ import {
   isCalcReady,
   needsAutocalc,
 } from "@shared/calc.ts";
-import {
-  type BroadcastFieldId,
-  type DealFieldsState,
-  type SyncedFieldId,
-  initialDealFields,
-  isEmptyBroadcast,
-} from "@shared/dealFields.ts";
-import {
-  type DealSettingId,
-  type DealSettingsState,
-  hedgeTypesFor,
-  initialDealSettings,
-  withSetting,
-} from "@shared/dealSettings.ts";
+import { type DealFieldsState, initialDealFields } from "@shared/dealFields.ts";
+import { type DealSettingsState, hedgeTypesFor, initialDealSettings } from "@shared/dealSettings.ts";
+import { type DealProduct, routeWrites } from "@shared/dealWrites.ts";
 import { dealOptionsRequests } from "@shared/fields.ts";
+import { deleteValueByPath, setValueByPath } from "@shared/lib/path.ts";
+import type { PathWrite } from "@shared/paths.ts";
+import type { ProductData } from "@shared/products/productRegistry.ts";
+import {
+  type OptionsRequest,
+  type ProductWrite,
+  optionsRequestsOf,
+  planProductWrites,
+  reconcileWrites,
+  uniqueRequests,
+} from "@shared/products/productWrites.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
   type SpotPriceStream,
@@ -61,21 +61,19 @@ export type DealStore = DealFieldsState & DealSettingsState & {
   addNewGroup(groupType: GroupType): void;
   cloneGroup(groupId: string): void;
   removeGroup(groupId: string): void;
-  setSynced(id: SyncedFieldId, value: unknown): void;
-  /** Pushes one value into every product; an empty one is not sent. */
-  broadcast(id: BroadcastFieldId, value: unknown): void;
+  /** Writes values at dot paths, in order, as one action: an edit, a paste, anything. */
+  writePaths(writes: readonly PathWrite[]): void;
   /** Calculates now, if ready (the manual Calculate). */
   calculate(): void;
   markInputsChanged(): void;
-  /** Sets a deal setting (internal, hedge type); a hedge type stays one of its options. */
-  setSetting(id: DealSettingId, value: unknown): void;
   dispose(): void;
 };
 
 /**
- * Deal factory. Syncs and broadcasts are actions that write every product
- * directly, and derived values (expiry days, validation) are computeds:
- * there is no subscription graph to wire up, order, or dispose.
+ * Deal factory. Every write is a batch of dot paths, routed by the shared
+ * rules and applied in one action, so every reaction (autocalc, inputs
+ * changed, the grid) runs once, after the last write. Derived values (expiry
+ * days, validation) are computeds: nothing to wire up, order, or dispose.
  */
 export const createDealStore = (devtools: DealDevtools): DealStore => {
   const spotPriceStream = createSpotPriceStream();
@@ -89,6 +87,27 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     });
   };
 
+  /** Writes into a live product's data, leaf by leaf, by the shared rules (derived fields are computeds). */
+  const applyProductWrites = (data: ProductData, writes: readonly ProductWrite[]) => {
+    for (const change of planProductWrites(data, writes).changes) {
+      if ("remove" in change) deleteValueByPath(data, change.path);
+      else if (!change.derived) setValueByPath(data, change.path, change.value);
+    }
+  };
+
+  /** Loads options; when they arrive, every product still on that parameter reconciles. */
+  const loadOptions = (requests: readonly OptionsRequest[]) => {
+    for (const request of requests) {
+      void optionsStore.load(request.source, request.param).then((options) => {
+        if (!options) return;
+        // after an `await` we're outside the action: wrap the writes
+        runInAction(() => {
+          for (const { data } of deal.products) applyProductWrites(data, reconcileWrites(data, request, options));
+        });
+      });
+    }
+  };
+
   const insertGroup = (
     groupType: GroupType,
     position: number,
@@ -99,6 +118,7 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     deal.groups[group.id] = group;
     deal.groupIds.splice(position, 0, group.id);
     reindexGroups();
+    loadOptions(uniqueRequests(group.productList.flatMap(({ data }) => optionsRequestsOf(data))));
   };
 
   const deal: DealStore = observable<DealStore>(
@@ -142,15 +162,21 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
         delete deal.groups[groupId];
         reindexGroups();
       },
-      /** Two-way sync, as one action: the deal value and every product's copy. */
-      setSynced(id, value) {
-        Object.assign(deal, { [id]: value });
-        deal.products.forEach((product) => product.setField(id, value));
-      },
-      /** Pushes one value into every product; the deal keeps nothing. */
-      broadcast(id, value) {
-        if (isEmptyBroadcast(value)) return; // nothing to send
-        deal.products.forEach((product) => product.setField(id, value));
+      writePaths(writes) {
+        const products: DealProduct[] = deal.groupIds.flatMap((groupId) =>
+          deal.groups[groupId].productList.map((product) => ({ groupId, productId: product.id, data: product.data })),
+        );
+        const { notionalCcy, premiumCcy, notionalAmount, isInternal, hedgeType } = deal;
+        const routed = routeWrites(
+          { dealFields: { notionalCcy, premiumCcy, notionalAmount }, settings: { isInternal, hedgeType }, products },
+          writes,
+        );
+        // same-value writes don't notify: only what changed does
+        Object.assign(deal, routed.dealFields, routed.settings);
+        for (const [productId, { groupId, writes: productWrites }] of routed.products) {
+          applyProductWrites(deal.groups[groupId].products[productId].data, productWrites);
+        }
+        loadOptions(routed.requests);
       },
       calculate() {
         if (!deal.isReady) return;
@@ -164,9 +190,6 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
           () =>
             runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
         );
-      },
-      setSetting(id, value) {
-        Object.assign(deal, withSetting(deal, id, value));
       },
       markInputsChanged() {
         deal.calc = calcInputsChanged(deal.calc);
@@ -183,9 +206,7 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
   );
 
   // the deal column's own options (its default parameters), loaded with the deal
-  dealOptionsRequests.forEach(
-    ({ source, param }) => void optionsStore.load(source, param),
-  );
+  loadOptions(dealOptionsRequests);
 
   // any product edit outdates the price (and supersedes a calculation in flight);
   // serializing reads, so tracks, every field of every product

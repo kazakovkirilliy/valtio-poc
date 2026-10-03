@@ -158,12 +158,6 @@ export const settingCells: readonly CellRef[] = dealSettings.map(({ id }) => ({
   fieldId: id,
 }));
 
-/** Async fields whose options (and existence) follow `fieldId`: repaint them with it. */
-export const dependentFields = (fieldId: FieldId): FieldId[] =>
-  asyncOptionFields
-    .filter(({ options }) => options.dependsOn === fieldId)
-    .map((field) => field.fieldId);
-
 /**
  * Collects changed cells and hands them to the grid once per tick, each
  * cell once, and only if what the grid shows of it really changed: value,

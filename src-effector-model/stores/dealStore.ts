@@ -19,41 +19,26 @@ import {
   isCalcReady,
   needsAutocalc,
 } from "@shared/calc.ts";
-import {
-  type DealFieldsState,
-  type SyncedFieldId,
-  initialDealFields,
-  isBroadcastField,
-  isEmptyBroadcast,
-  isSyncedField,
-} from "@shared/dealFields.ts";
-import {
-  type DealSettingsState,
-  hedgeTypesFor,
-  initialDealSettings,
-  isDealSetting,
-  withSetting,
-} from "@shared/dealSettings.ts";
-import {
-  type ProductFieldId,
-  asyncOptionFields,
-  dealOptionsRequests,
-  existsForParam,
-} from "@shared/fields.ts";
+import { type DealFieldsState, initialDealFields } from "@shared/dealFields.ts";
+import { type DealSettingsState, hedgeTypesFor, initialDealSettings } from "@shared/dealSettings.ts";
+import { type DealProduct, readDealKey, routeWrites } from "@shared/dealWrites.ts";
+import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupDefinitions, groupTitle, productUi } from "@shared/groups.ts";
 import { getValueByPath } from "@shared/lib/path.ts";
 import { uuid } from "@shared/lib/uuid.ts";
-import { type Option, optionsKey } from "@shared/options/optionsSource.ts";
+import type { Option } from "@shared/options/optionsSource.ts";
+import { type PathWrite, parsePath } from "@shared/paths.ts";
+import { type ProductData, type ProductUi, definitionOf } from "@shared/products/productRegistry.ts";
 import {
-  type ProductData,
-  type ProductUi,
-  definitionOf,
-} from "@shared/products/productRegistry.ts";
+  type OptionsRequest,
+  type ProductWrite,
+  optionsRequestsOf,
+  uniqueRequests,
+} from "@shared/products/productWrites.ts";
 import { createSpotPriceStream } from "@shared/spotPriceStream.ts";
 import type { FieldIssues } from "@shared/validation.ts";
-import { type OptionsRequest, loadAllOptionsEffect, loadOptionsEffect } from "./optionsStore.ts";
-import { type PathWrite, parsePath } from "./paths.ts";
-import { type ProductWrite, definitionOfData, fieldAtPath, productsModel } from "./productModel.ts";
+import { loadAllOptionsEffect, loadOptionsEffect } from "./optionsStore.ts";
+import { productsModel } from "./productModel.ts";
 
 /** What a deal needs from the app-wide developer settings. */
 type DealDevtools = {
@@ -113,84 +98,22 @@ const createGroup = () => {
 
 const productsOf = (groups: readonly GroupItem[]) => groups.flatMap((group) => group.products);
 
-/** The options to (re)load when `fieldId` takes `value`. */
-const optionsRequestsFor = (fieldId: ProductFieldId, value: unknown): OptionsRequest[] =>
-  asyncOptionFields
-    .filter(({ options }) => options.dependsOn === fieldId && existsForParam(options, value))
-    .map(({ options }) => ({ source: options.source, param: String(value) }));
-
-const uniqueRequests = (requests: readonly OptionsRequest[]) =>
-  [...new Map(requests.map((request) => [optionsKey(request.source, request.param), request])).values()];
-
-const withDealField = (deal: DealFieldsState, fieldId: SyncedFieldId, value: unknown) =>
-  Object.is(deal[fieldId], value) ? deal : { ...deal, [fieldId]: value };
-
-/**
- * A batch of path writes, routed: the deal's own values (synced fields,
- * settings) and each product's writes, in order. Synced fields (from the
- * deal or any product) and deal broadcasts go to every product.
- */
-const routeWrites = (
-  state: { groups: readonly GroupItem[]; dealFields: DealFieldsState; settings: DealSettingsState },
-  writes: readonly PathWrite[],
-) => {
-  let { dealFields, settings } = state;
-  const targets = state.groups.flatMap((group) =>
-    group.products.flatMap((product) => (product.data ? [{ groupId: group.id, product, data: product.data }] : [])),
+/** Every product with where it lives: what the write router needs. */
+const dealProducts = (groups: readonly GroupItem[]): DealProduct[] =>
+  groups.flatMap((group) =>
+    group.products.flatMap((product) =>
+      product.data ? [{ groupId: group.id, productId: product.id, data: product.data }] : [],
+    ),
   );
-  const lists = new Map<string, { groupId: string; productId: string; writes: ProductWrite[] }>();
-  const toProduct = (groupId: string, productId: string, write: ProductWrite) => {
-    if (!lists.has(productId)) lists.set(productId, { groupId, productId, writes: [] });
-    lists.get(productId)!.writes.push(write);
-  };
-  const requests: OptionsRequest[] = [];
-  const toEvery = (fieldId: ProductFieldId, value: unknown) => {
-    for (const { groupId, product } of targets) toProduct(groupId, product.id, { fieldId, value });
-    requests.push(...optionsRequestsFor(fieldId, value));
-  };
-
-  for (const { path, value } of writes) {
-    const target = parsePath(path);
-    if (!target) continue;
-    if (target.kind === "deal") {
-      const { key } = target;
-      if (isDealSetting(key)) settings = withSetting(settings, key, value);
-      else if (isSyncedField(key)) {
-        dealFields = withDealField(dealFields, key, value);
-        toEvery(key, value);
-      } else if (isBroadcastField(key) && !isEmptyBroadcast(value)) toEvery(key, value);
-      continue;
-    }
-    const found = targets.find(({ groupId, product }) => groupId === target.groupId && product.id === target.productId);
-    if (!found) continue;
-    const fieldId = fieldAtPath(definitionOfData(found.data), target.dataPath);
-    if (fieldId && isSyncedField(fieldId)) {
-      // a product's synced field is the two-way sync: the deal and every product
-      dealFields = withDealField(dealFields, fieldId, value);
-      toEvery(fieldId, value);
-    } else {
-      toProduct(found.groupId, found.product.id, { path: target.dataPath, value });
-      if (fieldId) requests.push(...optionsRequestsFor(fieldId, value));
-    }
-  }
-
-  const byGroup = new Map<string, ProductWrites[]>();
-  for (const { groupId, productId, writes: productWrites } of lists.values()) {
-    if (!byGroup.has(groupId)) byGroup.set(groupId, []);
-    byGroup.get(groupId)!.push({ productId, writes: productWrites });
-  }
-  return { dealFields, settings, byGroup, requests: uniqueRequests(requests) };
-};
 
 /**
  * One deal's model, on `@effector/model`: the groups are a collection whose
  * items each hold their products as a nested collection, so every group and
  * product has its own stores and api. `$order` keeps the display order.
  *
- * Everything is addressed by dot path (see `paths.ts`): `writePathsAction`
- * takes a batch of path writes and routes it, in one event, to the deal's
- * own stores and to the products it addresses (one api call for all of
- * them); `readPath` and `pathStore` read any path.
+ * Every write is a batch of dot paths (`writePathsAction`), routed by the
+ * shared rules: the deal's own stores take theirs, and the products get
+ * theirs in one api call addressed to their groups.
  */
 export const createDealStore = (devtools: DealDevtools) => {
   const actions = {
@@ -294,36 +217,41 @@ export const createDealStore = (devtools: DealDevtools) => {
     target: groups.edit.update,
   });
 
-  // --- writes by path: one event, routed to the deal's stores and the products addressed
+  // --- writes by path: routed by the shared rules; the products' writes in one keyed api call
   const routed = connect({
     clock: actions.writePathsAction,
     source: { groups: $groups, dealFields: $dealFields, settings: $settings },
-    fn: routeWrites,
+    fn: ({ groups: items, dealFields, settings }, writes) =>
+      routeWrites({ dealFields, settings, products: dealProducts(items) }, writes),
   });
   $dealFields.on(routed, (_, { dealFields }) => dealFields);
   $settings.on(routed, (_, { settings }) => settings);
   connect({
     clock: routed,
-    filter: ({ byGroup }) => byGroup.size > 0,
-    fn: ({ byGroup }) => ({ key: [...byGroup.keys()], data: [...byGroup.values()] }),
+    filter: ({ products }) => products.size > 0,
+    fn: ({ products }) => {
+      const byGroup = new Map<string, ProductWrites[]>();
+      for (const [productId, { groupId, writes }] of products) {
+        if (!byGroup.has(groupId)) byGroup.set(groupId, []);
+        byGroup.get(groupId)!.push({ productId, writes });
+      }
+      return { key: [...byGroup.keys()], data: [...byGroup.values()] };
+    },
     target: groups.api.writeProducts,
   });
 
   // --- async options (e.g. Fixing Source): loaded for a new group, reloaded on change
   connect({
     clock: groupCreated,
-    fn: ({ group }) =>
-      uniqueRequests(
-        group.products.flatMap(({ data }) =>
-          asyncOptionFields.flatMap(({ options }) => {
-            const param = getValueByPath(data, definitionOfData(data).fieldPaths[options.dependsOn]);
-            return existsForParam(options, param) ? [{ source: options.source, param: String(param) }] : [];
-          }),
-        ),
-      ),
+    fn: ({ group }) => uniqueRequests(group.products.flatMap(({ data }) => optionsRequestsOf(data))),
     target: loadAllOptionsEffect,
   });
-  connect({ clock: routed, filter: ({ requests }) => requests.length > 0, fn: ({ requests }) => requests, target: loadAllOptionsEffect });
+  connect({
+    clock: routed,
+    filter: ({ requests }) => requests.length > 0,
+    fn: ({ requests }) => requests,
+    target: loadAllOptionsEffect,
+  });
   // options arrived: every product still on that parameter reconciles (stale responses: ignored)
   connect({
     clock: loadOptionsEffect.done,
@@ -384,10 +312,7 @@ export const createDealStore = (devtools: DealDevtools) => {
   const readPath = (path: string): unknown => {
     const target = parsePath(path);
     if (!target) return undefined;
-    if (target.kind === "deal") {
-      if (isDealSetting(target.key)) return $settings.getState()[target.key];
-      return isSyncedField(target.key) ? $dealFields.getState()[target.key] : undefined;
-    }
+    if (target.kind === "deal") return readDealKey(target.key, $dealFields.getState(), $settings.getState());
     const data = findProduct($groupsById.getState(), target.groupId, target.productId)?.data;
     return data ? getValueByPath(data, target.dataPath) : undefined;
   };
@@ -407,10 +332,13 @@ export const createDealStore = (devtools: DealDevtools) => {
       store = combine($dealFields, $settings, () => readPath(path));
     } else {
       const $group = lens(groups).itemStore(createStore(target.groupId)) as unknown as Store<GroupItem | null>;
-      store = $group.map((group) => {
-        const data = group?.products.find((product) => product.id === target.productId)?.data;
-        return data ? getValueByPath(data, target.dataPath) : undefined;
-      }, { skipVoid: false });
+      store = $group.map(
+        (group) => {
+          const data = group?.products.find((product) => product.id === target.productId)?.data;
+          return data ? getValueByPath(data, target.dataPath) : undefined;
+        },
+        { skipVoid: false },
+      );
     }
     pathStores.set(path, store);
     return store;

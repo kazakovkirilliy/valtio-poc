@@ -10,14 +10,34 @@
  *   the chain of updates that led to each one.
  */
 import { attachReduxDevTools } from "@effector/redux-devtools-adapter";
-import type { Unit } from "effector";
+import { type Unit, is } from "effector";
 import { debug } from "patronum";
 import { $deals } from "./stores/multiTabStore.ts";
 import { $optionsByKey, loadOptionsEffect } from "./stores/optionsStore.ts";
 
+/**
+ * The state tab serializes every store's value on every update. Some values
+ * are live effector graphs (the deal models kept in the tabs store, and
+ * `@effector/model`'s item instances and keyvals): the extension would copy
+ * them whole each time, megabytes per edit. Show them as a label instead.
+ */
+const isLiveGraph = (value: object) =>
+  ("type" in value && (value.type === "instance" || value.type === "keyval")) ||
+  ("seq" in value && "family" in value); // a graph node
+const replacer = (_key: string, value: unknown) => {
+  if (is.unit(value)) return `[${value.kind}]`;
+  if (typeof value === "object" && value !== null && isLiveGraph(value)) return "[effector graph]";
+  return value;
+};
+
 if ("__REDUX_DEVTOOLS_EXTENSION__" in window) {
   // stateTab: every store's value in the State/Diff tabs (off by default)
-  attachReduxDevTools({ name: "Deal editor (Effector Model)", trace: true, stateTab: true });
+  attachReduxDevTools({
+    name: "Deal editor (Effector Model)",
+    trace: true,
+    stateTab: true,
+    devToolsConfig: { serialize: { replacer } },
+  });
 } else {
   console.info(
     "[devtools] Redux DevTools extension not found on this page: install it, or allow it on this site, then reload.",
