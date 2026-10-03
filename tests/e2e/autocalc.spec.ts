@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { apps, commitText, expect, openApp, test } from "./support/fixtures.ts";
+import { apps, editCell, expect, openApp, test } from "./support/fixtures.ts";
 
 const autocalc = (page: Page) => page.getByRole("switch", { name: "Autocalc" });
 const calculate = (page: Page) => page.getByRole("button", { name: "Calculate" });
@@ -14,14 +14,14 @@ for (const app of apps) {
       await expect(price(page)).toHaveText("—");
 
       // valid: calculates once the deal's fixing sources have loaded (~2s round trip)
-      await commitText(page, "Notional Ccy", 0, "USD");
+      await editCell(page, "Notional Ccy", 0, "USD");
       await expect(price(page)).toHaveText("Calculating…");
       await expect(price(page)).toHaveText("1.00", { timeout: 5000 });
 
       // off: an edit only outdates the price, until Calculate
       await autocalc(page).click();
       await expect(autocalc(page)).not.toBeChecked();
-      await commitText(page, "Notional Amount", 1, "1000");
+      await editCell(page, "Notional Amount", 1, "1000");
       await expect(price(page)).toHaveText("1.00 (outdated)");
       await calculate(page).click();
       await expect(price(page)).toHaveText("Calculating…");

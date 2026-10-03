@@ -1,5 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { vi } from "vitest";
+import { isSyncedField } from "@shared/dealFields.ts";
+import type { GridSource } from "@shared/grid/gridSource.ts";
 import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts";
 
 /**
@@ -36,8 +38,8 @@ export type DealAdapter = {
   has(i: number, fieldId: string): boolean;
   /** Commits a product field, as its input would. */
   commit(i: number, fieldId: string, value: unknown): void;
-  /** Commits a synced deal field (Notional/Premium Ccy), as its input would. */
-  sync(fieldId: string, value: string): void;
+  /** Commits a synced deal field (Notional Ccy/Amount, Premium Ccy), as its input would. */
+  sync(fieldId: string, value: unknown): void;
   dealValue(fieldId: string): unknown;
   /** Commits a deal broadcast field, as its input would. */
   broadcast(fieldId: string, value: unknown): void;
@@ -51,6 +53,8 @@ export type DealAdapter = {
   calculate(): void;
   /** Flips the autocalc switch (off in a new adapter). */
   setAutocalc(enabled: boolean): void;
+  /** The app's grid source over this deal: what the grid reads, watches and writes. */
+  grid(): GridSource;
   dispose(): void;
 };
 
@@ -81,6 +85,7 @@ const valtio = async (): Promise<DealAdapter> => {
   });
   const { createDealStore } = await import("../../../src-valtio/stores/dealStore.ts");
   const { multiTabStore } = await import("../../../src-valtio/stores/multiTabStore.ts");
+  const { createGridSource } = await import("../../../src-valtio/stores/gridSource.ts");
   const { optionsStore } = await import("../../../src-valtio/stores/optionsStore.ts");
   const { definitionOf, productTypeOf } = await import("@shared/products/productRegistry.ts");
   const deal = createDealStore();
@@ -137,6 +142,7 @@ const valtio = async (): Promise<DealAdapter> => {
     calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
     calculate: () => deal.actions.calculate(),
     setAutocalc: (enabled) => (multiTabStore.devtools.isAutocalcEnabled = enabled),
+    grid: () => createGridSource(deal),
     dispose: () => {},
   };
 };
@@ -150,6 +156,7 @@ const mobx = async (): Promise<DealAdapter> => {
   });
   const { createDealStore } = await import("../../../src-mobx/stores/dealStore.ts");
   const { optionsStore } = await import("../../../src-mobx/stores/optionsStore.ts");
+  const { createGridSource } = await import("../../../src-mobx/stores/gridSource.ts");
   const devtools = observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
   const deal = createDealStore(devtools);
   type Product = (typeof deal.products)[number];
@@ -158,7 +165,6 @@ const mobx = async (): Promise<DealAdapter> => {
     dataKeys: () => Object.keys(toJS(product.data)),
   });
   const field = (i: number, fieldId: string) => deal.products[i].fields[fieldId as keyof Product["fields"]];
-  const dealField = (fieldId: string) => deal.fields[fieldId as keyof typeof deal.fields]!;
 
   return {
     addGroup: (type) => deal.addNewGroup(type),
@@ -182,15 +188,16 @@ const mobx = async (): Promise<DealAdapter> => {
     read: (i, fieldId) => field(i, fieldId).value,
     has: (i, fieldId) => hasField(deal.products[i].data, fieldId),
     commit: (i, fieldId, value) => field(i, fieldId).commit(value),
-    sync: (fieldId, value) => dealField(fieldId).commit(value),
-    dealValue: (fieldId) => dealField(fieldId).value,
-    broadcast: (fieldId, value) => dealField(fieldId).commit(value),
+    sync: (fieldId, value) => deal.setSynced(fieldId as never, value),
+    dealValue: (fieldId) => (isSyncedField(fieldId) ? deal[fieldId] : undefined),
+    broadcast: (fieldId, value) => deal.broadcast(fieldId as never, value),
     issues: (i, fieldId) => field(i, fieldId).issues.map((issue) => issue.message),
     hasValidationErrors: () => deal.hasValidationErrors,
     optionsFor: (style) => optionsView(optionsStore.byKey[`fixingSources:${style}`]),
     calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
     calculate: () => deal.calculate(),
     setAutocalc: (enabled) => runInAction(() => (devtools.isAutocalcEnabled = enabled)),
+    grid: () => createGridSource(deal),
     dispose: () => deal.dispose(),
   };
 };
@@ -200,6 +207,7 @@ const effector = async (): Promise<DealAdapter> => {
   const { createDealStore } = await import("../../../src-effector/stores/dealStore.ts");
   const { readProductField } = await import("../../../src-effector/stores/productStore.ts");
   const { $optionsByKey } = await import("../../../src-effector/stores/optionsStore.ts");
+  const { createGridSource } = await import("../../../src-effector/stores/gridSource.ts");
   const setAutocalc = createEvent<boolean>();
   const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
   const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
@@ -244,7 +252,7 @@ const effector = async (): Promise<DealAdapter> => {
     commit: (i, fieldId, value) =>
       deal.actions.setProductFieldAction({ productId: list()[i].id, fieldId: fieldId as FieldId, value }),
     sync: (fieldId, value) =>
-      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
+      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as never, value }),
     dealValue: (fieldId) => (deal.$dealFields.getState() as Record<string, unknown>)[fieldId],
     broadcast: (fieldId, value) =>
       deal.actions.broadcastFieldAction({ fieldId: fieldId as never, value }),
@@ -257,6 +265,7 @@ const effector = async (): Promise<DealAdapter> => {
     calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
     calculate: () => deal.actions.calculateAction(),
     setAutocalc,
+    grid: () => createGridSource(deal),
     dispose: () => deal.dispose(),
   };
 };
@@ -266,6 +275,7 @@ const effectorNested = async (): Promise<DealAdapter> => {
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
   const { readProductField } = await import("../../../src-effector-nested/stores/productStore.ts");
   const { $optionsByKey } = await import("../../../src-effector-nested/stores/optionsStore.ts");
+  const { createGridSource } = await import("../../../src-effector-nested/stores/gridSource.ts");
   const setAutocalc = createEvent<boolean>();
   const $isAutocalcEnabled = createStore(false).on(setAutocalc, (_, enabled) => enabled);
   const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled });
@@ -309,7 +319,7 @@ const effectorNested = async (): Promise<DealAdapter> => {
       deal.actions.setProductFieldAction({ groupId, productId: product.id, fieldId: fieldId as FieldId, value });
     },
     sync: (fieldId, value) =>
-      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as "notionalCcy" | "premiumCcy", value }),
+      deal.actions.setTwoWaySyncAction({ fieldId: fieldId as never, value }),
     dealValue: (fieldId) => (deal.$dealFields.getState() as Record<string, unknown>)[fieldId],
     broadcast: (fieldId, value) =>
       deal.actions.broadcastFieldAction({ fieldId: fieldId as never, value }),
@@ -322,6 +332,7 @@ const effectorNested = async (): Promise<DealAdapter> => {
     calc: () => ({ status: deal.$calc.getState().status, price: deal.$calc.getState().price }),
     calculate: () => deal.actions.calculateAction(),
     setAutocalc,
+    grid: () => createGridSource(deal),
     dispose: () => deal.dispose(),
   };
 };

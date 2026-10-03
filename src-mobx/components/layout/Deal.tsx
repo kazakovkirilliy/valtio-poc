@@ -1,36 +1,23 @@
-import "@shared/styles/columns.css";
 import "@shared/styles/deal.css";
-import { observer } from "mobx-react-lite";
-import { columnsGridTemplateRows } from "@shared/fields.ts";
-import { LabelColumn } from "@shared/components/LabelColumn.tsx";
-import { GroupColumn } from "../columns/GroupColumn.tsx";
+import { memo, useMemo } from "react";
+import { DealGrid } from "@shared/grid/DealGrid.tsx";
 import { useOnMount } from "@shared/hooks/useOnMount.ts";
-import { DealColumn } from "../columns/DealColumn.tsx";
+import { createGridSource } from "../../stores/gridSource.ts";
 import { DealHeader } from "./DealHeader.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
-export const Deal = observer(() => {
+export const Deal = memo(() => {
   const deal = useDealStore();
+  const source = useMemo(() => createGridSource(deal), [deal]);
 
   useOnMount(() => {
     deal.addNewGroup("VanillaGroup");
   });
 
-  // reads only the group order, so field edits never re-render the deal
   return (
     <section className="deal">
       <DealHeader />
-
-      <div
-        className="columns"
-        style={{ gridTemplateRows: columnsGridTemplateRows }}
-      >
-        <DealColumn />
-        <LabelColumn />
-        {deal.groupIds.map((groupId) => (
-          <GroupColumn key={groupId} group={deal.groups[groupId]} />
-        ))}
-      </div>
+      <DealGrid source={source} />
     </section>
   );
 });

@@ -1,12 +1,12 @@
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.ts";
 
-// store tests: the same scenarios run against all three apps (tests/stores)
+// store tests run the same scenarios against every app (tests/stores); grid helpers are pure (tests/grid)
 export default mergeConfig(
   viteConfig,
   defineConfig({
     test: {
-      include: ["tests/stores/**/*.test.ts"],
+      include: ["tests/**/*.test.ts"],
       environment: "node",
     },
   }),

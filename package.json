@@ -25,6 +25,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-use": "^17.6.1",
+    "slickgrid": "^5.20.2",
     "valtio": "latest",
     "valtio-auto-persist": "^2.2.3",
     "valtio-persist": "^2.2.5",

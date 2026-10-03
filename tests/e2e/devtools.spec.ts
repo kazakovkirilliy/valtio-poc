@@ -1,8 +1,8 @@
 import type { Page } from "@playwright/test";
-import { apps, control, expect, openApp, test } from "./support/fixtures.ts";
+import { apps, cell, expect, openApp, test } from "./support/fixtures.ts";
 
 const toggle = (page: Page) => page.getByRole("button", { name: /Toggle Spot Price Stream/ });
-const spot = async (page: Page) => Number(await control(page, "Spot Stream", 0).inputValue());
+const spot = async (page: Page) => Number(await (await cell(page, "Spot Stream", 0)).textContent());
 
 for (const app of apps) {
   test.describe(app, () => {

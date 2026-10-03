@@ -31,6 +31,16 @@ export const fields = [
 type FieldDefinition = (typeof fields)[number];
 export type FieldId = FieldDefinition["id"];
 
+/**
+ * Keyboard order in the grid (Tab, Enter after an edit): these fields
+ * first, then the rest in display order.
+ */
+const navigationFirst: readonly FieldId[] = ["notionalAmount", "expiryDate", "strike"];
+export const navigationOrder: readonly FieldId[] = [
+  ...navigationFirst,
+  ...fields.map(({ id }) => id).filter((id) => !navigationFirst.includes(id)),
+];
+
 /** Fields every product has: all but the deal-only spot stream. */
 export type ProductFieldId = Exclude<FieldId, "spotStream">;
 
@@ -125,10 +135,3 @@ export const fieldLabels = Object.fromEntries(
 export const fieldInputTypes = Object.fromEntries(
   fields.map(({ id, input }) => [id, input]),
 ) as { [F in FieldDefinition as F["id"]]: F["input"] };
-
-/**
- * Shared grid rows of the columns layout: group header, product header, then
- * one row per field. Columns use `subgrid`, so a row has the same height in
- * every column (see `styles/columns.css`).
- */
-export const columnsGridTemplateRows = `auto auto repeat(${fields.length}, auto)`;

@@ -114,7 +114,7 @@ export const averageProduct = defineProduct<AverageProductStore["data"]>({
         expiryDays: NaN, // derived from expiryDate
         notional: {
           notionalCcy: deal.notionalCcy,
-          amount: NaN,
+          amount: deal.notionalAmount,
         },
         premiumCcy: deal.premiumCcy,
         premiumDate: "",

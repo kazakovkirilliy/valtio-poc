@@ -8,6 +8,7 @@ import {
 } from "@shared/fields.ts";
 import { removeIn, setIn } from "@shared/lib/path.ts";
 import { uuid } from "@shared/lib/uuid.ts";
+import type { CellWrite } from "@shared/grid/gridSource.ts";
 import { type Option, optionsKey, reconcileOption } from "@shared/options/optionsSource.ts";
 import {
   type AnyProductStore,
@@ -125,6 +126,17 @@ export const optionsRequestsFor = (fieldId: ProductFieldId, value: unknown): Opt
   asyncOptionFields
     .filter(({ options }) => options.dependsOn === fieldId && existsForParam(options, value))
     .map(({ options }) => ({ source: options.source, param: String(value) }));
+
+/** The options to reload after a batch of writes, one request per source and parameter. */
+export const optionsRequestsForWrites = (writes: readonly CellWrite[]): OptionsRequest[] => {
+  const requests = new Map<string, OptionsRequest>();
+  for (const { fieldId, value } of writes) {
+    for (const request of optionsRequestsFor(fieldId as ProductFieldId, value)) {
+      requests.set(optionsKey(request.source, request.param), request);
+    }
+  }
+  return [...requests.values()];
+};
 
 /**
  * Options arrived: a product still on that parameter keeps its value if it

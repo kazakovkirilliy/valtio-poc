@@ -32,7 +32,8 @@ import { optionsStore } from "./optionsStore.ts";
 export type ProductOwner = {
   readonly notionalCcy: string;
   readonly premiumCcy: string;
-  setSynced(id: SyncedFieldId, value: string): void;
+  readonly notionalAmount: number;
+  setSynced(id: SyncedFieldId, value: unknown): void;
 };
 
 /** A live product: its declared state, plus what the UI and the deal use. */
@@ -105,7 +106,7 @@ export const createProduct = (
         // synced fields go through the deal, which writes every product
         commit: (value) =>
           isSyncedField(fieldId)
-            ? owner.setSynced(fieldId, String(value))
+            ? owner.setSynced(fieldId, value)
             : product.setField(fieldId, value),
       }),
     ]),

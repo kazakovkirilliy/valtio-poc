@@ -62,7 +62,7 @@ export const createProductStore = (
   // ignores same-value writes, so the echo back stops after one hop.
   for (const fieldId of syncedFieldIds) {
     track(subscribeDealKey($dealStore, fieldId, (value) => write(fieldId, value)));
-    track(subscribePath(data, path(fieldId), (value) => ($dealStore[fieldId] = String(value))));
+    track(subscribePath(data, path(fieldId), (value) => Object.assign($dealStore, { [fieldId]: value })));
   }
 
   // Broadcasts (one-way): set and reset on the deal in one tick.

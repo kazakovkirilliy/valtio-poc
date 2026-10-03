@@ -1,0 +1,142 @@
+/* The deal grid (SlickGrid, alpine theme) on the app's tokens. */
+
+.deal-grid {
+  --alpine-font-family: var(--sans);
+  --alpine-font-size: 14px;
+  --alpine-font-color: var(--text);
+  --alpine-bg-color: var(--bg);
+  --alpine-grid-bgcolor: var(--bg);
+  --alpine-odd-row-color: var(--bg);
+  --alpine-header-bg-color: var(--surface);
+  --alpine-header-color: var(--text);
+  --alpine-header-border-color: var(--border);
+  --alpine-preheader-border-color: var(--border);
+  --alpine-border-color: var(--border);
+  --alpine-cell-border-color: var(--border);
+  --alpine-row-mouse-hover-color: var(--surface);
+  --alpine-cell-selected-bg-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  --alpine-cell-selected-color: var(--text);
+  --alpine-cell-active-box-shadow: inset 0 0 0 2px var(--accent);
+
+  margin-top: var(--space);
+  text-align: start;
+}
+
+.deal-grid .slick-cell {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  font-size: 14px;
+}
+
+/* --- headers: groups, products and the deal each in their own color */
+
+.deal-grid .slick-header-column {
+  font-size: 13px;
+}
+
+.deal-grid .slick-header-column.grid-header--product {
+  background: var(--product-header-bg);
+  color: var(--product-header-text);
+}
+
+.deal-grid .slick-header-column.grid-header--deal {
+  background: var(--deal-header-bg);
+  color: var(--deal-header-text);
+}
+
+.deal-grid .slick-header-column.grid-header--labels {
+  background: var(--surface);
+}
+
+/* group headers in the pre-header panel, one per run of a group's products */
+.grid-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space);
+  box-sizing: border-box;
+  height: 100%;
+  padding-inline: var(--space);
+  border-left: 2px solid var(--group-border);
+  background: var(--group-header-bg);
+  color: var(--group-header-text);
+}
+
+.grid-group__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.grid-group__action {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.grid-group__action:hover {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+/* the line between groups runs down from the group header */
+.deal-grid .grid-col--group-start {
+  border-left: 2px solid var(--group-border);
+}
+
+/* --- cells */
+
+.deal-grid .grid-cell--label {
+  justify-content: start;
+  font-size: 12px;
+  background: var(--surface);
+}
+
+.deal-grid .grid-col--deal {
+  background: color-mix(in srgb, var(--deal-header-bg) 35%, var(--bg));
+}
+
+.deal-grid .grid-cell--none {
+  background: var(--surface);
+}
+
+/* calculated cells (expiry days, the spot price): hatched, italic, never edited */
+.deal-grid .grid-cell--readonly {
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 6px,
+    color-mix(in srgb, var(--text) 12%, transparent) 6px 7px
+  );
+  font-style: italic;
+  cursor: default;
+}
+
+.deal-grid .grid-cell--pending {
+  opacity: 0.7;
+}
+
+.deal-grid .grid-cell--error {
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+
+.grid-editor {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  text-align: end;
+}
+
+.deal-grid__status {
+  min-height: 1.5em;
+  font-size: 12px;
+  text-align: start;
+}

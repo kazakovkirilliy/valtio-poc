@@ -114,7 +114,7 @@ export const vanillaProduct = defineProduct<VanillaProductStore["data"]>({
         expiryDays: NaN, // derived from expiryDate
         notional: {
           notionalCcy: deal.notionalCcy,
-          amount: NaN,
+          amount: deal.notionalAmount,
         },
         premiumCcy: deal.premiumCcy,
         premiumDate: "",

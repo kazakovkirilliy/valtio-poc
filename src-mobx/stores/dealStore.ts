@@ -12,18 +12,17 @@ import {
 } from "@shared/calc.ts";
 import {
   type BroadcastFieldId,
+  type DealFieldsState,
   type SyncedFieldId,
-  broadcastFieldIds,
+  initialDealFields,
   isEmptyBroadcast,
-  syncedFieldIds,
 } from "@shared/dealFields.ts";
-import { type FieldId, dealOptionsRequests } from "@shared/fields.ts";
+import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
   type SpotPriceStream,
   createSpotPriceStream,
 } from "@shared/spotPriceStream.ts";
-import { type FieldModel, createFieldModel } from "./fieldModel.ts";
 import { type GroupStore, createGroupStore } from "./groupStore.ts";
 import { optionsStore } from "./optionsStore.ts";
 import type { Product } from "./productStore.ts";
@@ -34,16 +33,12 @@ type DealDevtools = {
   readonly isAutocalcEnabled: boolean;
 };
 
-export type DealStore = {
-  notionalCcy: string;
-  premiumCcy: string;
+export type DealStore = DealFieldsState & {
   groups: Record<string, GroupStore>;
   groupIds: string[]; // display order; each group's `ui.index` mirrors it
   isInternal: boolean;
-  /** Kept outside MobX: ticks never notify observers (see SpotPriceField). */
+  /** Kept outside MobX: ticks never notify observers; the grid repaints just that cell. */
   readonly spotPriceStream: SpotPriceStream;
-  /** One model per deal field, for the inputs. */
-  readonly fields: Partial<Record<FieldId, FieldModel>>;
   readonly hedgeTypes: string[];
   /** Every product of every group, in display order. */
   readonly products: Product[];
@@ -54,7 +49,8 @@ export type DealStore = {
   addNewGroup(groupType: GroupType): void;
   cloneGroup(groupId: string): void;
   removeGroup(groupId: string): void;
-  setSynced(id: SyncedFieldId, value: string): void;
+  setSynced(id: SyncedFieldId, value: unknown): void;
+  /** Pushes one value into every product; an empty one is not sent. */
   broadcast(id: BroadcastFieldId, value: unknown): void;
   /** Calculates now, if ready (the manual Calculate). */
   calculate(): void;
@@ -87,43 +83,13 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     reindexGroups();
   };
 
-  /**
-   * The deal column's fields. Synced ones show the deal value and commit
-   * through the two-way sync. Broadcasts hold nothing (show empty) and
-   * commit into every product.
-   */
-  const fields: Partial<Record<FieldId, FieldModel>> = {
-    ...Object.fromEntries(
-      syncedFieldIds.map((id) => [
-        id,
-        createFieldModel({
-          read: () => deal[id],
-          commit: (value) => deal.setSynced(id, String(value)),
-        }),
-      ]),
-    ),
-    ...Object.fromEntries(
-      broadcastFieldIds.map((id) => [
-        id,
-        createFieldModel({
-          read: () => undefined,
-          commit: (value) => {
-            if (!isEmptyBroadcast(value)) deal.broadcast(id, value);
-          },
-        }),
-      ]),
-    ),
-  };
-
   const deal: DealStore = observable<DealStore>(
     {
-      notionalCcy: "1xxxxxx",
-      premiumCcy: "2",
+      ...initialDealFields,
       groups: {},
       groupIds: [],
       isInternal: true,
       spotPriceStream,
-      fields,
       get hedgeTypes() {
         return deal.isInternal ? ["abc"] : ["def"];
       },
@@ -158,11 +124,12 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       },
       /** Two-way sync, as one action: the deal value and every product's copy. */
       setSynced(id, value) {
-        deal[id] = value;
+        Object.assign(deal, { [id]: value });
         deal.products.forEach((product) => product.setField(id, value));
       },
       /** Pushes one value into every product; the deal keeps nothing. */
       broadcast(id, value) {
+        if (isEmptyBroadcast(value)) return; // nothing to send
         deal.products.forEach((product) => product.setField(id, value));
       },
       calculate() {
@@ -184,7 +151,7 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
         spotPriceStream.stop();
       },
     },
-    { spotPriceStream: false, fields: false, dispose: false, calc: observableRef },
+    { spotPriceStream: false, dispose: false, calc: observableRef },
     { autoBind: true },
   );
 

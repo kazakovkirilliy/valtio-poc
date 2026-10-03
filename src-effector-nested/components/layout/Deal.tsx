@@ -1,19 +1,15 @@
-import "@shared/styles/columns.css";
 import "@shared/styles/deal.css";
-import { memo } from "react";
-import { columnsGridTemplateRows } from "@shared/fields.ts";
-import { useAction, useKeys } from "../../hooks/units.ts";
+import { memo, useMemo } from "react";
+import { DealGrid } from "@shared/grid/DealGrid.tsx";
 import { useOnMount } from "@shared/hooks/useOnMount.ts";
-import { DealColumn } from "../columns/DealColumn.tsx";
+import { useAction } from "../../hooks/units.ts";
+import { createGridSource } from "../../stores/gridSource.ts";
 import { DealHeader } from "./DealHeader.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
-import { GroupColumn } from "../columns/GroupColumn.tsx";
-import { LabelColumn } from "@shared/components/LabelColumn.tsx";
 
 export const Deal = memo(() => {
   const deal = useDealStore();
-  // only the group ids: field edits never re-render the deal
-  const groupIds = useKeys(deal.$groups);
+  const source = useMemo(() => createGridSource(deal), [deal]);
   const addGroup = useAction(deal.actions.addGroupAction);
 
   useOnMount(() => {
@@ -23,17 +19,7 @@ export const Deal = memo(() => {
   return (
     <section className="deal">
       <DealHeader />
-
-      <div
-        className="columns"
-        style={{ gridTemplateRows: columnsGridTemplateRows }}
-      >
-        <DealColumn />
-        <LabelColumn />
-        {groupIds.map((groupId) => (
-          <GroupColumn key={groupId} groupId={groupId} />
-        ))}
-      </div>
+      <DealGrid source={source} />
     </section>
   );
 });

@@ -13,7 +13,12 @@ import {
   isCalcReady,
   needsAutocalc,
 } from "@shared/calc.ts";
-import { type BroadcastFieldId, broadcastFieldIds } from "@shared/dealFields.ts";
+import {
+  type BroadcastFieldId,
+  type DealFieldsState,
+  broadcastFieldIds,
+  initialDealFields,
+} from "@shared/dealFields.ts";
 import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import { setValueByPath } from "@shared/lib/path.ts";
@@ -36,9 +41,7 @@ type DealBroadcasts = Record<BroadcastFieldId, unknown>;
 const createBroadcasts = () =>
   Object.fromEntries(broadcastFieldIds.map((id) => [id, undefined])) as DealBroadcasts;
 
-export type DealStore = DealBroadcasts & {
-  notionalCcy: string;
-  premiumCcy: string;
+export type DealStore = DealBroadcasts & DealFieldsState & {
   groups: Record<string, GroupStore>;
   groupIds: string[]; // display order; each group's `ui.index` mirrors it
   isInternal: boolean;
@@ -92,8 +95,7 @@ export const createDealStore = (): DealStore => {
 
   const dealStore: DealStore = proxy<DealStore>({
     ...createBroadcasts(),
-    notionalCcy: "1xxxxxx",
-    premiumCcy: "2",
+    ...initialDealFields,
     groups: {},
     groupIds: [],
     isInternal: true,

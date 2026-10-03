@@ -7,7 +7,7 @@ import type { ProductFieldId } from "./fields.ts";
  *   product of every group.
  * Each product maps these field ids to its own paths.
  */
-export const syncedFieldIds = ["notionalCcy", "premiumCcy"] as const;
+export const syncedFieldIds = ["notionalCcy", "premiumCcy", "notionalAmount"] as const;
 export type SyncedFieldId = (typeof syncedFieldIds)[number];
 
 export const isSyncedField = (id: string): id is SyncedFieldId =>
@@ -22,15 +22,28 @@ export const broadcastFieldIds = [
   "expiryCut",
   "expiryDate",
   "premiumDate",
-  "notionalAmount",
   "settlementStyle",
   "settlementCcy",
   "settlementFixingSource",
 ] as const satisfies readonly ProductFieldId[];
 export type BroadcastFieldId = (typeof broadcastFieldIds)[number];
 
+export const isBroadcastField = (id: string): id is BroadcastFieldId =>
+  (broadcastFieldIds as readonly string[]).includes(id);
+
 /** The deal's own values: the synced fields. New products start from them. */
-export type DealFieldsState = Record<SyncedFieldId, string>;
+export type DealFieldsState = {
+  notionalCcy: string;
+  premiumCcy: string;
+  /** `NaN` while empty, like every number field. */
+  notionalAmount: number;
+};
+
+export const initialDealFields: DealFieldsState = {
+  notionalCcy: "1xxxxxx",
+  premiumCcy: "2",
+  notionalAmount: NaN,
+};
 
 /** A broadcast commit carries nothing when the input was left empty. */
 export const isEmptyBroadcast = (value: unknown) =>

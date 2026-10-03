@@ -32,6 +32,18 @@ describe.each(appNames)("%s deal", (app) => {
     expect(deal.product(0).dataKeys()).toContain("optionsCommon");
   });
 
+  it("syncs Notional Amount both ways, as a number; new products start from it", () => {
+    deal.sync("notionalAmount", 1000);
+    expect(all().map((i) => deal.read(i, "notionalAmount"))).toEqual([1000, 1000, 1000, 1000]);
+    deal.commit(2, "notionalAmount", 2500);
+    expect(deal.dealValue("notionalAmount")).toBe(2500);
+    expect(all().map((i) => deal.read(i, "notionalAmount"))).toEqual([2500, 2500, 2500, 2500]);
+    deal.addGroup("Average");
+    expect(deal.read(4, "notionalAmount")).toBe(2500);
+    deal.sync("notionalAmount", NaN); // cleared: empty everywhere
+    expect(all().map((i) => deal.read(i, "notionalAmount")).every(Number.isNaN)).toBe(true);
+  });
+
   it("syncs Notional/Premium Ccy both ways, Average included", () => {
     deal.sync("premiumCcy", "EUR");
     expect(all().map((i) => deal.read(i, "premiumCcy"))).toEqual(["EUR", "EUR", "EUR", "EUR"]);
@@ -44,7 +56,7 @@ describe.each(appNames)("%s deal", (app) => {
     const broadcasts: Record<string, unknown> = {
       strike: "12", callPut: "Call", buySell: "Buy", ccyPair: "EURUSD",
       expiryDate: "2999-01-01", expiryCut: "NY10", deliveryDate: "2999-01-03",
-      premiumDate: "2999-01-02", notionalAmount: 1000, settlementStyle: "Cash",
+      premiumDate: "2999-01-02", settlementStyle: "Cash",
       settlementCcy: "EUR", settlementFixingSource: "7",
     };
     for (const [fieldId, value] of Object.entries(broadcasts)) {

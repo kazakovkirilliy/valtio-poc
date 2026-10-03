@@ -1,4 +1,6 @@
-import { apps, commitText, control, expect, hasError, openApp, test, values } from "./support/fixtures.ts";
+import { apps, cell, editCell, expect, openApp, rowTexts, test } from "./support/fixtures.ts";
+
+const ERROR = /grid-cell--error/;
 
 for (const app of apps) {
   test.describe(app, () => {
@@ -8,60 +10,78 @@ for (const app of apps) {
       await expect(page.getByText("Strategy #2")).toBeVisible();
     });
 
-    test("fields commit on Enter or blur, never while typing", async ({ page }) => {
+    test("edits commit on Enter, never while typing; Escape cancels", async ({ page }) => {
       // the deal's ccy: typing doesn't sync, Enter does
-      await control(page, "Notional Ccy", 0).fill("EUR");
-      expect((await values(page, "Notional Ccy")).slice(1)).toEqual(["1xxxxxx", "1xxxxxx", "1xxxxxx"]);
-      await control(page, "Notional Ccy", 0).press("Enter");
-      expect(await values(page, "Notional Ccy")).toEqual(["EUR", "EUR", "EUR", "EUR"]);
+      await (await cell(page, "Notional Ccy", 0)).click();
+      await page.keyboard.press("Enter");
+      await page.locator(".grid-editor").fill("EUR");
+      expect((await rowTexts(page, "Notional Ccy")).slice(1)).toEqual(["1xxxxxx", "1xxxxxx", "1xxxxxx"]);
+      await page.keyboard.press("Enter");
+      await expect.poll(() => rowTexts(page, "Notional Ccy")).toEqual(["EUR", "EUR", "EUR", "EUR"]);
 
-      // a product's ccy: typing doesn't reach the deal, blur does
-      await control(page, "Premium Ccy", 2).fill("USD");
-      expect((await values(page, "Premium Ccy"))[0]).toBe("2");
-      await control(page, "Premium Ccy", 2).blur();
-      expect(await values(page, "Premium Ccy")).toEqual(["USD", "USD", "USD", "USD"]);
+      // Escape drops the draft
+      await (await cell(page, "Premium Ccy", 2)).click();
+      await page.keyboard.press("Enter");
+      await page.locator(".grid-editor").fill("USD");
+      await page.keyboard.press("Escape");
+      await expect.poll(() => rowTexts(page, "Premium Ccy")).toEqual(["2", "2", "2", "2"]);
+
+      // a product's ccy syncs back to the deal and every product
+      await editCell(page, "Premium Ccy", 2, "USD");
+      await expect.poll(() => rowTexts(page, "Premium Ccy")).toEqual(["USD", "USD", "USD", "USD"]);
 
       // validation runs on commit
-      await control(page, "Strike", 1).fill("1234");
-      expect(await hasError(page, "Strike", 1)).toBe(false);
-      await control(page, "Strike", 1).press("Enter");
-      expect(await hasError(page, "Strike", 1)).toBe(true);
+      await editCell(page, "Strike", 1, "1234");
+      await expect(await cell(page, "Strike", 1)).toHaveClass(ERROR);
 
-      // numbers: committed as numbers; cleared shows empty, not 0
-      await commitText(page, "Notional Amount", 1, "1500");
-      await expect(control(page, "Notional Amount", 1)).toHaveValue("1500");
-      await commitText(page, "Notional Amount", 1, "");
-      await expect(control(page, "Notional Amount", 1)).toHaveValue("");
+      // Notional Amount: a synced number; cleared shows empty, not 0
+      await editCell(page, "Notional Amount", 1, "1500");
+      await expect.poll(() => rowTexts(page, "Notional Amount")).toEqual(["1500", "1500", "1500", "1500"]);
+      await editCell(page, "Notional Amount", 0, "");
+      await expect.poll(() => rowTexts(page, "Notional Amount")).toEqual(["", "", "", ""]);
 
-      // broadcasts: nothing sent while typing; on Enter every product, and the deal field clears
-      await control(page, "Ccy Pair", 0).fill("EURUSD");
-      expect((await values(page, "Ccy Pair")).slice(1)).toEqual(["", "", ""]);
-      await control(page, "Ccy Pair", 0).press("Enter");
-      expect(await values(page, "Ccy Pair")).toEqual(["", "EURUSD", "EURUSD", "EURUSD"]);
+      // broadcasts: every product, and the deal holds nothing
+      await editCell(page, "Ccy Pair", 0, "EURUSD");
+      await expect.poll(() => rowTexts(page, "Ccy Pair")).toEqual(["", "EURUSD", "EURUSD", "EURUSD"]);
+    });
 
-      // Enter then blur commits once
-      await commitText(page, "Strike", 2, "9");
-      await control(page, "Strike", 2).blur();
-      await expect(control(page, "Strike", 2)).toHaveValue("9");
+    test("typing over a cell starts an edit that replaces it", async ({ page }) => {
+      await editCell(page, "Strike", 1, "9");
+      await (await cell(page, "Strike", 1)).click();
+      await page.keyboard.type("42");
+      await page.keyboard.press("Enter");
+      await expect.poll(() => rowTexts(page, "Strike")).toEqual(["", "42", "", ""]);
+    });
+
+    test("calculated cells can't be edited", async ({ page }) => {
+      await editCell(page, "Expiry Date", 1, "2999-01-01");
+      const days = await cell(page, "Expiry Days", 1);
+      await expect(days).toHaveClass(/grid-cell--readonly/);
+      const before = await days.textContent();
+      await days.click();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".grid-editor")).toHaveCount(0);
+      await page.keyboard.type("5");
+      await expect(days).toHaveText(before ?? "");
     });
 
     test("Delivery Date can't be before Expiry Date", async ({ page }) => {
       for (const n of [1, 2]) {
-        await commitText(page, "Expiry Date", n, "2999-02-10");
-        await commitText(page, "Delivery Date", n, "2999-02-05");
-        expect(await hasError(page, "Delivery Date", n)).toBe(true);
-        expect(await hasError(page, "Expiry Date", n)).toBe(false);
-        await commitText(page, "Expiry Date", n, "2999-02-01");
-        expect(await hasError(page, "Delivery Date", n)).toBe(false);
+        await editCell(page, "Expiry Date", n, "2999-02-10");
+        await editCell(page, "Delivery Date", n, "2999-02-05");
+        await expect(await cell(page, "Delivery Date", n)).toHaveClass(ERROR);
+        await expect(await cell(page, "Expiry Date", n)).not.toHaveClass(ERROR);
+        await editCell(page, "Expiry Date", n, "2999-02-01");
+        await expect(await cell(page, "Delivery Date", n)).not.toHaveClass(ERROR);
       }
       // a broadcast of a later expiry flags the products, a later delivery clears them
-      await commitText(page, "Expiry Date", 0, "2999-06-01");
-      expect(await hasError(page, "Delivery Date", 1)).toBe(true);
-      expect(await hasError(page, "Delivery Date", 2)).toBe(true);
-      expect(await hasError(page, "Delivery Date", 0)).toBe(false);
-      await commitText(page, "Delivery Date", 0, "2999-06-02");
-      expect(await hasError(page, "Delivery Date", 1)).toBe(false);
-      expect(await hasError(page, "Delivery Date", 2)).toBe(false);
+      await editCell(page, "Expiry Date", 0, "2999-06-01");
+      await expect(await cell(page, "Delivery Date", 1)).toHaveClass(ERROR);
+      await expect(await cell(page, "Delivery Date", 2)).toHaveClass(ERROR);
+      await expect(await cell(page, "Delivery Date", 0)).not.toHaveClass(ERROR);
+      await editCell(page, "Delivery Date", 0, "2999-06-02");
+      await expect(await cell(page, "Delivery Date", 1)).not.toHaveClass(ERROR);
+      await expect(await cell(page, "Delivery Date", 2)).not.toHaveClass(ERROR);
     });
   });
 }

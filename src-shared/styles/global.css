@@ -6,7 +6,17 @@
   --bg: #fff;
   --surface: #f4f3ec;
   --border: #e5e4e7;
+  --accent: #2563eb;
   --error: red;
+
+  /* grid headers */
+  --group-header-bg: #c7d2fe;
+  --group-header-text: #312e81;
+  --group-border: #6366f1;
+  --product-header-bg: #e0e7ff;
+  --product-header-text: #3730a3;
+  --deal-header-bg: #fde68a;
+  --deal-header-text: #78350f;
 
   /* layout */
   --space: 8px;
@@ -36,6 +46,15 @@
     --bg: #16171d;
     --surface: #1f2028;
     --border: #2e303a;
+    --accent: #60a5fa;
+
+    --group-header-bg: #312e81;
+    --group-header-text: #e0e7ff;
+    --group-border: #818cf8;
+    --product-header-bg: #1e1b4b;
+    --product-header-text: #c7d2fe;
+    --deal-header-bg: #78350f;
+    --deal-header-text: #fef3c7;
   }
 }
 

@@ -22,10 +22,13 @@ import {
   type BroadcastFieldId,
   type DealFieldsState,
   type SyncedFieldId,
+  initialDealFields,
+  isBroadcastField,
   isEmptyBroadcast,
   isSyncedField,
 } from "@shared/dealFields.ts";
 import { type ProductFieldId, dealOptionsRequests } from "@shared/fields.ts";
+import { type CellWrite, DEAL_COLUMN_ID } from "@shared/grid/gridSource.ts";
 import type { GroupType } from "@shared/groups.ts";
 import type { ProductData } from "@shared/products/productRegistry.ts";
 import { setIn } from "@shared/lib/path.ts";
@@ -43,6 +46,7 @@ import {
 import { loadAllOptionsEffect, loadOptionsEffect } from "./optionsStore.ts";
 import {
   optionsRequestsFor,
+  optionsRequestsForWrites,
   optionsRequestsOf,
   reconcileProductOptions,
   setProductField,
@@ -81,7 +85,7 @@ export const createDealStore = (devtools: DealDevtools) => {
     /** Two-way sync: the deal value and every product's copy, in one event. */
     setTwoWaySyncAction: createEvent<{
       fieldId: SyncedFieldId;
-      value: string;
+      value: unknown;
     }>(),
     /** Pushes one value into every product; the deal keeps nothing. */
     broadcastFieldAction: createEvent<{
@@ -90,13 +94,12 @@ export const createDealStore = (devtools: DealDevtools) => {
     }>(),
     /** Calculates now, if the deal is ready (the manual Calculate). */
     calculateAction: createEvent(),
+    /** Writes many cells at once (a grid paste or edit): one update of each store. */
+    writeCellsAction: createEvent<readonly CellWrite[]>(),
   };
 
   // --- state
-  const $dealFields = createStore<DealFieldsState>({
-    notionalCcy: "1xxxxxx",
-    premiumCcy: "2",
-  });
+  const $dealFields = createStore<DealFieldsState>(initialDealFields);
   const $groups = createStore<GroupsState>({});
   const $isInternal = createStore(true);
 
@@ -135,10 +138,7 @@ export const createDealStore = (devtools: DealDevtools) => {
   connect({
     clock: actions.setProductFieldAction,
     filter: ({ fieldId }) => isSyncedField(fieldId),
-    fn: ({ fieldId, value }) => ({
-      fieldId: fieldId as SyncedFieldId,
-      value: String(value),
-    }),
+    fn: ({ fieldId, value }) => ({ fieldId: fieldId as SyncedFieldId, value }),
     target: actions.setTwoWaySyncAction,
   });
 
@@ -156,8 +156,10 @@ export const createDealStore = (devtools: DealDevtools) => {
     },
   );
 
+  const withDealField = (deal: DealFieldsState, fieldId: SyncedFieldId, value: unknown) =>
+    Object.is(deal[fieldId], value) ? deal : { ...deal, [fieldId]: value };
   $dealFields.on(actions.setTwoWaySyncAction, (deal, { fieldId, value }) =>
-    deal[fieldId] === value ? deal : { ...deal, [fieldId]: value },
+    withDealField(deal, fieldId, value),
   );
   $groups.on(actions.setTwoWaySyncAction, (groups, { fieldId, value }) =>
     mapProducts(groups, (product) => setProductField(product, fieldId, value)),
@@ -168,6 +170,29 @@ export const createDealStore = (devtools: DealDevtools) => {
       setProductField(product, fieldId, value),
     );
   });
+
+  // --- many cells at once: every write folded into one new state per store,
+  // so validation, autocalc and the grid each see the batch once
+  $dealFields.on(actions.writeCellsAction, (deal, writes) =>
+    writes.reduce(
+      (next, { fieldId, value }) => (isSyncedField(fieldId) ? withDealField(next, fieldId, value) : next),
+      deal,
+    ),
+  );
+  $groups.on(actions.writeCellsAction, (groups, writes) =>
+    writes.reduce((next, { columnId, fieldId, value }) => {
+      if (fieldId === "spotStream") return next;
+      const toEvery =
+        isSyncedField(fieldId) ||
+        (columnId === DEAL_COLUMN_ID && isBroadcastField(fieldId) && !isEmptyBroadcast(value));
+      if (toEvery) return mapProducts(next, (product) => setProductField(product, fieldId, value));
+      const group = Object.values(next).find((candidate) => columnId in candidate.products);
+      if (!group) return next; // the deal column's other fields hold nothing
+      const product = group.products[columnId];
+      // copies only the path to the product
+      return setIn(next, `${group.id}.products.${columnId}`, setProductField(product, fieldId, value));
+    }, groups),
+  );
 
   // --- async options (e.g. Fixing Source): each depends on another product field
   // load them for a new group's products (one request per source and parameter) …
@@ -188,6 +213,7 @@ export const createDealStore = (devtools: DealDevtools) => {
     fn: ({ fieldId, value }) => optionsRequestsFor(fieldId, value),
     target: loadAllOptionsEffect,
   });
+  connect({ clock: actions.writeCellsAction, fn: optionsRequestsForWrites, target: loadAllOptionsEffect });
   // options arrived: products still on that parameter keep their value if it's
   // an option, else take the first (stale responses: ignored)
   $groups.on(loadOptionsEffect.done, (groups, { params, result }) =>
