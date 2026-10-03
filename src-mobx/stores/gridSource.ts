@@ -6,10 +6,14 @@ import {
   DEAL_COLUMN_ID,
   type GridColumn,
   type GridSource,
+  SETTINGS_COLUMN_ID,
   createCellNotifier,
   dealCell,
   productCell,
+  settingCell,
+  settingCells,
 } from "@shared/grid/gridSource.ts";
+import { isDealSetting } from "@shared/dealSettings.ts";
 import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts";
 import type { DealStore } from "./dealStore.ts";
 import { optionsStore } from "./optionsStore.ts";
@@ -41,6 +45,8 @@ export const createGridSource = (deal: DealStore): GridSource => {
   ];
 
   const getCell: GridSource["getCell"] = (columnId, fieldId) => {
+    if (columnId === SETTINGS_COLUMN_ID) return isDealSetting(fieldId) ? settingCell(fieldId, deal) : null;
+    if (isDealSetting(fieldId)) return null;
     if (columnId === DEAL_COLUMN_ID) {
       const synced = isSyncedField(fieldId) ? deal[fieldId] : undefined;
       return dealCell(fieldId, synced, optionsStore.byKey, deal.spotPriceStream);
@@ -102,6 +108,7 @@ export const createGridSource = (deal: DealStore): GridSource => {
         }
       };
       watchColumns();
+      const settingStops = settingCells.map(watchCell);
       const stopColumns = reaction(() => getColumns().map(({ id }) => id), watchColumns, {
         equals: compareStructural,
       });
@@ -109,13 +116,15 @@ export const createGridSource = (deal: DealStore): GridSource => {
         stopNotifier();
         stopColumns();
         columnStops.forEach((stop) => stop());
+        settingStops.forEach((stop) => stop());
       };
     },
 
     write: (writes) =>
       runInAction(() => {
         for (const { columnId, fieldId, value } of writes) {
-          if (columnId !== DEAL_COLUMN_ID) writeProduct(columnId, fieldId, value);
+          if (isDealSetting(fieldId)) deal.setSetting(fieldId, value);
+          else if (columnId !== DEAL_COLUMN_ID) writeProduct(columnId, fieldId, value);
           else if (isSyncedField(fieldId)) deal.setSynced(fieldId, value);
           else if (isBroadcastField(fieldId)) deal.broadcast(fieldId, value);
         }

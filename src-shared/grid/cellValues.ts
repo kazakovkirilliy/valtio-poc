@@ -1,5 +1,4 @@
-import { type FieldId, fieldInputTypes } from "../fields.ts";
-import type { CellView } from "./gridSource.ts";
+import { type CellKey, type CellView, inputTypeOf } from "./gridSource.ts";
 
 /** A cell's text, as shown and copied: a dropdown shows its option's label. */
 export const cellText = (view: CellView | null): string => {
@@ -23,12 +22,12 @@ export const parseNumber = (text: string) => {
  * source after a Cash style) takes the text: the store reconciles it.
  */
 export const parseCellText = (
-  fieldId: FieldId,
+  key: CellKey,
   text: string,
   view: CellView | null,
 ): { value: unknown } | null => {
   const trimmed = text.trim();
-  switch (fieldInputTypes[fieldId]) {
+  switch (inputTypeOf(key)) {
     case "number": {
       const value = parseNumber(trimmed.replaceAll(",", ""));
       return trimmed === "" || !Number.isNaN(value) ? { value } : null;

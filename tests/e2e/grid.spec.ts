@@ -13,16 +13,20 @@ const recordRepaints = async (page: Page) => {
     const w = window as unknown as { __repainted: Set<string>; __observer?: MutationObserver };
     w.__observer?.disconnect();
     w.__repainted = new Set();
-    const labelOf = (row: string) =>
-      document.querySelector(`.deal-grid .slick-row[data-row="${row}"] > .slick-cell.l1`)?.textContent;
+    const labelOf = (row: string, labels: string) =>
+      document.querySelector(`.deal-grid .slick-row[data-row="${row}"] > .slick-cell.${labels}`)?.textContent;
     w.__observer = new MutationObserver((records) => {
       for (const { target } of records) {
         const node = target instanceof Element ? target : target.parentElement;
         const cell = node?.closest(".slick-cell");
-        if (!cell || cell.classList.contains("l1")) continue;
-        const label = labelOf((cell.parentElement as HTMLElement).dataset.row!);
+        if (!cell) continue;
+        const row = (cell.parentElement as HTMLElement).dataset.row!;
+        // columns: settings labels l0, settings l1, deal l2, field labels l3, products from l4
         const index = Number([...cell.classList].find((name) => /^l\d+$/.test(name))!.slice(1));
-        if (label !== "Spot Stream") w.__repainted.add(`${label}:${index === 0 ? 0 : index - 1}`);
+        if (index === 0 || index === 3) continue;
+        const label = labelOf(row, index === 1 ? "l0" : "l3");
+        const column = index === 1 ? "settings" : index === 2 ? 0 : index - 3;
+        if (label !== "Spot Stream") w.__repainted.add(`${label}:${column}`);
       }
     });
     w.__observer.observe(document.querySelector(".deal-grid")!, { subtree: true, childList: true, characterData: true });
@@ -132,6 +136,47 @@ for (const app of apps) {
       await (await cell(page, "Strike", 2)).click();
       await paste(page, "5\t6\nPut\tCall");
       expect(await repainted()).toEqual(["Call / Put:2", "Call / Put:3", "Strike:2", "Strike:3"]);
+    });
+
+    test("the settings subgrid: beside the deal a few rows down, reachable by arrows and Tab", async ({ page }) => {
+      const hedgeType = await cell(page, "Hedge Type", "settings");
+      await expect(hedgeType).toHaveText("a");
+      await expect(await cell(page, "Internal", "settings")).toHaveText("Yes");
+
+      // arrows cross between the subgrids, row for row
+      await hedgeType.click();
+      await page.keyboard.press("ArrowRight");
+      expect(await activeCell(page)).toEqual({ label: "Premium Ccy", column: 0 });
+      await page.keyboard.press("ArrowDown");
+      await page.keyboard.press("ArrowLeft");
+      expect(await activeCell(page)).toEqual({ label: "Internal", column: "settings" });
+      await page.keyboard.press("ArrowDown"); // nothing below the subgrid: stays
+      expect(await activeCell(page)).toEqual({ label: "Internal", column: "settings" });
+
+      // Tab: the settings top-down, then on into the deal by priority; Shift+Tab comes back
+      await hedgeType.click();
+      await page.keyboard.press("Tab");
+      expect(await activeCell(page)).toEqual({ label: "Internal", column: "settings" });
+      await page.keyboard.press("Tab");
+      expect(await activeCell(page)).toEqual({ label: "Notional Amount", column: 0 });
+      await page.keyboard.press("Shift+Tab");
+      expect(await activeCell(page)).toEqual({ label: "Internal", column: "settings" });
+
+      // the hedge types follow Internal; one no longer offered resets to the first
+      await editCell(page, "Internal", "settings", "No");
+      await expect(hedgeType).toHaveText("d");
+      await editCell(page, "Hedge Type", "settings", "f");
+      await expect(hedgeType).toHaveText("f");
+      await editCell(page, "Internal", "settings", "Yes");
+      await expect(hedgeType).toHaveText("a");
+
+      // copy and paste work across the subgrid too
+      await hedgeType.click();
+      await page.keyboard.press("Shift+ArrowDown");
+      expect(await copy(page)).toBe("a\nYes");
+      await hedgeType.click();
+      await paste(page, "c");
+      await expect(hedgeType).toHaveText("c");
     });
   });
 }

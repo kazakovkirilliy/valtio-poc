@@ -20,6 +20,13 @@ import {
   initialDealFields,
 } from "@shared/dealFields.ts";
 import { dealOptionsRequests } from "@shared/fields.ts";
+import {
+  type DealSettingId,
+  type DealSettingsState,
+  hedgeTypesFor,
+  initialDealSettings,
+  withSetting,
+} from "@shared/dealSettings.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import { setValueByPath } from "@shared/lib/path.ts";
 import {
@@ -44,12 +51,12 @@ const createBroadcasts = () =>
   ) as DealBroadcasts;
 
 export type DealStore = DealBroadcasts &
-  DealFieldsState & {
+  DealFieldsState &
+  DealSettingsState & {
     groups: Record<string, GroupStore>;
     groupIds: string[]; // display order; each group's `ui.index` mirrors it
-    isInternal: boolean;
     options: {
-      hedgeTypes: string[];
+      hedgeTypes: readonly string[];
     };
     spotPriceStream: SpotPriceStream;
     readonly hasValidationErrors: boolean;
@@ -64,6 +71,8 @@ export type DealStore = DealBroadcasts &
       setValueByPath(path: string, value: unknown): void;
       /** Calculates now, if ready (the manual Calculate). */
       calculate(): void;
+      /** Sets a deal setting (internal, hedge type); a hedge type stays one of its options. */
+      setSetting(id: DealSettingId, value: unknown): void;
     };
   };
 
@@ -105,7 +114,7 @@ export const createDealStore = (): DealStore => {
     ...initialDealFields,
     groups: {},
     groupIds: [],
-    isInternal: true,
+    ...initialDealSettings,
     spotPriceStream: ref(spotPriceStream), // ref(): ticks never notify the deal proxy
     options: {
       hedgeTypes: [],
@@ -147,6 +156,9 @@ export const createDealStore = (): DealStore => {
       },
       setValueByPath(path: string, value: unknown) {
         setValueByPath(dealStore, path, value);
+      },
+      setSetting(id: DealSettingId, value: unknown) {
+        Object.assign(dealStore, withSetting(dealStore, id, value));
       },
       calculate() {
         if (!dealStore.isReady) return;
@@ -206,12 +218,7 @@ export const createDealStore = (): DealStore => {
   subscribeKey(multiTabStore.devtools, "isAutocalcEnabled", autocalc);
 
   const options = dealStore.options;
-  effect(
-    () =>
-      (options.hedgeTypes = dealStore.isInternal
-        ? ["a", "b", "c"]
-        : ["d", "e", "f"]),
-  );
+  effect(() => (options.hedgeTypes = hedgeTypesFor(dealStore.isInternal)));
 
   return dealStore;
 };

@@ -1,12 +1,21 @@
 import { isSyncedField } from "../dealFields.ts";
 import {
+  type DealSettingId,
+  type DealSettingsState,
+  dealSettings,
+  isDealSetting,
+  settingOptions,
+} from "../dealSettings.ts";
+import {
   type FieldId,
+  type InputType,
   type ProductFieldId,
   type SelectFieldId,
   asyncOptionFields,
   fieldExists,
   fields,
   fieldInputTypes,
+  fieldLabels,
   fieldOptions,
   isAsyncOptions,
 } from "../fields.ts";
@@ -23,6 +32,18 @@ import type { SpotPriceStream } from "../spotPriceStream.ts";
 
 /** The deal column: synced and broadcast fields, and the spot price. */
 export const DEAL_COLUMN_ID = "deal";
+
+/** The deal settings subgrid's value column (hedge type, internal); its keys are setting ids. */
+export const SETTINGS_COLUMN_ID = "settings";
+
+/** What a cell holds: a field, or in the settings column, a deal setting. */
+export type CellKey = FieldId | DealSettingId;
+
+export const inputTypeOf = (key: CellKey): InputType =>
+  isDealSetting(key) ? "select" : fieldInputTypes[key];
+
+export const labelOf = (key: CellKey) =>
+  isDealSetting(key) ? dealSettings.find((setting) => setting.id === key)!.label : fieldLabels[key];
 
 export type GridColumn = {
   /** A product id, or `DEAL_COLUMN_ID`. */
@@ -41,14 +62,15 @@ export type CellView = {
   options?: { status: OptionsState["status"]; options: readonly Option[] };
 };
 
-export type CellRef = { columnId: string; fieldId: FieldId };
+export type CellRef = { columnId: string; fieldId: CellKey };
 export type CellWrite = CellRef & { value: unknown };
 
 export type GridSource = {
   getColumns(): readonly GridColumn[];
   /** Groups or products added, removed or renamed. */
   subscribeColumns(onChange: () => void): () => void;
-  getCell(columnId: string, fieldId: FieldId): CellView | null;
+  /** A field's cell, or in `SETTINGS_COLUMN_ID`, a deal setting's. */
+  getCell(columnId: string, fieldId: CellKey): CellView | null;
   /** The cells whose value, issues or options changed. */
   subscribeCells(onChange: (cells: readonly CellRef[]) => void): () => void;
   /** Applies writes in order, as one batch; a single edit is a batch of one. */
@@ -120,6 +142,22 @@ export const dealCell = (
   };
 };
 
+const settingOptionStates = new Map<string, OptionsState>();
+
+/** A deal setting's cell: a dropdown over its options (cached per list, to compare by identity). */
+export const settingCell = (id: DealSettingId, settings: DealSettingsState): CellView => {
+  const options = settingOptions(id, settings);
+  const listKey = `${id}:${options.map(({ value }) => value).join(",")}`;
+  if (!settingOptionStates.has(listKey)) settingOptionStates.set(listKey, { status: "loaded", options });
+  return { value: settings[id], hasError: false, readOnly: false, options: settingOptionStates.get(listKey) };
+};
+
+/** Every settings cell: they change together (the internal flag decides the hedge types). */
+export const settingCells: readonly CellRef[] = dealSettings.map(({ id }) => ({
+  columnId: SETTINGS_COLUMN_ID,
+  fieldId: id,
+}));
+
 /** Async fields whose options (and existence) follow `fieldId`: repaint them with it. */
 export const dependentFields = (fieldId: FieldId): FieldId[] =>
   asyncOptionFields
@@ -146,10 +184,12 @@ export const createCellNotifier = (
   const pending = new Map<string, CellRef>();
 
   const recordNewColumns = () => {
-    for (const { id: columnId } of source.getColumns()) {
+    const columnIds = [SETTINGS_COLUMN_ID, ...source.getColumns().map(({ id }) => id)];
+    for (const columnId of columnIds) {
       if (knownColumns.has(columnId)) continue;
       knownColumns.add(columnId);
-      for (const { id: fieldId } of fields) {
+      const keys = columnId === SETTINGS_COLUMN_ID ? dealSettings : fields;
+      for (const { id: fieldId } of keys) {
         shown.set(keyOf({ columnId, fieldId }), source.getCell(columnId, fieldId));
       }
     }

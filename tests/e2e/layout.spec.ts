@@ -9,13 +9,13 @@ for (const app of apps) {
       await expect(page.getByText("Average #3")).toBeVisible();
 
       const headers = page.locator(".deal-grid .slick-header-column");
-      await expect(headers).toHaveText(["Deal", "", "Vanilla Product #1", "Vanilla Product #1", "Vanilla Product #2", "Average Product #1"]);
-      // the deal and the labels stay in view
-      await expect(page.locator(".deal-grid .slick-pane-left .slick-header-column")).toHaveText(["Deal", ""]);
+      await expect(headers).toHaveText(["", "", "Deal", "", "Vanilla Product #1", "Vanilla Product #1", "Vanilla Product #2", "Average Product #1"]);
+      // the settings subgrid, the deal and the labels stay in view
+      await expect(page.locator(".deal-grid .slick-pane-left .slick-header-column")).toHaveText(["", "", "Deal", ""]);
       await expect(page.locator(".deal-grid .grid-group__title")).toHaveText(["Vanilla Group #1", "Strategy #2", "Average #3"]);
 
       // one row per field, labelled in the labels column
-      const labels = await page.locator(".deal-grid .slick-cell.l1").evaluateAll((cells) =>
+      const labels = await page.locator(".deal-grid .slick-cell.l3").evaluateAll((cells) =>
         cells
           .sort((a, b) => Number((a.parentElement as HTMLElement).dataset.row) - Number((b.parentElement as HTMLElement).dataset.row))
           .map((cell) => cell.textContent),

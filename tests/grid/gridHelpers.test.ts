@@ -3,7 +3,7 @@ import { fields, navigationOrder } from "@shared/fields.ts";
 import { cellText, parseCellText } from "@shared/grid/cellValues.ts";
 import { parseTsv, toTsv } from "@shared/grid/clipboard.ts";
 import type { CellView } from "@shared/grid/gridSource.ts";
-import { nextInOrder } from "@shared/grid/navigation.ts";
+import { fieldRowsInOrder, nextInOrder } from "@shared/grid/navigation.ts";
 import { pasteWrites } from "@shared/grid/paste.ts";
 
 const row = (id: string) => fields.findIndex((field) => field.id === id);
@@ -86,15 +86,19 @@ describe("keyboard order", () => {
     expect([...navigationOrder].sort()).toEqual(fields.map(({ id }) => id).sort());
   });
 
-  it("goes through a column by priority, skipping cells it can't stop at, then on to the next column", () => {
-    const canStop = (_row: number, cell: number) => cell !== 1; // column 1: the labels
+  it("goes through a column in its own order, skipping cells it can't stop at, then on to the next column", () => {
+    // column 0: a two-row subgrid (rows 2 and 3), 1: labels (no cells), 2: a field column, by priority
+    const rowsOf = (cell: number) => [[2, 3], [], fieldRowsInOrder][cell];
     const next = (r: number, cell: number, step: 1 | -1 = 1) =>
-      nextInOrder(r, cell, step, { first: 0, count: 3 }, canStop);
-    expect(next(row("notionalAmount"), 0)).toEqual({ row: row("expiryDate"), cell: 0 });
-    expect(next(row("strike"), 0)).toEqual({ row: row("notionalCcy"), cell: 0 });
-    const last = row(navigationOrder[navigationOrder.length - 1]);
-    expect(next(last, 0)).toEqual({ row: row("notionalAmount"), cell: 2 }); // labels passed over
-    expect(next(last, 2)).toBeNull(); // past the last cell
-    expect(next(row("notionalAmount"), 2, -1)).toEqual({ row: last, cell: 0 });
+      nextInOrder(r, cell, step, { first: 0, count: 3 }, rowsOf, () => true);
+    expect(next(2, 0)).toEqual({ row: 3, cell: 0 });
+    expect(next(3, 0)).toEqual({ row: row("notionalAmount"), cell: 2 }); // labels passed over
+    expect(next(row("notionalAmount"), 2)).toEqual({ row: row("expiryDate"), cell: 2 });
+    expect(next(row("strike"), 2)).toEqual({ row: row("notionalCcy"), cell: 2 });
+    expect(next(row(navigationOrder[navigationOrder.length - 1]), 2)).toBeNull(); // past the last cell
+    expect(next(row("notionalAmount"), 2, -1)).toEqual({ row: 3, cell: 0 });
+    // a cell it can't stop at is passed over
+    const skipExpiry = (r: number) => r !== row("expiryDate");
+    expect(nextInOrder(row("notionalAmount"), 2, 1, { first: 0, count: 3 }, rowsOf, skipExpiry)).toEqual({ row: row("strike"), cell: 2 });
   });
 });

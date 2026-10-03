@@ -5,10 +5,14 @@ import {
   DEAL_COLUMN_ID,
   type GridColumn,
   type GridSource,
+  SETTINGS_COLUMN_ID,
   createCellNotifier,
   dealCell,
   productCell,
+  settingCell,
+  settingCells,
 } from "@shared/grid/gridSource.ts";
+import { isDealSetting } from "@shared/dealSettings.ts";
 import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts";
 import type { DealStore } from "./dealStore.ts";
 import { $optionsByKey } from "./optionsStore.ts";
@@ -47,6 +51,10 @@ export const createGridSource = (deal: DealStore): GridSource => {
   };
 
   const getCell: GridSource["getCell"] = (columnId, fieldId) => {
+    if (columnId === SETTINGS_COLUMN_ID) {
+      return isDealSetting(fieldId) ? settingCell(fieldId, deal.$settings.getState()) : null;
+    }
+    if (isDealSetting(fieldId)) return null;
     const byKey = $optionsByKey.getState();
     if (columnId === DEAL_COLUMN_ID) {
       const synced = isSyncedField(fieldId) ? deal.$dealFields.getState()[fieldId] : undefined;
@@ -81,6 +89,7 @@ export const createGridSource = (deal: DealStore): GridSource => {
         getColumns().flatMap(({ id }) => asyncOptionFields.map(({ fieldId }) => ({ columnId: id, fieldId })));
       const stops = [
         stopNotifier,
+        deal.$settings.updates.watch(() => notify(settingCells)),
         deal.$products.updates.watch((next) => {
           const changed = changedIds(products, next);
           products = next;
@@ -99,7 +108,14 @@ export const createGridSource = (deal: DealStore): GridSource => {
       return () => stops.forEach((stop) => stop());
     },
 
-    write: (writes) => deal.actions.writeCellsAction(writes),
+    // settings are their own event; every field write is one batch
+    write(writes) {
+      for (const { fieldId, value } of writes) {
+        if (isDealSetting(fieldId)) deal.actions.setSettingAction({ id: fieldId, value });
+      }
+      const fieldWrites = writes.filter(({ fieldId }) => !isDealSetting(fieldId));
+      if (fieldWrites.length) deal.actions.writeCellsAction(fieldWrites);
+    },
     cloneGroup: (groupId) => deal.actions.cloneGroupAction(groupId),
     removeGroup: (groupId) => deal.actions.removeGroupAction(groupId),
     spotPriceStream: deal.spotPriceStream,

@@ -1,3 +1,4 @@
+import { isDealSetting } from "../dealSettings.ts";
 import { existenceDependencies } from "../fields.ts";
 import { parseCellText } from "./cellValues.ts";
 import type { CellRef, CellView, CellWrite } from "./gridSource.ts";
@@ -12,7 +13,8 @@ type PasteInput = {
   rowCount: number;
   /** The grid cells that hold values, in order; any other column (the labels) is passed over. */
   dataCells: readonly number[];
-  cellAt: (row: number, cell: number) => { ref: CellRef; view: CellView | null };
+  /** The cell at a position; `null` where a column has no cell (the settings column's other rows). */
+  cellAt: (row: number, cell: number) => { ref: CellRef; view: CellView | null } | null;
 };
 
 /**
@@ -35,10 +37,11 @@ export const pasteWrites = ({ data, range, rowCount, dataCells, cellAt }: PasteI
   for (let r = 0; r < height && range.fromRow + r < rowCount; r++) {
     targets.forEach((cell, c) => {
       const text = fill ? data[0][0] : data[r][c];
-      if (text === undefined) return;
-      const { ref, view } = cellAt(range.fromRow + r, cell);
+      const target = cellAt(range.fromRow + r, cell);
+      if (text === undefined || !target) return;
+      const { ref, view } = target;
       // a missing cell is only worth writing if an earlier write can create it
-      const canExist = view !== null || existenceDependencies(ref.fieldId).length > 0;
+      const canExist = view !== null || (!isDealSetting(ref.fieldId) && existenceDependencies(ref.fieldId).length > 0);
       const parsed = canExist && !view?.readOnly ? parseCellText(ref.fieldId, text, view) : null;
       if (parsed) writes.push({ ...ref, value: parsed.value });
       else skipped++;

@@ -90,6 +90,28 @@ describe.each(appNames)("%s grid source", (app) => {
     expect(grid.getCell(first, "settlementFixingSource")).toBeNull();
   });
 
+  it("the deal settings: hedge type options follow Internal, and a hedge type stays one of them", async () => {
+    const setting = (id: "hedgeType" | "isInternal") => grid.getCell("settings", id);
+    const options = () => setting("hedgeType")?.options?.options.map(({ value }) => value);
+    expect([setting("hedgeType")?.value, setting("isInternal")?.value]).toEqual(["a", true]);
+    expect(options()).toEqual(["a", "b", "c"]);
+    expect(grid.getCell("settings", "strike")).toBeNull(); // the subgrid has only its settings
+    expect(grid.getCell("deal", "hedgeType")).toBeNull();
+
+    const { seen, stop } = watch();
+    grid.write([{ columnId: "settings", fieldId: "isInternal", value: "false" }]); // as the dropdown sends it
+    expect([setting("hedgeType")?.value, setting("isInternal")?.value]).toEqual(["d", false]);
+    expect(options()).toEqual(["d", "e", "f"]);
+    await sleep(5);
+    expect(seen()).toEqual(["settings:hedgeType", "settings:isInternal"]);
+    stop();
+
+    grid.write([{ columnId: "settings", fieldId: "hedgeType", value: "a" }]); // not offered: ignored
+    expect(setting("hedgeType")?.value).toBe("d");
+    grid.write([{ columnId: "settings", fieldId: "hedgeType", value: "f" }]);
+    expect(setting("hedgeType")?.value).toBe("f");
+  });
+
   it("a style and the fixing source it creates land in one paste, in order", async () => {
     const [first] = productIds();
     grid.write([

@@ -5,12 +5,20 @@ import {
   SlickGrid,
   SlickRange,
 } from "slickgrid";
+import { DEAL_SETTINGS_FIRST_ROW, dealSettings } from "../dealSettings.ts";
 import { type FieldId, fields } from "../fields.ts";
 import { cellText } from "./cellValues.ts";
 import { parseTsv, toTsv } from "./clipboard.ts";
 import { createFieldEditor } from "./fieldEditor.ts";
-import { DEAL_COLUMN_ID, type GridColumn, type GridSource } from "./gridSource.ts";
-import { nextInOrder } from "./navigation.ts";
+import {
+  type CellKey,
+  type CellRef,
+  DEAL_COLUMN_ID,
+  type GridColumn,
+  type GridSource,
+  SETTINGS_COLUMN_ID,
+} from "./gridSource.ts";
+import { fieldRowsInOrder, nextInOrder } from "./navigation.ts";
 import { pasteWrites } from "./paste.ts";
 
 /** One grid row per field, in display order. */
@@ -18,43 +26,66 @@ type Row = { fieldId: FieldId; label: string };
 const rows: Row[] = fields.map(({ id, label }) => ({ fieldId: id, label }));
 const rowOf = new Map(rows.map((row, index) => [row.fieldId, index]));
 
-const LABEL_COLUMN_ID = "labels";
+/** The deal settings subgrid: its rows, a few rows down. */
+const settingRows = dealSettings.map((_, index) => DEAL_SETTINGS_FIRST_ROW + index);
+const settingAt = (row: number) => dealSettings[row - DEAL_SETTINGS_FIRST_ROW];
+
 const COLUMN_WIDTH = 160;
-/** The deal and label columns stay in view: the last frozen column is the labels. */
-const FROZEN_COLUMN = 1;
+/** The settings subgrid, the deal and the field labels stay in view: the last frozen column is the labels. */
+const FROZEN_COLUMN = 3;
 
 const escapeHtml = (text: string) =>
   text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
+/** A column of labels: the settings', or the fields'. Not a value column. */
+type LabelColumn = { labels: "settings" | "fields" };
+type LayoutColumn = GridColumn | LabelColumn;
+const isLabels = (column: LayoutColumn | undefined): column is LabelColumn =>
+  Boolean(column && "labels" in column);
+
 /**
- * The grid's columns, left to right: the deal, the field labels, then every
- * product. `null` marks the labels: not a value column, so selection, copy,
- * paste and keyboard order pass over it.
+ * The grid's columns, left to right: the settings subgrid (labels, values),
+ * the deal, the field labels, then every product.
  */
-const layoutOf = (columns: readonly GridColumn[]) => [
+const layoutOf = (columns: readonly GridColumn[]): LayoutColumn[] => [
+  { labels: "settings" },
+  { id: SETTINGS_COLUMN_ID, title: "" },
   ...columns.filter((column) => column.id === DEAL_COLUMN_ID),
-  null,
+  { labels: "fields" },
   ...columns.filter((column) => column.id !== DEAL_COLUMN_ID),
 ];
 
 /**
- * Mounts the deal grid: fields as rows; the deal and label columns frozen on
- * the left, then every product, under its group's header. Returns the
- * unmount. Cells are painted by SlickGrid from `source`; the only repaints
- * are the cells the source reports changed, so React renders nothing here.
+ * Mounts the deal grid: fields as rows; the settings subgrid, the deal and
+ * the field labels frozen on the left, then every product, under its group's
+ * header. Returns the unmount. Cells are painted by SlickGrid from `source`;
+ * the only repaints are the cells the source reports changed, so React
+ * renders nothing here.
  *
- * Keyboard: arrows move to the neighbouring cell; Tab, and Enter after an
- * edit, follow the field priority (`navigationOrder`). Typing starts an
- * edit, Escape cancels it. Copy and paste work on the selected range as
- * tab-separated text, and a paste is a single `source.write` batch.
+ * Keyboard: arrows move to the neighbouring cell, across subgrids; Tab, and
+ * Enter after an edit, go through the settings top-down and each field
+ * column by priority (`navigationOrder`). Typing starts an edit, Escape
+ * cancels it. Copy and paste work on the selected range as tab-separated
+ * text, and a paste is a single `source.write` batch.
  */
 export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
   let layout = layoutOf(source.getColumns());
-  const cellOf = (columnId: string) => layout.findIndex((column) => column?.id === columnId);
-  const dataCells = () => layout.flatMap((column, cell) => (column ? [cell] : []));
-  const viewAt = (row: number, cell: number) => {
+  const cellOf = (columnId: string) =>
+    layout.findIndex((column) => !isLabels(column) && column.id === columnId);
+  const dataCells = () => layout.flatMap((column, cell) => (isLabels(column) ? [] : [cell]));
+
+  /** What a grid cell holds: the row's setting in the settings column, else the row's field. */
+  const keyAt = (row: number, columnId: string): CellKey | undefined =>
+    columnId === SETTINGS_COLUMN_ID ? settingAt(row)?.id : rows[row].fieldId;
+  const refAt = (row: number, cell: number): CellRef | null => {
     const column = layout[cell];
-    return column ? source.getCell(column.id, rows[row].fieldId) : null;
+    if (!column || isLabels(column)) return null;
+    const key = keyAt(row, column.id);
+    return key ? { columnId: column.id, fieldId: key } : null;
+  };
+  const viewAt = (row: number, cell: number) => {
+    const ref = refAt(row, cell);
+    return ref ? source.getCell(ref.columnId, ref.fieldId) : null;
   };
 
   // a repainted cell keeps the classes it had unless they are removed: list every state
@@ -63,8 +94,10 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
     let text = cellText(view);
     if (text === "" && view?.options?.status === "loading") text = "Loading…";
     if (text === "" && view?.options?.status === "error") text = "Failed to load";
+    const isOutsideSubgrid = !refAt(row, cell);
     const states = {
-      "grid-cell--none": !view,
+      "grid-cell--void": isOutsideSubgrid,
+      "grid-cell--none": !view && !isOutsideSubgrid,
       "grid-cell--error": Boolean(view?.hasError),
       "grid-cell--readonly": Boolean(view?.readOnly),
       "grid-cell--pending": Boolean(view?.options && view.options.status !== "loaded"),
@@ -78,41 +111,62 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
       toolTip: view?.readOnly ? "Calculated: read-only" : "",
     };
   };
+  const settingLabelFormatter: Formatter<Row> = (row) => {
+    const setting = settingAt(row);
+    return setting
+      ? { text: escapeHtml(setting.label), removeClasses: "grid-cell--void" }
+      : { text: "", addClasses: "grid-cell--void" };
+  };
 
   const FieldEditor = createFieldEditor(source);
   const toSlickColumns = (): Column<Row>[] =>
     layout.map((column, cell) => {
-      if (!column) {
+      if (isLabels(column)) {
+        const isSettings = column.labels === "settings";
         return {
-          id: LABEL_COLUMN_ID,
+          id: `labels-${column.labels}`,
           name: "",
           field: "label",
           width: COLUMN_WIDTH,
           focusable: false,
           selectable: false,
           resizable: false,
-          headerCssClass: "grid-header--labels",
+          headerCssClass: isSettings ? "grid-header--void" : "grid-header--labels",
           cssClass: "grid-cell--label",
-          formatter: (row) => escapeHtml(rows[row].label),
+          formatter: isSettings ? settingLabelFormatter : (row) => escapeHtml(rows[row].label),
         };
       }
       const isDeal = column.id === DEAL_COLUMN_ID;
+      const isSettings = column.id === SETTINGS_COLUMN_ID;
       // the first product of each group draws the line between groups
-      const startsGroup = Boolean(column.group) && layout[cell - 1]?.group?.id !== column.group?.id;
+      const previous = layout[cell - 1];
+      const startsGroup =
+        Boolean(column.group) && (isLabels(previous) || previous?.group?.id !== column.group?.id);
       return {
         id: column.id,
         name: escapeHtml(column.title),
         field: "fieldId",
         width: COLUMN_WIDTH,
         resizable: false,
-        headerCssClass: `${isDeal ? "grid-header--deal" : "grid-header--product"}${startsGroup ? " grid-col--group-start" : ""}`,
+        headerCssClass: isSettings
+          ? "grid-header--void"
+          : `${isDeal ? "grid-header--deal" : "grid-header--product"}${startsGroup ? " grid-col--group-start" : ""}`,
         cssClass: `${isDeal ? "grid-col--deal" : ""}${startsGroup ? " grid-col--group-start" : ""}`,
         editor: FieldEditor,
+        params: { keyAt: (item: Row) => keyAt(rowOf.get(item.fieldId)!, column.id) },
         formatter,
       };
     });
 
-  const grid = new SlickGrid<Row>(container, rows, toSlickColumns(), {
+  // the settings column only has cells on the subgrid's rows: elsewhere it can't be focused or selected
+  const settingsOff = { [SETTINGS_COLUMN_ID]: { focusable: false, selectable: false } };
+  const data = {
+    getLength: () => rows.length,
+    getItem: (row: number) => rows[row],
+    getItemMetadata: (row: number) => (settingAt(row) ? null : { columns: settingsOff }),
+  };
+
+  const grid = new SlickGrid<Row>(container, data, toSlickColumns(), {
     editable: true,
     enableCellNavigation: true,
     autoEdit: false, // on by default: every click and move would open an editor
@@ -127,22 +181,29 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
     preHeaderPanelHeight: 32,
     enableColumnReorder: false,
     // every commit, typed or pasted, goes to the source as a batch
-    editCommandHandler: (item, column, command) =>
-      source.write([{ columnId: String(column.id), fieldId: item.fieldId, value: command.serializedValue }]),
+    editCommandHandler: (_item, _column, command) => {
+      const ref = refAt(command.row, command.cell);
+      if (ref) source.write([{ ...ref, value: command.serializedValue }]);
+    },
   });
   const selection = new SlickCellSelectionModel();
   grid.setSelectionModel(selection);
 
   // derived and missing cells can't be edited
-  grid.onBeforeEditCell.subscribe((_event, { item, column }) => {
-    const view = source.getCell(String(column.id), item.fieldId);
+  grid.onBeforeEditCell.subscribe((_event, { row, cell }) => {
+    const view = row === undefined || cell === undefined ? null : viewAt(row, cell);
     return Boolean(view && !view.readOnly);
   });
 
-  // --- keyboard order: Tab, and Enter after an edit, follow the field priority
+  // --- keyboard order: Tab, and Enter after an edit, go through each column in its own order
   const canStop = (row: number, cell: number) => {
     const view = viewAt(row, cell);
     return Boolean(view && !view.readOnly);
+  };
+  const rowsInOrder = (cell: number) => {
+    const column = layout[cell];
+    if (!column || isLabels(column)) return [];
+    return column.id === SETTINGS_COLUMN_ID ? settingRows : fieldRowsInOrder;
   };
   grid.onKeyDown.subscribe((event, { row, cell }) => {
     const key = event.getNativeEvent<KeyboardEvent>();
@@ -152,7 +213,7 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
     if (!isTab && !isEnterAfterEdit) return;
     if (!grid.getEditorLock().commitCurrentEdit()) return;
     const step = isTab && key.shiftKey ? -1 : 1;
-    const target = nextInOrder(row, cell, step, { first: 0, count: layout.length }, canStop);
+    const target = nextInOrder(row, cell, step, { first: 0, count: layout.length }, rowsInOrder, canStop);
     event.stopImmediatePropagation(); // not the grid's own (spatial) Tab
     if (!target) return; // past the last cell: Tab leaves the grid
     key.preventDefault();
@@ -192,9 +253,8 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
       rowCount: rows.length,
       dataCells: dataCells(),
       cellAt: (row, cell) => {
-        const columnId = layout[cell]!.id;
-        const fieldId = rows[row].fieldId;
-        return { ref: { columnId, fieldId }, view: source.getCell(columnId, fieldId) };
+        const ref = refAt(row, cell);
+        return ref && { ref, view: source.getCell(ref.columnId, ref.fieldId) };
       },
     });
     source.write(writes);
@@ -209,7 +269,7 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
   const renderGroupHeaders = () => {
     const runs: { id: string; title: string; span: number }[] = [];
     for (const column of layout) {
-      if (!column?.group) continue;
+      if (isLabels(column) || !column.group) continue;
       const last = runs[runs.length - 1];
       if (last?.id === column.group.id) last.span++;
       else runs.push({ ...column.group, span: 1 });
@@ -242,15 +302,19 @@ export const mountDealGrid = (container: HTMLElement, source: GridSource) => {
     if (editing && editing.row === row && editing.cell === cell) return;
     grid.updateCell(row, cell);
   };
+  const rowOfRef = ({ columnId, fieldId }: CellRef) =>
+    columnId === SETTINGS_COLUMN_ID
+      ? settingRows[dealSettings.findIndex(({ id }) => id === fieldId)]
+      : rowOf.get(fieldId as FieldId);
   const stopColumns = source.subscribeColumns(() => {
     layout = layoutOf(source.getColumns());
     grid.setColumns(toSlickColumns());
     renderGroupHeaders();
   });
   const stopCells = source.subscribeCells((cells) => {
-    for (const { columnId, fieldId } of cells) {
-      const cell = cellOf(columnId);
-      const row = rowOf.get(fieldId);
+    for (const ref of cells) {
+      const cell = cellOf(ref.columnId);
+      const row = rowOfRef(ref);
       if (cell >= 0 && row !== undefined) repaint(row, cell);
     }
   });

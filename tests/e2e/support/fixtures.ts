@@ -11,19 +11,21 @@ export const openApp = async (page: Page, app: App) => {
   await expect(page.getByText("Vanilla Group #1")).toBeVisible();
 };
 
-// --- the deal grid. Columns: 0 = the deal, 1.. = the products in display
-// order (the labels column, between them, is not counted).
+// --- the deal grid, left to right: the settings subgrid (its labels l0,
+// values l1), the deal (l2), the field labels (l3), then the products.
+// Columns here: "settings", 0 = the deal, 1.. = the products.
 
-const cellClass = (column: number) => `l${column === 0 ? 0 : column + 1}`;
+export type Column = number | "settings";
+const cellClass = (column: Column) => (column === "settings" ? "l1" : `l${column === 0 ? 2 : column + 3}`);
 
-/** The grid row of a field, by its label. */
+/** The grid row of a field (or a setting), by its label. */
 const rowOf = async (page: Page, label: string) => {
-  const labelCell = page.locator(".deal-grid .slick-cell.l1").filter({ hasText: new RegExp(`^${label}$`) });
+  const labelCell = page.locator(".deal-grid .slick-cell.l3, .deal-grid .slick-cell.l0").filter({ hasText: new RegExp(`^${label}$`) });
   return labelCell.locator("xpath=..").getAttribute("data-row");
 };
 
-/** A field's cell in a column. */
-export const cell = async (page: Page, label: string, column: number) =>
+/** A field's (or a setting's) cell in a column. */
+export const cell = async (page: Page, label: string, column: Column) =>
   page.locator(`.deal-grid .slick-row[data-row="${await rowOf(page, label)}"] > .slick-cell.${cellClass(column)}`);
 
 /** A field's row as shown: the deal's cell, then each product's. */
@@ -32,23 +34,25 @@ export const rowTexts = async (page: Page, label: string) => {
   return page.locator(`.deal-grid .slick-row[data-row="${row}"] > .slick-cell`).evaluateAll((cells) =>
     cells
       .map((el) => ({ el, index: Number([...el.classList].find((name) => /^l\d+$/.test(name))!.slice(1)) }))
-      .filter(({ index }) => index !== 1)
+      .filter(({ index }) => index === 2 || index >= 4)
       .sort((a, b) => a.index - b.index)
       .map(({ el }) => el.textContent ?? ""),
   );
 };
 
-/** The active cell, as its field's label and its column. */
+/** The active cell, as its row's label and its column. */
 export const activeCell = (page: Page) =>
-  page.locator(".deal-grid .slick-cell.active").evaluate((active) => {
+  page.locator(".deal-grid .slick-cell.active").evaluate((active): { label: string | null | undefined; column: number | "settings" } => {
     const row = (active.parentElement as HTMLElement).dataset.row;
-    const label = document.querySelector(`.deal-grid .slick-row[data-row="${row}"] > .slick-cell.l1`)?.textContent;
     const index = Number([...active.classList].find((name) => /^l\d+$/.test(name))!.slice(1));
-    return { label, column: index === 0 ? 0 : index - 1 };
+    const labelOf = (labels: string) =>
+      document.querySelector(`.deal-grid .slick-row[data-row="${row}"] > .slick-cell.${labels}`)?.textContent;
+    if (index === 1) return { label: labelOf("l0"), column: "settings" };
+    return { label: labelOf("l3"), column: index === 2 ? 0 : index - 3 };
   });
 
 /** Edits a cell as a user would: Enter to edit, type (or pick an option by label), Enter to commit. */
-export const editCell = async (page: Page, label: string, column: number, text: string) => {
+export const editCell = async (page: Page, label: string, column: Column, text: string) => {
   await (await cell(page, label, column)).click();
   await page.keyboard.press("Enter");
   const editor = page.locator(".deal-grid .grid-editor");

@@ -27,6 +27,14 @@ import {
   isEmptyBroadcast,
   isSyncedField,
 } from "@shared/dealFields.ts";
+import {
+  type DealSettingId,
+  type DealSettingsState,
+  hedgeTypesFor,
+  initialDealSettings,
+  isDealSetting,
+  withSetting,
+} from "@shared/dealSettings.ts";
 import { type ProductFieldId, dealOptionsRequests } from "@shared/fields.ts";
 import { type CellWrite, DEAL_COLUMN_ID } from "@shared/grid/gridSource.ts";
 import type { GroupType } from "@shared/groups.ts";
@@ -94,6 +102,8 @@ export const createDealStore = (devtools: DealDevtools) => {
     }>(),
     /** Calculates now, if the deal is ready (the manual Calculate). */
     calculateAction: createEvent(),
+    /** Sets a deal setting (internal, hedge type); a hedge type stays one of its options. */
+    setSettingAction: createEvent<{ id: DealSettingId; value: unknown }>(),
     /** Writes many cells at once (a grid paste or edit): one update of each store. */
     writeCellsAction: createEvent<readonly CellWrite[]>(),
   };
@@ -101,12 +111,14 @@ export const createDealStore = (devtools: DealDevtools) => {
   // --- state
   const $dealFields = createStore<DealFieldsState>(initialDealFields);
   const $groups = createStore<GroupsState>({});
-  const $isInternal = createStore(true);
+  const $settings = createStore<DealSettingsState>(initialDealSettings).on(
+    actions.setSettingAction,
+    (settings, { id, value }) => withSetting(settings, id, value),
+  );
 
   // --- derived
-  const $hedgeTypes = $isInternal.map((isInternal) =>
-    isInternal ? ["a", "b", "c"] : ["d", "e", "f"],
-  );
+  const $isInternal = $settings.map((settings) => settings.isInternal);
+  const $hedgeTypes = $isInternal.map(hedgeTypesFor);
   /** Issues per product, per field — only changed products are re-validated. */
   const $validation = $groups.map((groups) =>
     validateProducts(productsOf(groups)),
@@ -185,7 +197,7 @@ export const createDealStore = (devtools: DealDevtools) => {
   );
   $groups.on(actions.writeCellsAction, (groups, writes) =>
     writes.reduce((next, { columnId, fieldId, value }) => {
-      if (fieldId === "spotStream") return next;
+      if (fieldId === "spotStream" || isDealSetting(fieldId)) return next; // settings: setSettingAction
       const toEvery =
         isSyncedField(fieldId) ||
         (columnId === DEAL_COLUMN_ID &&
@@ -309,6 +321,7 @@ export const createDealStore = (devtools: DealDevtools) => {
     // stores
     $dealFields,
     $groups,
+    $settings,
     $isInternal,
     $hedgeTypes,
     $validation,

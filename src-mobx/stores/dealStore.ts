@@ -23,6 +23,13 @@ import {
   initialDealFields,
   isEmptyBroadcast,
 } from "@shared/dealFields.ts";
+import {
+  type DealSettingId,
+  type DealSettingsState,
+  hedgeTypesFor,
+  initialDealSettings,
+  withSetting,
+} from "@shared/dealSettings.ts";
 import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
@@ -39,13 +46,12 @@ type DealDevtools = {
   readonly isAutocalcEnabled: boolean;
 };
 
-export type DealStore = DealFieldsState & {
+export type DealStore = DealFieldsState & DealSettingsState & {
   groups: Record<string, GroupStore>;
   groupIds: string[]; // display order; each group's `ui.index` mirrors it
-  isInternal: boolean;
   /** Kept outside MobX: ticks never notify observers; the grid repaints just that cell. */
   readonly spotPriceStream: SpotPriceStream;
-  readonly hedgeTypes: string[];
+  readonly hedgeTypes: readonly string[];
   /** Every product of every group, in display order. */
   readonly products: Product[];
   readonly hasValidationErrors: boolean;
@@ -61,6 +67,8 @@ export type DealStore = DealFieldsState & {
   /** Calculates now, if ready (the manual Calculate). */
   calculate(): void;
   markInputsChanged(): void;
+  /** Sets a deal setting (internal, hedge type); a hedge type stays one of its options. */
+  setSetting(id: DealSettingId, value: unknown): void;
   dispose(): void;
 };
 
@@ -98,10 +106,10 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
       ...initialDealFields,
       groups: {},
       groupIds: [],
-      isInternal: true,
+      ...initialDealSettings,
       spotPriceStream,
       get hedgeTypes() {
-        return deal.isInternal ? ["a", "b", "c"] : ["d", "e", "f"];
+        return hedgeTypesFor(deal.isInternal);
       },
       get products() {
         return deal.groupIds.flatMap(
@@ -156,6 +164,9 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
           () =>
             runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
         );
+      },
+      setSetting(id, value) {
+        Object.assign(deal, withSetting(deal, id, value));
       },
       markInputsChanged() {
         deal.calc = calcInputsChanged(deal.calc);

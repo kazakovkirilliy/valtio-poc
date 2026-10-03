@@ -17,11 +17,15 @@ import {
   DEAL_COLUMN_ID,
   type GridColumn,
   type GridSource,
+  SETTINGS_COLUMN_ID,
   createCellNotifier,
   dealCell,
   dependentFields,
   productCell,
+  settingCell,
+  settingCells,
 } from "@shared/grid/gridSource.ts";
+import { isDealSetting } from "@shared/dealSettings.ts";
 import { getValueByPath, resolveParent, setValueByPath } from "@shared/lib/path.ts";
 import {
   type ProductData,
@@ -97,6 +101,8 @@ export const createGridSource = (dealStore: DealStore): GridSource => {
   };
 
   const getCell: GridSource["getCell"] = (columnId, fieldId) => {
+    if (columnId === SETTINGS_COLUMN_ID) return isDealSetting(fieldId) ? settingCell(fieldId, dealStore) : null;
+    if (isDealSetting(fieldId)) return null;
     if (columnId === DEAL_COLUMN_ID) {
       const synced = isSyncedField(fieldId) ? dealStore[fieldId] : undefined;
       return dealCell(fieldId, synced, optionsStore.byKey, dealStore.spotPriceStream);
@@ -176,6 +182,8 @@ export const createGridSource = (dealStore: DealStore): GridSource => {
         getColumns().flatMap(({ id }) => asyncOptionFields.map(({ fieldId }) => ({ columnId: id, fieldId })));
       const stops = [
         stopNotifier,
+        subscribeKey(dealStore, "isInternal", () => notify(settingCells)),
+        subscribeKey(dealStore, "hedgeType", () => notify(settingCells)),
         subscribeColumns(watchProducts),
         stopValidation,
         ...syncedFieldIds.map((fieldId) =>
@@ -191,7 +199,8 @@ export const createGridSource = (dealStore: DealStore): GridSource => {
 
     write(writes) {
       for (const { columnId, fieldId, value } of writes) {
-        if (columnId === DEAL_COLUMN_ID) writeDeal(fieldId, value);
+        if (isDealSetting(fieldId)) dealStore.actions.setSetting(fieldId, value);
+        else if (columnId === DEAL_COLUMN_ID) writeDeal(fieldId, value);
         else writeProduct(columnId, fieldId, value);
       }
     },

@@ -81,7 +81,7 @@ describe("effector", () => {
     const deal = createDealStore({ $isSpotPriceStreamEnabled: createStore(false), $isAutocalcEnabled: createStore(false) });
     expect(Object.keys(deal.actions).sort()).toEqual([
       "addGroupAction", "broadcastFieldAction", "calculateAction", "cloneGroupAction",
-      "removeGroupAction", "setProductFieldAction", "setTwoWaySyncAction", "writeCellsAction",
+      "removeGroupAction", "setProductFieldAction", "setSettingAction", "setTwoWaySyncAction", "writeCellsAction",
     ]);
     deal.dispose();
   });

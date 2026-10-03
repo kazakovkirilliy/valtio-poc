@@ -117,6 +117,18 @@
   cursor: default;
 }
 
+/* the settings subgrid's columns outside its rows: no cell at all */
+.deal-grid .grid-cell--void {
+  background: var(--bg);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.deal-grid .slick-header-column.grid-header--void {
+  background: var(--bg);
+  border-color: transparent;
+}
+
 .deal-grid .grid-cell--pending {
   opacity: 0.7;
 }
