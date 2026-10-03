@@ -21,7 +21,9 @@
     "effector-react": "^23.3.0",
     "effector-storage": "^8.0.0",
     "mobx": "^7.0.5",
+    "mobx-keystone": "^2.2.0",
     "mobx-react-lite": "^5.1.0",
+    "mobx-state-tree": "^8.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-use": "^17.6.1",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@babel/plugin-proposal-decorators": "^7.29.7",
     "@effector/redux-devtools-adapter": "^0.2.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",

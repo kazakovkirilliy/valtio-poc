@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getValueByPath } from "@shared/lib/path.ts";
 import { productPath } from "@shared/paths.ts";
-import { definitionOf, productTypeOf } from "@shared/products/productRegistry.ts";
+import { definitionOf, productTypeOf, readField } from "@shared/products/productRegistry.ts";
 import { installFakeApi } from "./support/fakeApi.ts";
 
 // guarantees that are specific to how each library updates
@@ -51,6 +52,66 @@ describe("mobx", () => {
     stop();
     expect(runs).toBe(before);
     deal.dispose();
+  });
+});
+
+describe("mobx-state-tree", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write replaces only its own product's data, and only when a value changes", async () => {
+    const { observable } = await import("mobx");
+    const { destroy } = await import("mobx-state-tree");
+    const { Deal } = await import("../../src-mobx-state-tree/stores/dealModel.ts");
+    const deal = Deal.create({}, { devtools: observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }) });
+    deal.addNewGroup("Strategy");
+    deal.addNewGroup("Average");
+    const [strategy, average] = deal.groups;
+    const [edited, sibling] = strategy.products;
+    const before = { edited: edited.data, sibling: sibling.data, average: average.products[0].data };
+    const write = () => deal.writePaths([{ path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" }]);
+
+    write();
+    expect(edited.data).not.toBe(before.edited);
+    expect(getValueByPath(edited.data, "optionsCommon")).not.toBe(getValueByPath(before.edited, "optionsCommon")); // the path to the field is copied …
+    expect(edited.data.cashSettlement).toBe(before.edited.cashSettlement); // … nothing else
+    expect(sibling.data).toBe(before.sibling);
+    expect(average.products[0].data).toBe(before.average);
+
+    const written = edited.data;
+    write();
+    expect(edited.data).toBe(written); // same value: nothing replaced
+    destroy(deal);
+  });
+});
+
+describe("mobx-keystone", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a clone gets new ids and its own copy of the data", async () => {
+    const { setGlobalConfig } = await import("mobx-keystone");
+    setGlobalConfig({ showDuplicateModelNameWarnings: false });
+    const { Deal } = await import("../../src-mobx-keystone/stores/dealModel.ts");
+    const deal = new Deal({});
+    deal.addNewGroup("VanillaGroup");
+    deal.addNewGroup("Average");
+    deal.cloneGroup(deal.groups[0].id);
+    const [source, copy] = deal.groups;
+    expect(deal.groups.map((group) => group.title)).toEqual(["Vanilla Group #1", "Vanilla Group #2", "Average #3"]);
+    expect(copy.id).not.toBe(source.id);
+    expect(copy.products[0].id).not.toBe(source.products[0].id);
+
+    deal.writePaths([{ path: fieldPath(copy.id, copy.products[0], "expiryCut"), value: "TK15" }]);
+    expect(readField(copy.products[0].data, "expiryCut")).toBe("TK15");
+    expect(readField(source.products[0].data, "expiryCut")).toBe("");
+
+    deal.removeGroup(source.id);
+    expect(deal.groups.map((group) => group.title)).toEqual(["Vanilla Group #1", "Average #2"]); // renumbered
   });
 });
 

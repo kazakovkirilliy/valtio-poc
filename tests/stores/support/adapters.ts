@@ -12,8 +12,8 @@ import { type ProductData, definitionOf, productTypeOf } from "@shared/products/
  * the app being migrated would. Each app only adds what isn't on it (the
  * calculation, the autocalc switch, the deal-wide validation flag).
  */
-export type AppName = "valtio" | "mobx" | "effector-nested" | "effector-model";
-export const appNames: AppName[] = ["valtio", "mobx", "effector-nested", "effector-model"];
+export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -168,6 +168,42 @@ const mobx = async (): Promise<DealAdapter> => {
   });
 };
 
+const mobxStateTree = async (): Promise<DealAdapter> => {
+  const { observable, runInAction } = await import("mobx");
+  const { destroy } = await import("mobx-state-tree");
+  const { Deal } = await import("../../../src-mobx-state-tree/stores/dealModel.ts");
+  const { createPathDeal } = await import("../../../src-mobx-state-tree/stores/pathDeal.ts");
+  const devtools = observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const deal = Deal.create({}, { devtools });
+  return pathAdapter(createPathDeal(deal), {
+    hasValidationErrors: () => deal.hasValidationErrors,
+    calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
+    calculate: () => deal.calculate(),
+    setAutocalc: (enabled) => runInAction(() => (devtools.isAutocalcEnabled = enabled)),
+    dispose: () => destroy(deal),
+  });
+};
+
+const mobxKeystone = async (): Promise<DealAdapter> => {
+  const { observable, runInAction } = await import("mobx");
+  const { registerRootStore, setGlobalConfig, unregisterRootStore } = await import("mobx-keystone");
+  // each test re-imports the models, which registers their names again
+  setGlobalConfig({ showDuplicateModelNameWarnings: false });
+  const { Deal, devtoolsContext } = await import("../../../src-mobx-keystone/stores/dealModel.ts");
+  const { createPathDeal } = await import("../../../src-mobx-keystone/stores/pathDeal.ts");
+  const devtools = observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const deal = new Deal({});
+  devtoolsContext.set(deal, devtools);
+  registerRootStore(deal); // starts the deal's reactions
+  return pathAdapter(createPathDeal(deal), {
+    hasValidationErrors: () => deal.hasValidationErrors,
+    calc: () => ({ status: deal.calc.status, price: deal.calc.price }),
+    calculate: () => deal.calculate(),
+    setAutocalc: (enabled) => runInAction(() => (devtools.isAutocalcEnabled = enabled)),
+    dispose: () => unregisterRootStore(deal),
+  });
+};
+
 const effectorNested = async (): Promise<DealAdapter> => {
   const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
@@ -203,5 +239,5 @@ const effectorModel = async (): Promise<DealAdapter> => {
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
+  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };

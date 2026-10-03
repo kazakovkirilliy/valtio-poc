@@ -13,6 +13,13 @@ export default defineConfig({
       include: /[\\/]src-effector-(nested|model)[\\/]/,
       plugins: [['effector/babel-plugin', { addLoc: true }]],
     }),
+    // mobx-keystone app only: its models are declared with decorators
+    // (`@model`, `@modelAction`, `@computed`), which the default transform
+    // doesn't compile yet
+    babel({
+      include: /[\\/]src-mobx-keystone[\\/]/,
+      plugins: [['@babel/plugin-proposal-decorators', { version: '2023-11' }]],
+    }),
   ],
   resolve: {
     // library-independent code shared by every app
@@ -21,12 +28,15 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       // index.html links to every version of the app: valtio (src-valtio/),
-      // MobX (src-mobx/), nested Effector (src-effector-nested/) and
-      // @effector/model (src-effector-model/)
+      // MobX (src-mobx/), MobX-State-Tree (src-mobx-state-tree/),
+      // mobx-keystone (src-mobx-keystone/), nested Effector
+      // (src-effector-nested/) and @effector/model (src-effector-model/)
       input: {
         index: 'index.html',
         valtio: 'valtio.html',
         mobx: 'mobx.html',
+        'mobx-state-tree': 'mobx-state-tree.html',
+        'mobx-keystone': 'mobx-keystone.html',
         'effector-nested': 'effector-nested.html',
         'effector-model': 'effector-model.html',
       },
