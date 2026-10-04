@@ -20,7 +20,7 @@ import {
   isAsyncOptions,
 } from "../fields.ts";
 import { type Option, type OptionsState, optionsKey } from "../options/optionsSource.ts";
-import { type GenericProductDefinition, isReadOnly } from "../products/productRegistry.ts";
+import { type GenericProductDefinition, isFieldVisible, isReadOnly } from "../products/productRegistry.ts";
 import type { SpotPriceStream } from "../spotPriceStream.ts";
 
 /**
@@ -101,17 +101,21 @@ export const cellOptions = (
   return byKey[key] ?? notLoadedYet;
 };
 
-/** A product's cell, read through `read`; `null` for a field it doesn't have. */
+/**
+ * A product's cell, reading the product's data by path through `readData`;
+ * `null` for a field it doesn't have, or that is hidden.
+ */
 export const productCell = (
   definition: GenericProductDefinition,
-  read: (fieldId: ProductFieldId) => unknown,
+  readData: (dataPath: string) => unknown,
   fieldId: FieldId,
   hasError: boolean,
   byKey: Readonly<Record<string, OptionsState>>,
 ): CellView | null => {
   if (!(fieldId in definition.fieldPaths)) return null; // e.g. the deal-only spot stream
   const id = fieldId as ProductFieldId;
-  if (!fieldExists(id, read)) return null;
+  const read = (field: ProductFieldId) => readData(definition.fieldPaths[field]);
+  if (!fieldExists(id, read) || !isFieldVisible(definition, id, readData)) return null;
   const asyncField = asyncOptionFields.find((field) => field.fieldId === id);
   return {
     value: read(id),

@@ -1,9 +1,9 @@
-import type { ZodType } from "zod";
+import { type BoolLogic, evaluateBoolLogic } from "../boolLogic.ts";
 import type { DealFieldsState } from "../dealFields.ts";
 import type { ProductFieldId } from "../fields.ts";
 import { getValueByPath } from "../lib/path.ts";
 import { type AverageProductStore, averageProduct } from "./averageProduct.ts";
-import type { CrossFieldRule, DerivedField, ProductUi } from "./productDefinition.ts";
+import type { CrossFieldRule, DerivedField, FieldValidation, ProductUi } from "./productDefinition.ts";
 import { type VanillaProductStore, vanillaProduct } from "./vanillaProduct.ts";
 
 /**
@@ -20,11 +20,15 @@ export type AnyProductStore = VanillaProductStore | AverageProductStore;
 export type ProductData = AnyProductStore["data"];
 export type { ProductUi };
 
-/** A definition as generic code sees it: string paths, functions over any product's data. */
+/**
+ * A compiled definition as generic code sees it: string paths, relative to
+ * the product's data, and functions over any product's data.
+ */
 export type GenericProductDefinition = {
   label: string;
   fieldPaths: Record<ProductFieldId, string>;
-  schemas: Record<ProductFieldId, ZodType>;
+  validation: Partial<Record<ProductFieldId, FieldValidation>>;
+  visibility: Partial<Record<ProductFieldId, BoolLogic>>;
   rules?: Partial<Record<ProductFieldId, readonly CrossFieldRule<ProductData>[]>>;
   derived?: Partial<Record<ProductFieldId, DerivedField<ProductData>>>;
   createData: (deal: DealFieldsState) => ProductData;
@@ -43,6 +47,25 @@ export const readField = (data: ProductData, fieldId: ProductFieldId) =>
 /** Derived fields are read-only. */
 export const isReadOnly = (definition: GenericProductDefinition, fieldId: ProductFieldId) =>
   Boolean(definition.derived?.[fieldId]);
+
+/**
+ * Whether a field shows in the grid, and is validated: its visibility
+ * condition, if it has one, holds. `read` reads the product's data by path.
+ */
+export const isFieldVisible = (
+  definition: GenericProductDefinition,
+  fieldId: ProductFieldId,
+  read: (dataPath: string) => unknown,
+) => {
+  const condition = definition.visibility[fieldId];
+  return !condition || evaluateBoolLogic(condition, read);
+};
+
+/** Whether a row can be hidden in some product: a cell that may appear once another write lands. */
+export const canBeHidden = (fieldId: string) =>
+  Object.values(productDefinitions).some(
+    (definition) => fieldId in (definition as unknown as GenericProductDefinition).visibility,
+  );
 
 /** The derived fields that depend on a field: recompute them when it changes. */
 export const derivedFieldsOf = (

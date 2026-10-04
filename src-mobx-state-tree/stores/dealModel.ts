@@ -1,5 +1,5 @@
 import { autorun, reaction } from "mobx";
-import { type Instance, type SnapshotIn, addDisposer, getEnv, getSnapshot, types } from "mobx-state-tree";
+import { type Instance, type SnapshotIn, addDisposer, getEnv, getSnapshot, isAlive, types } from "mobx-state-tree";
 import { calculatePrice } from "@shared/api/calculate.ts";
 import {
   type CalcState,
@@ -97,7 +97,8 @@ export const Deal = types
     const loadOptions = (requests: readonly OptionsRequest[]) => {
       for (const request of requests) {
         void optionsStore.load(request.source, request.param).then((options) => {
-          if (options) self.reconcileOptions(request, options);
+          // a deal destroyed meanwhile (a closed tab) has nothing to reconcile
+          if (options && isAlive(self)) self.reconcileOptions(request, options);
         });
       }
     };

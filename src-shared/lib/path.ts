@@ -5,6 +5,11 @@ export type LeafPath<T> = {
     : K;
 }[keyof T & string];
 
+/** Dot-separated paths to every field of `T`, objects included. */
+export type DeepPath<T> = {
+  [K in keyof T & string]: T[K] extends object ? K | `${K}.${DeepPath<T[K]>}` : K;
+}[keyof T & string];
+
 /** `undefined` when any segment is missing, instead of throwing. */
 export const getValueByPath = (target: object, path: string): unknown =>
   path

@@ -41,44 +41,85 @@ const dateSchema = optionalString(z.iso.date("Must be a valid date"));
 export const vanillaProduct = defineProduct<VanillaProductStore["data"]>({
   label: "Vanilla Product",
 
-  fieldPaths: {
-    notionalCcy: "optionsCommon.base.notional.notionalCcy",
-    notionalAmount: "optionsCommon.base.notional.amount",
-    premiumCcy: "optionsCommon.base.premiumCcy",
-    strike: "optionsCommon.strike",
-    callPut: "optionsCommon.callPut",
-    buySell: "optionsCommon.base.buySell",
-    ccyPair: "optionsCommon.base.ccyPair",
-    expiryDate: "optionsCommon.base.expiryDate",
-    expiryDays: "optionsCommon.base.expiryDays",
-    expiryCut: "optionsCommon.base.expiryCut",
-    deliveryDate: "optionsCommon.base.deliveryDate",
-    premiumDate: "optionsCommon.base.premiumDate",
-    settlementStyle: "settlementStyle",
-    settlementCcy: "cashSettlement.settlementCcy",
-    settlementFixingSource: "cashSettlement.settlementFixingSource",
-  },
-
-  schemas: {
-    notionalCcy: ccySchema,
-    notionalAmount: optionalNumber(z.number().positive("Must be greater than 0")),
-    premiumCcy: ccySchema,
-    strike: z.string().max(3, "Must be at most 3 characters"),
-    callPut: optionalString(z.enum(["Call", "Put"])),
-    buySell: optionalString(z.enum(["Buy", "Sell"])),
-    ccyPair: optionalString(
-      z.string().regex(/^[A-Z]{6}$/, "Must be 6 uppercase letters, e.g. EURUSD"),
-    ),
-    expiryDate: dateSchema,
-    expiryDays: optionalNumber(z.number().int().min(0, "Expiry date is in the past")),
-    expiryCut: z.string().max(10, "Must be at most 10 characters"),
-    deliveryDate: dateSchema,
-    premiumDate: dateSchema,
-    settlementStyle: z.enum(settlementStyles),
-    settlementCcy: ccySchema,
-    // an option id; its options come from the API, per settlement style
-    settlementFixingSource: z.string(),
-  },
+  fields: [
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.notional.notionalCcy" },
+      position: { field: "notionalCcy" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.notional.notionalCcy", ccySchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.notional.amount" },
+      position: { field: "notionalAmount" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.notional.amount", optionalNumber(z.number().positive("Must be greater than 0"))] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.premiumCcy" },
+      position: { field: "premiumCcy" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.premiumCcy", ccySchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.strike" },
+      position: { field: "strike" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.strike", z.string().max(3, "Must be at most 3 characters")] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.callPut" },
+      position: { field: "callPut" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.callPut", optionalString(z.enum(["Call", "Put"]))] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.buySell" },
+      position: { field: "buySell" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.buySell", optionalString(z.enum(["Buy", "Sell"]))] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.ccyPair" },
+      position: { field: "ccyPair" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.ccyPair", optionalString(z.string().regex(/^[A-Z]{6}$/, "Must be 6 uppercase letters, e.g. EURUSD"))] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryDate" },
+      position: { field: "expiryDate" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryDate", dateSchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryDays" },
+      position: { field: "expiryDays" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryDays", optionalNumber(z.number().int().min(0, "Expiry date is in the past"))] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryCut" },
+      position: { field: "expiryCut" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.expiryCut", z.string().max(10, "Must be at most 10 characters")] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.deliveryDate" },
+      position: { field: "deliveryDate" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.deliveryDate", dateSchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.premiumDate" },
+      position: { field: "premiumDate" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.optionsCommon.base.premiumDate", dateSchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.settlementStyle" },
+      position: { field: "settlementStyle" },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.settlementStyle", z.enum(settlementStyles)] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.cashSettlement.settlementCcy" },
+      position: { field: "settlementCcy" },
+      visibility: { if: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.settlementStyle", "Cash"] },
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.cashSettlement.settlementCcy", ccySchema] },
+    },
+    {
+      props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.cashSettlement.settlementFixingSource" },
+      position: { field: "settlementFixingSource" },
+      // an option id; its options come from the API, per settlement style
+      validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.cashSettlement.settlementFixingSource", z.string()] },
+    },
+  ],
 
   rules: {
     deliveryDate: [

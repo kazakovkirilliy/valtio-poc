@@ -1,5 +1,6 @@
 import { isDealSetting } from "../dealSettings.ts";
 import { existenceDependencies } from "../fields.ts";
+import { canBeHidden } from "../products/productRegistry.ts";
 import { parseCellText } from "./cellValues.ts";
 import type { CellRef, CellView, CellWrite } from "./gridSource.ts";
 
@@ -40,8 +41,10 @@ export const pasteWrites = ({ data, range, rowCount, dataCells, cellAt }: PasteI
       const target = cellAt(range.fromRow + r, cell);
       if (text === undefined || !target) return;
       const { ref, view } = target;
-      // a missing cell is only worth writing if an earlier write can create it
-      const canExist = view !== null || (!isDealSetting(ref.fieldId) && existenceDependencies(ref.fieldId).length > 0);
+      // a missing cell is only worth writing if an earlier write can create (or show) it
+      const canExist =
+        view !== null ||
+        (!isDealSetting(ref.fieldId) && (existenceDependencies(ref.fieldId).length > 0 || canBeHidden(ref.fieldId)));
       const parsed = canExist && !view?.readOnly ? parseCellText(ref.fieldId, text, view) : null;
       if (parsed) writes.push({ ...ref, value: parsed.value });
       else skipped++;

@@ -34,7 +34,7 @@ export const createProductStore = (
     data: initialData ?? definition.createData($dealStore),
   } as AnyProductStore);
 
-  const stops = (Object.keys(definition.schemas) as ProductFieldId[]).map((fieldId) =>
+  const stops = (Object.keys(definition.fieldPaths) as ProductFieldId[]).map((fieldId) =>
     watchFieldValidation($dealStore, definition, productStore.data, productPath, fieldId),
   );
 

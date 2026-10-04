@@ -5,6 +5,8 @@ import {
   isEmptyBroadcast,
   isSyncedField,
 } from "./dealFields.ts";
+import { type DealReducer, dealStateOf, runDealLogic } from "./dealLogic/changes.ts";
+import { onStoreChanges } from "./dealLogic/dealLogic.ts";
 import { type DealSettingsState, isDealSetting, withSetting } from "./dealSettings.ts";
 import type { ProductFieldId } from "./fields.ts";
 import { type PathWrite, parsePath } from "./paths.ts";
@@ -35,7 +37,9 @@ const withDealField = (deal: DealFieldsState, fieldId: SyncedFieldId, value: unk
   Object.is(deal[fieldId], value) ? deal : { ...deal, [fieldId]: value };
 
 /**
- * Routes a batch of path writes (see `paths.ts`), in order, for any store:
+ * Routes a batch of path writes (see `paths.ts`), in order, for any store.
+ * The deal logic (`onStoreChanges`) runs first, and the changes it adds are
+ * routed with the batch, after the writes that caused them:
  * - a deal setting: the new settings (a hedge type stays one of its options);
  * - a synced field, from the deal or any product: the deal's value, and
  *   every product (two-way sync);
@@ -47,6 +51,7 @@ const withDealField = (deal: DealFieldsState, fieldId: SyncedFieldId, value: unk
 export const routeWrites = (
   state: { dealFields: DealFieldsState; settings: DealSettingsState; products: readonly DealProduct[] },
   writes: readonly PathWrite[],
+  reducers: readonly DealReducer[] = onStoreChanges,
 ): RoutedWrites => {
   let { dealFields, settings } = state;
   const products = new Map<string, { groupId: string; writes: ProductWrite[] }>();
@@ -60,7 +65,7 @@ export const routeWrites = (
     requests.push(...optionsRequestsFor(fieldId, value));
   };
 
-  for (const { path, value } of writes) {
+  for (const { path, value } of runDealLogic(dealStateOf(state), writes, reducers)) {
     const target = parsePath(path);
     if (!target) continue;
     if (target.kind === "deal") {

@@ -60,7 +60,7 @@ export const createPathGridSource = (deal: PathDeal): GridSource => {
     const definition = definitionOfData(product.data);
     return productCell(
       definition,
-      (id) => deal.readPath(productPath(product.groupId, columnId, definition.fieldPaths[id])),
+      (dataPath) => deal.readPath(productPath(product.groupId, columnId, dataPath)),
       key,
       key in definition.fieldPaths && deal.fieldIssues(columnId, key as ProductFieldId).length > 0,
       options,
