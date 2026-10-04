@@ -7,10 +7,14 @@ import { DATA, GROUPS, PRODUCTS } from "../paths.ts";
 
 export type ProductUi = { title: string; index: number };
 
-/** A field computed from others; read-only in the UI, never written by the user. */
+/**
+ * A field computed from others. Read-only, unless it has `write`: a write to
+ * it then writes the field it returns instead, and it is recomputed from that.
+ */
 export type DerivedField<Data> = {
   dependsOn: readonly ProductFieldId[];
   compute: (data: Data) => unknown;
+  write?: (value: unknown) => { fieldId: ProductFieldId; value: unknown };
 };
 
 /**

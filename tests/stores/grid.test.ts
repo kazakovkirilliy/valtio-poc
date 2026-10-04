@@ -46,7 +46,7 @@ describe.each(appNames)("%s grid source", (app) => {
     expect(grid.getCell("deal", "spotStream")?.readOnly).toBe(true);
     expect(grid.getCell(first, "spotStream")).toBeNull(); // deal-only
     expect(grid.getCell(first, "settlementFixingSource")).toBeNull(); // not Cash
-    expect(grid.getCell(first, "expiryDays")?.readOnly).toBe(true);
+    expect(grid.getCell(first, "expiryDays")?.readOnly).toBe(false); // derived, but writing it moves the expiry date
     expect(grid.getCell(first, "notionalCcy")?.hasError).toBe(true); // 7 characters
     expect(grid.getCell(first, "settlementStyle")?.options?.options.map(({ value }) => value)).toEqual(["Cash", "Delivery"]);
   });
@@ -76,17 +76,15 @@ describe.each(appNames)("%s grid source", (app) => {
     stop();
   });
 
-  it("broadcasts from the deal column; read-only and missing cells are never written", async () => {
+  it("broadcasts from the deal column; missing cells are never written", async () => {
     const [first, second] = productIds();
     const writes: CellWrite[] = [
       { columnId: "deal", fieldId: "strike", value: "9" },
-      { columnId: first, fieldId: "expiryDays", value: 5 },
       { columnId: first, fieldId: "settlementFixingSource", value: "4" }, // not Cash: no such field
     ];
     grid.write(writes);
     expect([grid.getCell(first, "strike")?.value, grid.getCell(second, "strike")?.value]).toEqual(["9", "9"]);
     expect(grid.getCell("deal", "strike")?.value).toBeUndefined();
-    expect(grid.getCell(first, "expiryDays")?.value).toBeNaN();
     expect(grid.getCell(first, "settlementFixingSource")).toBeNull();
   });
 

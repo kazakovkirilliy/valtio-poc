@@ -3,8 +3,16 @@ import { Model, idProp, model, modelAction, prop } from "mobx-keystone";
 import type { DealFieldsState } from "@shared/dealFields.ts";
 import { productUi } from "@shared/groups.ts";
 import { deleteValueByPath, setValueByPath } from "@shared/lib/path.ts";
-import { type ProductData, type ProductType, definitionOf } from "@shared/products/productRegistry.ts";
-import { type ProductWrite, definitionOfData, planProductWrites } from "@shared/products/productWrites.ts";
+import {
+  type ProductData,
+  type ProductType,
+  definitionOf,
+} from "@shared/products/productRegistry.ts";
+import {
+  type ProductWrite,
+  definitionOfData,
+  planProductWrites,
+} from "@shared/products/productWrites.ts";
 import { type FieldIssues, productIssues } from "@shared/validation.ts";
 
 /**
@@ -37,5 +45,13 @@ export class Product extends Model({
 }
 
 /** A new product, the `index`-th of its group, starting from the deal's values. */
-export const newProduct = (productType: ProductType, index: number, deal: DealFieldsState) =>
-  new Product({ title: productUi(productType, index).title, data: definitionOf(productType).createData(deal) });
+export const newProduct = (
+  productType: ProductType,
+  index: number,
+  deal: DealFieldsState,
+) => {
+  return new Product({
+    title: productUi(productType, index).title,
+    data: definitionOf(productType).createData(deal),
+  });
+};

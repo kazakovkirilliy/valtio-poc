@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStore } from "effector";
+import { dateInDays } from "@shared/lib/date.ts";
 import type { PathDeal } from "@shared/pathDeal.ts";
 import { type DealAdapter, appNames, createAdapter } from "./support/adapters.ts";
 import { installFakeApi, sleep } from "./support/fakeApi.ts";
@@ -61,12 +62,12 @@ describe.each(appNames)("%s: reading and writing by path", (app) => {
     // a deal broadcast reaches every product, whatever its own path
     deal.writePaths([{ path: "strike", value: "9" }]);
     expect([deal.readPath(strike(0, 0)), deal.readPath(strike(1, 0))]).toEqual(["9", "9"]);
-    // derived: computed, never written
+    // derived: computed from the expiry date; writing it moves the date
     deal.writePaths([{ path: path(0, 0, "optionsCommon.base.expiryDate"), value: "2999-01-01" }]);
-    const days = deal.readPath(path(0, 0, "optionsCommon.base.expiryDays"));
-    expect(days).toBeGreaterThan(0);
+    expect(deal.readPath(path(0, 0, "optionsCommon.base.expiryDays"))).toBeGreaterThan(0);
     deal.writePaths([{ path: path(0, 0, "optionsCommon.base.expiryDays"), value: 1 }]);
-    expect(deal.readPath(path(0, 0, "optionsCommon.base.expiryDays"))).toBe(days);
+    expect(deal.readPath(path(0, 0, "optionsCommon.base.expiryDays"))).toBe(1);
+    expect(deal.readPath(path(0, 0, "optionsCommon.base.expiryDate"))).toBe(dateInDays(1));
     // settings: a hedge type stays one of its options
     deal.writePaths([{ path: "isInternal", value: false }]);
     expect(deal.readPath("hedgeType")).toBe("d");

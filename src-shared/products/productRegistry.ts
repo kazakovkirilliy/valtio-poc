@@ -44,9 +44,11 @@ export const productTypeOf = (data: { productType: string }) =>
 export const readField = (data: ProductData, fieldId: ProductFieldId) =>
   getValueByPath(data, definitionOf(data.productType).fieldPaths[fieldId]);
 
-/** Derived fields are read-only. */
-export const isReadOnly = (definition: GenericProductDefinition, fieldId: ProductFieldId) =>
-  Boolean(definition.derived?.[fieldId]);
+/** Derived fields are read-only, unless they say how a write to them is made (`write`). */
+export const isReadOnly = (definition: GenericProductDefinition, fieldId: ProductFieldId) => {
+  const derived = definition.derived?.[fieldId];
+  return Boolean(derived && !derived.write);
+};
 
 /**
  * Whether a field shows in the grid, and is validated: its visibility

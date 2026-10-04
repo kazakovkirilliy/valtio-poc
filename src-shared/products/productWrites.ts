@@ -66,11 +66,12 @@ const unchanged = (data: ProductData) => ({ data, changes: [] as LeafChange[] })
  * changes that get there, in order.
  *
  * A path that is a declared field gets the field's rules: derived fields are
- * never written and are recomputed from what they depend on; a field the
- * product doesn't have (a fixing source without Cash) isn't written, and
- * fields that stop existing are removed. Any other path is written as is.
+ * recomputed from what they depend on, and a write to one writes the field
+ * it says (`write`) or nothing; a field the product doesn't have (a fixing
+ * source without Cash) isn't written, and fields that stop existing are
+ * removed. Any other path is written as is.
  */
-export const planProductWrite = (data: ProductData, write: ProductWrite) => {
+export const planProductWrite = (data: ProductData, write: ProductWrite): { data: ProductData; changes: LeafChange[] } => {
   const definition = definitionOfData(data);
   const fieldId = "fieldId" in write ? write.fieldId : fieldAtPath(definition, write.path);
   if (!fieldId) {
@@ -81,6 +82,9 @@ export const planProductWrite = (data: ProductData, write: ProductWrite) => {
   }
   const read = (id: ProductFieldId) => getValueByPath(data, definition.fieldPaths[id]);
   if (isReadOnly(definition, fieldId) || !fieldExists(fieldId, read)) return unchanged(data);
+  // a writable derived field (Expiry Days): the field it derives from is written, and it follows
+  const derived = definition.derived?.[fieldId];
+  if (derived?.write) return planProductWrite(data, derived.write(write.value));
   const path = definition.fieldPaths[fieldId];
   let next = setIn(data, path, write.value);
   if (next === data) return unchanged(data);

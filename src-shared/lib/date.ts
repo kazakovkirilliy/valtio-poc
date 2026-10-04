@@ -17,6 +17,20 @@ export const daysUntil = (isoDate: string): number => {
 };
 
 /**
+ * The ISO `YYYY-MM-DD` date `days` whole days from today (local time): the
+ * inverse of `daysUntil`. Empty unless `days` is a finite number.
+ */
+export const dateInDays = (days: unknown): string => {
+  if (typeof days !== "number" || !Number.isFinite(days)) return "";
+
+  const now = new Date();
+  // UTC midnight, as in daysUntil; Date.UTC rolls the day over months and years
+  const target = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + Math.round(days));
+
+  return new Date(target).toISOString().slice(0, 10);
+};
+
+/**
  * Whether ISO date `date` is on or after `reference`. ISO `YYYY-MM-DD`
  * strings compare correctly as strings; an empty date never fails.
  */

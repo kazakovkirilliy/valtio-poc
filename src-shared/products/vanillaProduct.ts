@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { daysUntil, isOnOrAfter } from "../lib/date.ts";
+import { dateInDays, daysUntil, isOnOrAfter } from "../lib/date.ts";
 import { optionalNumber, optionalString } from "../lib/schemas.ts";
 import { DEFAULT_SETTLEMENT_STYLE, settlementStyles } from "../settlementStyles.ts";
 import { type ProductUi, defineProduct } from "./productDefinition.ts";
@@ -136,6 +136,8 @@ export const vanillaProduct = defineProduct<VanillaProductStore["data"]>({
     expiryDays: {
       dependsOn: ["expiryDate"],
       compute: ({ optionsCommon: { base } }) => daysUntil(base.expiryDate),
+      // typing a number of days moves the expiry date that many days from today
+      write: (days) => ({ fieldId: "expiryDate", value: dateInDays(days) }),
     },
   },
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { dateInDays } from "@shared/lib/date.ts";
 import { type DealAdapter, appNames, createAdapter } from "./support/adapters.ts";
 import { installFakeApi } from "./support/fakeApi.ts";
 
@@ -73,11 +74,15 @@ describe.each(appNames)("%s deal", (app) => {
     expect(deal.read(1, "strike")).toBe("12");
   });
 
-  it("derives Expiry Days, read-only", () => {
+  it("derives Expiry Days; writing it moves Expiry Date", () => {
     deal.commit(0, "expiryDate", "2999-01-01");
     expect(deal.read(0, "expiryDays")).toBeGreaterThan(0);
-    deal.commit(0, "expiryDays", 5); // ignored
-    expect(deal.read(0, "expiryDays")).toBeGreaterThan(0);
+    deal.commit(0, "expiryDays", 5);
+    expect(deal.read(0, "expiryDays")).toBe(5);
+    expect(deal.read(0, "expiryDate")).toBe(dateInDays(5));
+    deal.commit(0, "expiryDays", NaN); // cleared: no date
+    expect(deal.read(0, "expiryDate")).toBe("");
+    expect(deal.read(0, "expiryDays")).toBeNaN();
     deal.commit(0, "expiryDate", "2000-01-01");
     expect(deal.read(0, "expiryDays")).toBeLessThan(0);
     expect(deal.issues(0, "expiryDays")).toEqual(["Expiry date is in the past"]);

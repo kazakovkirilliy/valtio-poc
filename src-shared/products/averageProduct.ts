@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { daysUntil, isOnOrAfter } from "../lib/date.ts";
+import { dateInDays, daysUntil, isOnOrAfter } from "../lib/date.ts";
 import { optionalNumber, optionalString } from "../lib/schemas.ts";
 import { DEFAULT_SETTLEMENT_STYLE, settlementStyles } from "../settlementStyles.ts";
 import { type ProductUi, defineProduct } from "./productDefinition.ts";
@@ -87,6 +87,7 @@ export const averageProduct = defineProduct<AverageProductStore["data"]>({
       position: { field: "expiryDays" },
       validation: { schema: ["groups.$GROUP_ID.products.$PRODUCT_ID.data.avroCommon.base.expiryDays", optionalNumber(z.number().int().min(0, "Expiry date is in the past"))] },
     },
+
     {
       props: { path: "groups.$GROUP_ID.products.$PRODUCT_ID.data.avroCommon.base.expiryCut" },
       position: { field: "expiryCut" },
@@ -136,6 +137,8 @@ export const averageProduct = defineProduct<AverageProductStore["data"]>({
     expiryDays: {
       dependsOn: ["expiryDate"],
       compute: ({ avroCommon: { base } }) => daysUntil(base.expiryDate),
+      // typing a number of days moves the expiry date that many days from today
+      write: (days) => ({ fieldId: "expiryDate", value: dateInDays(days) }),
     },
   },
 
