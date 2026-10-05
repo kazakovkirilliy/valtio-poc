@@ -95,14 +95,16 @@ for (const app of apps) {
       await paste(page, "7");
       await expect.poll(() => rowTexts(page, "Strike")).toEqual(["", "1", "7", "7"]);
 
-      // a dropdown takes a label; read-only and unknown values are skipped
+      // a dropdown takes a label; unknown values are skipped
       await (await cell(page, "Settlement Style", 1)).click();
       await paste(page, "Cash\tBogus\tDelivery");
       await expect.poll(() => rowTexts(page, "Settlement Style")).toEqual(["", "Cash", "Delivery", "Delivery"]);
       await expect(pasteStatus(page)).toHaveText("Pasted 2 cells, skipped 1");
+      // a number pasted into Expiry Days is written, like typing it
       await (await cell(page, "Expiry Days", 1)).click();
       await paste(page, "5");
-      await expect(pasteStatus(page)).toHaveText("Pasted 0 cells, skipped 1");
+      await expect(pasteStatus(page)).toHaveText("Pasted 1 cell");
+      await expect.poll(() => rowTexts(page, "Expiry Days")).toEqual(["", "5", "", ""]);
     });
 
     test("a paste into the deal column broadcasts and syncs", async ({ page }) => {

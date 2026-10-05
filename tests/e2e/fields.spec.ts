@@ -1,3 +1,4 @@
+import { dateInDays } from "../../src-shared/lib/date.ts";
 import { apps, cell, editCell, expect, openApp, rowTexts, test } from "./support/fixtures.ts";
 
 const ERROR = /grid-cell--error/;
@@ -53,16 +54,14 @@ for (const app of apps) {
       await expect.poll(() => rowTexts(page, "Strike")).toEqual(["", "42", "", ""]);
     });
 
-    test("calculated cells can't be edited", async ({ page }) => {
+    test("Expiry Days follows Expiry Date, and typing days moves the date", async ({ page }) => {
       await editCell(page, "Expiry Date", 1, "2999-01-01");
       const days = await cell(page, "Expiry Days", 1);
-      await expect(days).toHaveClass(/grid-cell--readonly/);
-      const before = await days.textContent();
-      await days.click();
-      await page.keyboard.press("Enter");
-      await expect(page.locator(".grid-editor")).toHaveCount(0);
-      await page.keyboard.type("5");
-      await expect(days).toHaveText(before ?? "");
+      await expect(days).not.toHaveClass(/grid-cell--readonly/);
+      expect(Number(await days.textContent())).toBeGreaterThan(0);
+      await editCell(page, "Expiry Days", 1, "5");
+      await expect(days).toHaveText("5");
+      await expect(await cell(page, "Expiry Date", 1)).toHaveText(dateInDays(5));
     });
 
     test("Delivery Date can't be before Expiry Date", async ({ page }) => {

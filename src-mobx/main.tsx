@@ -8,6 +8,9 @@ import App from "./App.tsx";
 // every state change must go through an action
 configure({ enforceActions: "always" });
 
+// dev only: the import is removed from production builds, with everything it loads
+if (import.meta.env.DEV) await import("./devtools.ts");
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />

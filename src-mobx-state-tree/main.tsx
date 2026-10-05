@@ -6,6 +6,9 @@ import App from "./App.tsx";
 
 // MST protects its own trees: only actions can change them
 
+// dev only: the import is removed from production builds, with everything it loads
+if (import.meta.env.DEV) await import("./devtools.ts");
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
