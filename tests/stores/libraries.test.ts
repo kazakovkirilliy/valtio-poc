@@ -225,6 +225,40 @@ describe("zustand", () => {
     expect(deal.getState()).toBe(after);
     stop();
   });
+
+  it("options arriving start one calculation, not two: products reconcile before the load counts as done", async () => {
+    const api = installFakeApi({ Cash: [{ id: 3, name: "Shared" }, { id: 4, name: "C4" }] });
+    const { sleep } = await import("./support/fakeApi.ts");
+    const { createStore } = await import("zustand/vanilla");
+    const { createDealStore } = await import("../../src-zustand/stores/dealStore.ts");
+    const deal = createDealStore(createStore(() => ({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: true })));
+    const { actions } = deal.getState();
+    actions.addNewGroup("VanillaGroup");
+    const { groupIds, groups } = deal.getState();
+    const group = groups[groupIds[0]];
+    const product = { id: group.productIds[0], ...group.products[group.productIds[0]] };
+    actions.writePaths([
+      { path: "notionalCcy", value: "USD" },
+      { path: fieldPath(group.id, product, "settlementStyle"), value: "Cash" },
+    ]);
+    await sleep(60); // Cash's first option taken (3), and the deal priced
+    api.lists.Cash = [{ id: 4, name: "C4" }]; // 3 is no longer offered
+    const started = new Set<number>(); // by request id: a listener can see one state twice
+    const stop = deal.subscribe(({ calc }) => {
+      if (calc.status === "calculating") started.add(calc.requestId);
+    });
+
+    actions.cloneGroup(group.id); // the copy, still valid on 3, reloads Cash's options
+    await sleep(60);
+    const fixings = deal.getState().groupIds.map((id) => {
+      const { products, productIds } = deal.getState().groups[id];
+      return readField(products[productIds[0]].data, "settlementFixingSource");
+    });
+    expect(fixings).toEqual(["4", "4"]); // both reconciled
+    expect(deal.getState().calc.status).toBe("done");
+    expect(started.size).toBe(1); // priced once, on the reconciled data: not on 3 first
+    stop();
+  });
 });
 
 describe("jotai", () => {
@@ -272,6 +306,42 @@ describe("jotai", () => {
     expect(notified).toHaveLength(2); // same values: nothing set
     expect(store.get(edited.dataAtom)).toBe(data);
     stops.forEach((stop) => stop());
+    deal.dispose();
+  });
+
+  it("options arriving start one calculation, not two: products reconcile before the load counts as done", async () => {
+    const api = installFakeApi({ Cash: [{ id: 3, name: "Shared" }, { id: 4, name: "C4" }] });
+    const { sleep } = await import("./support/fakeApi.ts");
+    const { atom, getDefaultStore } = await import("jotai/vanilla");
+    const { createDealStore } = await import("../../src-jotai/stores/dealStore.ts");
+    const store = getDefaultStore();
+    const deal = createDealStore(atom({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: true }));
+    deal.actions.addNewGroup("VanillaGroup");
+    const group = store.get(deal.groupsAtom)[store.get(deal.groupIdsAtom)[0]];
+    const product = { id: group.productIds[0], data: store.get(group.products[group.productIds[0]].dataAtom) };
+    deal.actions.writePaths([
+      { path: "notionalCcy", value: "USD" },
+      { path: fieldPath(group.id, product, "settlementStyle"), value: "Cash" },
+    ]);
+    await sleep(60); // Cash's first option taken (3), and the deal priced
+    api.lists.Cash = [{ id: 4, name: "C4" }]; // 3 is no longer offered
+    const started = new Set<number>(); // by request id: a listener reads the latest value, so can see one twice
+    const stop = store.sub(deal.calcAtom, () => {
+      const { status, requestId } = store.get(deal.calcAtom);
+      if (status === "calculating") started.add(requestId);
+    });
+
+    deal.actions.cloneGroup(group.id); // the copy, still valid on 3, reloads Cash's options
+    await sleep(60);
+    const fixings = store.get(deal.groupIdsAtom).map((id) => {
+      const { products, productIds } = store.get(deal.groupsAtom)[id];
+      return readField(store.get(products[productIds[0]].dataAtom), "settlementFixingSource");
+    });
+    expect(fixings).toEqual(["4", "4"]); // both reconciled
+    expect(store.get(deal.calcAtom).status).toBe("done");
+    expect(started.size).toBe(1); // priced once, on the reconciled data: not on 3 first
+    stop();
+    deal.dispose();
   });
 });
 

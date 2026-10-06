@@ -16,7 +16,7 @@ export type OptionsStoreState = {
   /** Loads in flight. */
   pending: number;
   actions: {
-    load(source: OptionsSource, param: string): Promise<readonly Option[] | undefined>;
+    load(source: OptionsSource, param: string, onLoaded?: (options: readonly Option[]) => void): Promise<void>;
   };
 };
 
@@ -31,8 +31,12 @@ export const optionsStore = createStore<OptionsStoreState>()(
       byKey: {},
       pending: 0,
       actions: {
-        /** (Re)loads; resolves with the options, or `undefined` on failure. */
-        async load(source, param) {
+        /**
+         * (Re)loads. `onLoaded` gets the options before they count as loaded
+         * (not on failure): what it writes lands while the load is still
+         * pending, so whatever waits for it (autocalc) sees the result.
+         */
+        async load(source, param, onLoaded) {
           const key = optionsKey(source, param);
           // the entry and the count in one `set`: one notification
           set(
@@ -42,19 +46,18 @@ export const optionsStore = createStore<OptionsStoreState>()(
           );
           try {
             const options = await source.load(param);
+            onLoaded?.(options);
             set(
               ({ byKey, pending }) => ({ byKey: withEntry(byKey, key, optionsLoaded(byKey[key], options)), pending: pending - 1 }),
               false,
               "loaded",
             );
-            return options;
           } catch {
             set(
               ({ byKey, pending }) => ({ byKey: withEntry(byKey, key, optionsFailed(byKey[key])), pending: pending - 1 }),
               false,
               "loadFailed",
             );
-            return undefined;
           }
         },
       },

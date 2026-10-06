@@ -41,8 +41,8 @@ Lines per app folder, comments included. Everything library-independent (routing
 | mobx-keystone | 454 | 159 | 31 | 24 | 668 | 13 |
 | Legend-State | 565 | 173 | 33 | 22 | 793 | 11 |
 | Redux Toolkit | 662 | 172 | 17 | 32 | 883 | 19 |
-| **Zustand** | 620 | 202 | 41 | 21 | 884 | 14 |
-| **Jotai** | 546 | 195 | 64 | 21 | 826 | 13 |
+| **Zustand** | 635 | 202 | 41 | 21 | 899 | 14 |
+| **Jotai** | 566 | 195 | 68 | 21 | 850 | 13 |
 | Effector Nested | 623 | 187 | 77 | 58 | 945 | 14 |
 | Effector Model | 614 | 187 | 64 | 58 | 923 | 13 |
 
@@ -50,15 +50,15 @@ Zustand and Jotai mirror Valtio file for file, so they can be diffed directly. `
 
 | File | Valtio | Zustand | Jotai |
 | --- | ---: | ---: | ---: |
-| `stores/dealStore.ts` | 224 | 252 | 243 |
+| `stores/dealStore.ts` | 224 | 264 | 255 |
 | `stores/groupStore.ts` | 58 | 46 | 47 |
 | `stores/productStore.ts` | 45 | 29 | 41 |
 | `stores/validation.ts` | 52 | 42 | — (a derived atom per product) |
-| `stores/multiTabStore.ts` | 65 | 83 | 66 |
-| `stores/optionsStore.ts` | 46 | 69 | 51 |
+| `stores/multiTabStore.ts` | 65 | 83 | 70 |
+| `stores/optionsStore.ts` | 46 | 72 | 55 |
 | `stores/pathDeal.ts` | 124 | 99 | 98 |
 | `stores/subscribe.ts` + `hooks/useProxyValue.ts` | 63 | — (`useStore`) | — (`useAtomValue`) |
-| `devtools.ts` | — (in `multiTabStore.ts`) | 41 | 64 |
+| `devtools.ts` | — (in `multiTabStore.ts`) | 41 | 68 |
 
 ## Zustand (`src-zustand/`)
 
@@ -73,7 +73,7 @@ Zustand and Jotai mirror Valtio file for file, so they can be diffed directly. `
   - A `set` with a partial always notifies, even when nothing changed, so skip the `set` instead.
   - Listeners run synchronously in subscription order, and an earlier listener can `set` again. Compare with what you saw last, not with `prev`.
   - Load options *before* the write's `set`. Otherwise autocalc sees `pending === 0` and calculates too early.
-  - Two stores can't update together. When options arrive, Zustand can start one calculation that the reconcile then makes outdated. The final price is right; Redux avoids the extra request because both happen in one dispatch.
+  - Two stores can't update together, so when options arrive the products are reconciled *before* the options store counts the load as done (`load(source, param, onLoaded)`). The other order lets autocalc price data the reconcile is about to change, which costs an extra, superseded request.
   - Put `persist` outside `devtools`: `persist`'s own `setState` drops the action name.
   - Time travel restores from JSON. Each store's `serialize.replacer` leaves out the actions, deal stores and stream, and NaN comes back as `null`.
 
@@ -90,6 +90,7 @@ Zustand and Jotai mirror Valtio file for file, so they can be diffed directly. `
 - **Devtools:** Jotai's own devtools are React-only. `devtools.ts` wraps `store.set` and reports each outermost write atom by its `debugLabel` through the shared action log. There is no time travel.
 - **Gotchas:**
   - Never call `store.set` inside a write atom, because it flushes the outer batch midway. Use the write's `set` (that's why options expose `loadAtom`).
+  - When options arrive, their state, the products' reconcile (`onLoaded(set, options)`) and the end of the load are one write atom, so autocalc never prices data that is about to change.
   - After an `await`, each `set` is its own batch. Group follow-up writes in a write atom.
   - In Vitest the default store outlives `vi.resetModules()`. Tests stay isolated because every atom is recreated per test.
-  - `atomWithStorage` also syncs the switches across browser tabs. That isn't required, and no test covers it.
+  - `atomWithStorage`'s default storage follows other browser tabs. Its `subscribe` is removed so the switches behave like the other apps (only Effector Nested syncs across tabs).

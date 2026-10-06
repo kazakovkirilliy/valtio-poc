@@ -277,7 +277,7 @@ const jotai = async (): Promise<DealAdapter> => {
     },
     calculate: () => deal.actions.calculate(),
     setAutocalc: (enabled) => store.set(devtoolsAtom, (devtools) => ({ ...devtools, isAutocalcEnabled: enabled })),
-    dispose: () => {},
+    dispose: () => deal.dispose(), // the store outlives the test: drop the deal's subscriptions
   });
 };
 

@@ -55,6 +55,10 @@ export type DealStore = StoreApi<DealState>;
 const isUnchanged = (state: DealState, next: Partial<DealState>) =>
   (Object.keys(next) as (keyof DealState)[]).every((key) => Object.is(state[key], next[key]));
 
+// deals are numbered in the order they're made, like their tabs (none is
+// ever removed): each is its own instance in the Redux DevTools
+let dealCount = 0;
+
 /**
  * Deal factory: one zustand store per deal, its state plain, immutable data.
  * Every write is a batch of dot paths, routed by the shared rules and applied
@@ -64,6 +68,7 @@ const isUnchanged = (state: DealState, next: Partial<DealState>) =>
  */
 export const createDealStore = (devtoolsStore: DevToolsStore): DealStore => {
   const spotPriceStream = createSpotPriceStream();
+  dealCount += 1;
 
   /** Every product with where it lives, in display order. */
   const dealProducts = (): DealProduct[] => {
@@ -100,11 +105,14 @@ export const createDealStore = (devtoolsStore: DevToolsStore): DealStore => {
     calc: calcInputsChanged(dealStore.getState().calc),
   });
 
-  /** Loads options; when they arrive, every product still on that parameter reconciles. */
+  /**
+   * Loads options. When they arrive, every product still on that parameter
+   * reconciles before they count as loaded: autocalc, which waits for them,
+   * never prices data that is about to change.
+   */
   const loadOptions = (requests: readonly OptionsRequest[]) => {
     for (const request of requests) {
-      void optionsStore.getState().actions.load(request.source, request.param).then((options) => {
-        if (!options) return;
+      void optionsStore.getState().actions.load(request.source, request.param, (options) => {
         const { groups } = dealStore.getState();
         let next = groups;
         for (const { groupId, productId, data } of dealProducts()) {
@@ -198,15 +206,19 @@ export const createDealStore = (devtoolsStore: DevToolsStore): DealStore => {
             if (!selectIsReady(state, optionsStore.getState().pending)) return;
             const requestId = state.calc.requestId + 1;
             set({ calc: calcStarted(state.calc, requestId) }, false, "calculate");
+            // a superseded request's response leaves `calc` as it is: no `set`, nobody notified
+            const settle = (calc: CalcState, action: string) => {
+              if (calc !== get().calc) set({ calc }, false, action);
+            };
             calculatePrice(dealProducts().map(({ data }) => data)).then(
-              (price) => set((state) => ({ calc: calcSucceeded(state.calc, requestId, price) }), false, "calculated"),
-              () => set((state) => ({ calc: calcFailed(state.calc, requestId) }), false, "calculationFailed"),
+              (price) => settle(calcSucceeded(get().calc, requestId, price), "calculated"),
+              () => settle(calcFailed(get().calc, requestId), "calculationFailed"),
             );
           },
         },
       }),
       {
-        name: "Deal (Zustand)",
+        name: `Deal ${dealCount} (Zustand)`,
         enabled: import.meta.env.DEV,
         // time travel sets the state back from its JSON: leave out what isn't
         // data (the actions, the stream), so a jump keeps the live ones

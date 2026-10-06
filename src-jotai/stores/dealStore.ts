@@ -17,8 +17,8 @@ import {
   isCalcReady,
   needsAutocalc,
 } from "@shared/calc.ts";
-import { type DealFieldsState, initialDealFields } from "@shared/dealFields.ts";
-import { type DealSettingsState, dealSettings, hedgeTypesFor, initialDealSettings } from "@shared/dealSettings.ts";
+import { type DealFieldsState, initialDealFields, syncedFieldIds } from "@shared/dealFields.ts";
+import { type DealSettingsState, dealSettings, initialDealSettings } from "@shared/dealSettings.ts";
 import { routeWrites } from "@shared/dealWrites.ts";
 import { dealOptionsRequests } from "@shared/fields.ts";
 import { type GroupType, groupTitle } from "@shared/groups.ts";
@@ -50,7 +50,6 @@ export type DealStore = {
   settingsAtom: PrimitiveAtom<DealSettingsState>;
   groupsAtom: PrimitiveAtom<Record<string, GroupStore>>;
   groupIdsAtom: PrimitiveAtom<string[]>; // display order; each group's `ui.index` mirrors it
-  hedgeTypesAtom: Atom<readonly string[]>;
   spotPriceStream: SpotPriceStream;
   hasValidationErrorsAtom: Atom<boolean>;
   /** No validation errors and no request pending: ready to calculate. */
@@ -65,6 +64,8 @@ export type DealStore = {
     /** Calculates now, if ready (the manual Calculate). */
     calculate(): void;
   };
+  /** Unsubscribes the deal from the store and stops its stream. */
+  dispose(): void;
 };
 
 /**
@@ -89,32 +90,34 @@ export const createDealStore = (devtoolsAtom: Atom<DealDevtools>): DealStore => 
       });
     });
 
-  /** Replaces a product's data by the shared rules; sets nothing when nothing changed. */
+  /** Replaces a product's data by the shared rules; whether it changed (nothing is set if not). */
   const applyProductWrites = (get: Getter, set: Setter, product: ProductStore, writes: readonly ProductWrite[]) => {
     const { data, changes } = planProductWrites(get(product.dataAtom), writes);
-    if (!changes.length) return;
-    set(product.dataAtom, data);
-    // any product edit outdates the price (and supersedes a calculation in flight)
-    set(dealStore.calcAtom, calcInputsChanged);
+    if (changes.length) set(product.dataAtom, data);
+    return changes.length > 0;
   };
 
-  /** Options arrived: every product still on that parameter reconciles, in one batch. */
+  /** Options arrived: every product still on that parameter reconciles. */
   const reconcileOptionsAtom = atom(null, (get, set, request: OptionsRequest, options: readonly Option[]) => {
+    let changed = false;
     for (const { product, data } of dealProducts(get)) {
-      applyProductWrites(get, set, product, reconcileWrites(data, request, options));
+      if (applyProductWrites(get, set, product, reconcileWrites(data, request, options))) changed = true;
     }
+    if (changed) set(dealStore.calcAtom, calcInputsChanged);
   });
 
   /**
    * Loads options; when they arrive, every product still on that parameter
-   * reconciles. `set` is the calling action's: the load is counted in that
-   * action's batch, so autocalc never sees the edit without it.
+   * reconciles, in the batch that stores them and ends the load. `set` is
+   * the calling action's: the load is counted in that action's batch. So
+   * autocalc never sees the edit without its load, or the load done without
+   * the products it changes.
    */
   const loadOptions = (set: Setter, requests: readonly OptionsRequest[]) => {
     for (const request of requests) {
-      void set(optionsStore.loadAtom, request.source, request.param).then((options) => {
-        if (options) store.set(reconcileOptionsAtom, request, options);
-      });
+      void set(optionsStore.loadAtom, request.source, request.param, (set, options) =>
+        set(reconcileOptionsAtom, request, options),
+      );
     }
   };
 
@@ -159,20 +162,24 @@ export const createDealStore = (devtoolsAtom: Atom<DealDevtools>): DealStore => 
     set(dealStore.calcAtom, calcInputsChanged); // so do removed ones
   });
   const writePathsAtom = atom(null, (get, set, writes: readonly PathWrite[]) => {
+    const dealFields = get(dealStore.dealFieldsAtom);
     const settings = get(dealStore.settingsAtom);
-    const routed = routeWrites(
-      { dealFields: get(dealStore.dealFieldsAtom), settings, products: dealProducts(get) },
-      writes,
-    );
-    // the router hands back the same deal fields when none changed: setting them notifies nothing
-    set(dealStore.dealFieldsAtom, routed.dealFields);
-    // but new settings for any settings write: set only when a value changed
-    if (dealSettings.some(({ id }) => routed.settings[id] !== settings[id])) {
+    const routed = routeWrites({ dealFields, settings, products: dealProducts(get) }, writes);
+    // the router can hand back new objects with the same values (a field
+    // written back, any settings write): set only what changed
+    if (syncedFieldIds.some((id) => !Object.is(routed.dealFields[id], dealFields[id]))) {
+      set(dealStore.dealFieldsAtom, routed.dealFields);
+    }
+    if (dealSettings.some(({ id }) => !Object.is(routed.settings[id], settings[id]))) {
       set(dealStore.settingsAtom, routed.settings);
     }
+    let changed = false;
     for (const [productId, { groupId, writes: productWrites }] of routed.products) {
-      applyProductWrites(get, set, get(dealStore.groupsAtom)[groupId].products[productId], productWrites);
+      const product = get(dealStore.groupsAtom)[groupId].products[productId];
+      if (applyProductWrites(get, set, product, productWrites)) changed = true;
     }
+    // any product edit outdates the price (and supersedes a calculation in flight), once
+    if (changed) set(dealStore.calcAtom, calcInputsChanged);
     loadOptions(set, routed.requests);
   });
   const calculateAtom = atom(null, (get, set) => {
@@ -191,14 +198,12 @@ export const createDealStore = (devtoolsAtom: Atom<DealDevtools>): DealStore => 
   removeGroupAtom.debugLabel = "removeGroup";
   writePathsAtom.debugLabel = "writePaths";
   calculateAtom.debugLabel = "calculate";
-  reconcileOptionsAtom.debugLabel = "reconcileOptions";
 
   const dealStore: DealStore = {
     dealFieldsAtom: atom(initialDealFields),
     settingsAtom: atom(initialDealSettings),
     groupsAtom: atom<Record<string, GroupStore>>({}),
     groupIdsAtom: atom<string[]>([]),
-    hedgeTypesAtom: atom((get) => hedgeTypesFor(get(dealStore.settingsAtom).isInternal)),
     spotPriceStream, // outside jotai: ticks never set an atom
     hasValidationErrorsAtom: atom((get) =>
       dealProducts(get).some(({ product }) => Object.keys(get(product.issuesAtom)).length > 0),
@@ -212,12 +217,15 @@ export const createDealStore = (devtoolsAtom: Atom<DealDevtools>): DealStore => 
       writePaths: (writes) => store.set(writePathsAtom, writes),
       calculate: () => store.set(calculateAtom),
     },
+    dispose: () => {
+      stops.forEach((stop) => stop());
+      spotPriceStream.stop();
+    },
   };
 
   const followSpotPriceStream = () =>
     store.get(devtoolsAtom).isSpotPriceStreamEnabled ? spotPriceStream.start() : spotPriceStream.stop();
   followSpotPriceStream();
-  store.sub(devtoolsAtom, followSpotPriceStream);
 
   // the deal column's own options (its default parameters), loaded with the deal
   loadOptions(store.set, dealOptionsRequests);
@@ -235,9 +243,13 @@ export const createDealStore = (devtoolsAtom: Atom<DealDevtools>): DealStore => 
       dealStore.actions.calculate();
     }
   };
-  store.sub(dealStore.calcAtom, autocalc);
-  store.sub(dealStore.isReadyAtom, autocalc);
-  store.sub(devtoolsAtom, autocalc);
+
+  const stops = [
+    store.sub(devtoolsAtom, followSpotPriceStream),
+    store.sub(dealStore.calcAtom, autocalc),
+    store.sub(dealStore.isReadyAtom, autocalc),
+    store.sub(devtoolsAtom, autocalc),
+  ];
 
   return dealStore;
 };

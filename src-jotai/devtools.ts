@@ -11,7 +11,7 @@
  * - `?debug` in the URL: the same actions, logged to the console.
  */
 import { atom, getDefaultStore } from "jotai/vanilla";
-import { createActionLog } from "@shared/reduxDevtools.ts";
+import { createActionLog, isDebugEnabled } from "@shared/reduxDevtools.ts";
 import { multiTabStore } from "./stores/multiTabStore.ts";
 import { optionsStore } from "./stores/optionsStore.ts";
 
@@ -58,7 +58,11 @@ store.set = (target, ...args) => {
   }
 };
 
-// a change outside any action: set after an `await`
-store.sub(stateAtom, () => {
-  if (depth === 0) report("(outside an action)", []);
-});
+// a change outside any action (set after an `await`) shows as a new state of
+// the whole app: watched only when something takes the reports, since that
+// mounts every atom and rebuilds the state on every change
+if (isDebugEnabled || "__REDUX_DEVTOOLS_EXTENSION__" in window) {
+  store.sub(stateAtom, () => {
+    if (depth === 0) report("(outside an action)", []);
+  });
+}

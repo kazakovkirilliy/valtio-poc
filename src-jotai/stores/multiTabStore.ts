@@ -1,5 +1,5 @@
 import { type PrimitiveAtom, atom, getDefaultStore } from "jotai/vanilla";
-import { atomWithStorage } from "jotai/vanilla/utils";
+import { atomWithStorage, createJSONStorage } from "jotai/vanilla/utils";
 import { type DealStore, createDealStore } from "./dealStore.ts";
 import { uuid } from "@shared/lib/uuid.ts";
 
@@ -10,11 +10,15 @@ export type DevToolsStore = {
   isAutocalcEnabled: boolean;
 };
 
-// persisted by jotai itself (localStorage, as JSON): read at once, saved on every change
+// localStorage, as JSON, minus `subscribe`: with it, the switches would follow
+// other browser tabs, which only the Effector Nested app does
+const { subscribe: _otherTabs, ...devtoolsStorage } = createJSONStorage<DevToolsStore>();
+
+// persisted by jotai itself: read at once, saved on every change
 const devtoolsAtom = atomWithStorage<DevToolsStore>(
   "jotai-devtools",
   { isSpotPriceStreamEnabled: true, isAutocalcEnabled: true },
-  undefined, // the default storage
+  devtoolsStorage,
   { getOnInit: true }, // the stored value from the start, not once something subscribes
 );
 
