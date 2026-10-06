@@ -1,40 +1,14 @@
 import { proxy } from "valtio";
 import { deepClone } from "valtio/utils";
-import { type DealStore } from "./dealStore.ts";
-import {
-  type AnyProductStore,
-  type ProductType,
-  createProduct,
-  productDefinitions,
-} from "./products/productRegistry.ts";
-import { uuid } from "../lib/uuid.ts";
-
-/**
- * Every group type and the products it holds. A group's type and products
- * are fixed at creation; clone/remove act on whole groups only.
- */
-export const groupDefinitions = {
-  VanillaGroup: { label: "Vanilla Group", productTypes: ["VanillaProduct"] },
-  Strategy: {
-    label: "Strategy",
-    productTypes: ["VanillaProduct", "VanillaProduct"],
-  },
-  Average: { label: "Average", productTypes: ["AverageProduct"] },
-} as const satisfies Record<
-  string,
-  { label: string; productTypes: readonly ProductType[] }
->;
-
-export type GroupType = keyof typeof groupDefinitions;
-
-export const groupTypes = Object.keys(groupDefinitions) as GroupType[];
+import { type GroupType, groupDefinitions, productUi } from "@shared/groups.ts";
+import { uuid } from "@shared/lib/uuid.ts";
+import type { AnyProductStore } from "@shared/products/productRegistry.ts";
+import type { DealStore } from "./dealStore.ts";
+import { createProductStore } from "./productStore.ts";
 
 export type GroupStore = {
   id: string;
-  ui: {
-    title: string;
-    index: number;
-  };
+  ui: { title: string; index: number }; // set by the deal on insert
   groupType: GroupType;
   products: Record<string, AnyProductStore>;
   productIds: string[]; // display order; each product's `ui.index` mirrors it
@@ -53,7 +27,7 @@ export const createGroupStore = (
   const groupId = uuid();
   const groupStore = proxy<GroupStore>({
     id: groupId,
-    ui: { title: "", index: 0 }, // set by the deal on insert
+    ui: { title: "", index: 0 },
     groupType,
     products: {},
     productIds: [],
@@ -64,15 +38,13 @@ export const createGroupStore = (
   groupDefinitions[groupType].productTypes.forEach((productType, index) => {
     const productId = uuid();
     const sourceProduct = source?.products[source.productIds[index]];
-    const { productStore, dispose } = createProduct(
-      productType,
+    const { productStore, dispose } = createProductStore(
       $dealStore,
+      productType,
       `groups.${groupId}.products.${productId}`,
-      sourceProduct && deepClone(sourceProduct),
+      productUi(productType, index),
+      sourceProduct && deepClone(sourceProduct.data),
     );
-    productStore.ui.index = index;
-    productStore.ui.title = `${productDefinitions[productType].label} #${index + 1}`;
-
     groupStore.products[productId] = productStore;
     groupStore.productIds.push(productId);
     disposers.push(dispose);

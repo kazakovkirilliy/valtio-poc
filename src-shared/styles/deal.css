@@ -1,0 +1,20 @@
+.deal {
+  background: var(--surface);
+  padding-top: var(--space);
+}
+
+.deal__toolbar {
+  display: flex;
+  gap: var(--space);
+}
+
+.deal__calc {
+  display: flex;
+  align-items: center;
+  gap: var(--space);
+  margin-bottom: var(--space);
+}
+
+.deal__calc-hint {
+  font-size: 12px;
+}

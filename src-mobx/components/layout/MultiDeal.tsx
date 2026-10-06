@@ -1,11 +1,11 @@
-import "./MultiDeal.css";
+import "@shared/styles/multiDeal.css";
 import { memo } from "react";
 import { observer } from "mobx-react-lite";
 import clsx from "clsx";
 import { Deal } from "./Deal.tsx";
 import { DealStoreProvider } from "../providers/DealStoreProvider.tsx";
 import type { DealStore } from "../../stores/dealStore.ts";
-import { useOnMount } from "../../hooks/useOnMount.ts";
+import { useOnMount } from "@shared/hooks/useOnMount.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
 
 const SingleDeal = memo(

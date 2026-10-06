@@ -1,5 +1,6 @@
 import { observer } from "mobx-react-lite";
-import { groupDefinitions, groupTypes } from "../../stores/groupStore.ts";
+import { CalcBar } from "@shared/components/CalcBar.tsx";
+import { groupDefinitions, groupTypes } from "@shared/groups.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
@@ -8,6 +9,14 @@ export const DealHeader = observer(() => {
   const { devtools } = multiTabStore;
 
   return (
+    <>
+    <CalcBar
+      calc={deal.calc}
+      isReady={deal.isReady}
+      isAutocalcEnabled={devtools.isAutocalcEnabled}
+      onToggleAutocalc={devtools.toggleAutocalcEnabled}
+      onCalculate={deal.calculate}
+    />
     <div className="deal__toolbar">
       {groupTypes.map((groupType) => (
         <button
@@ -24,6 +33,7 @@ export const DealHeader = observer(() => {
         {devtools.isSpotPriceStreamEnabled ? "Enabled" : "Disabled"})
       </button>
     </div>
+    </>
   );
 });
 

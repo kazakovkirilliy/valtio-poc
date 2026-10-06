@@ -1,52 +1,79 @@
-import { autorun, observable } from "mobx";
 import {
-  type BroadcastFieldId,
-  type SyncedFieldId,
-  broadcastFieldIds,
-} from "./dealFields.ts";
-import { type FieldModel, createFieldModel } from "./fieldModel.ts";
-import type { FieldId } from "./fields.ts";
+  autorun,
+  observable,
+  observableRef,
+  reaction,
+  runInAction,
+} from "mobx";
+import { calculatePrice } from "@shared/api/calculate.ts";
 import {
-  type GroupStore,
-  type GroupType,
-  createGroupStore,
-  groupDefinitions,
-} from "./groupStore.ts";
-import type { AnyProduct } from "./products/productRegistry.ts";
+  type CalcState,
+  calcFailed,
+  calcInputsChanged,
+  calcStarted,
+  calcSucceeded,
+  initialCalcState,
+  isCalcReady,
+  needsAutocalc,
+} from "@shared/calc.ts";
+import { type DealFieldsState, initialDealFields } from "@shared/dealFields.ts";
+import { type DealSettingsState, hedgeTypesFor, initialDealSettings } from "@shared/dealSettings.ts";
+import { type DealProduct, routeWrites } from "@shared/dealWrites.ts";
+import { dealOptionsRequests } from "@shared/fields.ts";
+import { deleteValueByPath, setValueByPath } from "@shared/lib/path.ts";
+import type { PathWrite } from "@shared/paths.ts";
+import type { ProductData } from "@shared/products/productRegistry.ts";
+import {
+  type OptionsRequest,
+  type ProductWrite,
+  optionsRequestsOf,
+  planProductWrites,
+  reconcileWrites,
+  uniqueRequests,
+} from "@shared/products/productWrites.ts";
+import { type GroupType, groupTitle } from "@shared/groups.ts";
 import {
   type SpotPriceStream,
   createSpotPriceStream,
-} from "./spotPriceStream.ts";
+} from "@shared/spotPriceStream.ts";
+import { type GroupStore, createGroupStore } from "./groupStore.ts";
+import { optionsStore } from "./optionsStore.ts";
+import type { Product } from "./productStore.ts";
 
 /** What a deal needs from the app-wide developer settings. */
-type DealDevtools = { readonly isSpotPriceStreamEnabled: boolean };
+type DealDevtools = {
+  readonly isSpotPriceStreamEnabled: boolean;
+  readonly isAutocalcEnabled: boolean;
+};
 
-export type DealStore = {
-  notionalCcy: string;
-  premiumCcy: string;
+export type DealStore = DealFieldsState & DealSettingsState & {
   groups: Record<string, GroupStore>;
   groupIds: string[]; // display order; each group's `ui.index` mirrors it
-  isInternal: boolean;
-  /** Kept outside MobX: ticks never notify observers (see SpotPriceField). */
+  /** Kept outside MobX: ticks never notify observers; the grid repaints just that cell. */
   readonly spotPriceStream: SpotPriceStream;
-  /** One model per deal field, for the inputs. */
-  readonly fields: Partial<Record<FieldId, FieldModel>>;
-  readonly hedgeTypes: string[];
+  readonly hedgeTypes: readonly string[];
   /** Every product of every group, in display order. */
-  readonly products: AnyProduct[];
+  readonly products: Product[];
   readonly hasValidationErrors: boolean;
+  calc: CalcState;
+  /** No validation errors and no request pending: ready to calculate. */
+  readonly isReady: boolean;
   addNewGroup(groupType: GroupType): void;
   cloneGroup(groupId: string): void;
   removeGroup(groupId: string): void;
-  setSynced(id: SyncedFieldId, value: string): void;
-  broadcast(id: BroadcastFieldId, value: unknown): void;
+  /** Writes values at dot paths, in order, as one action: an edit, a paste, anything. */
+  writePaths(writes: readonly PathWrite[]): void;
+  /** Calculates now, if ready (the manual Calculate). */
+  calculate(): void;
+  markInputsChanged(): void;
   dispose(): void;
 };
 
 /**
- * Deal factory. Syncs and broadcasts are actions that write every product
- * directly, and derived values (expiry days, validation) are computeds:
- * there is no subscription graph to wire up, order, or dispose.
+ * Deal factory. Every write is a batch of dot paths, routed by the shared
+ * rules and applied in one action, so every reaction (autocalc, inputs
+ * changed, the grid) runs once, after the last write. Derived values (expiry
+ * days, validation) are computeds: nothing to wire up, order, or dispose.
  */
 export const createDealStore = (devtools: DealDevtools): DealStore => {
   const spotPriceStream = createSpotPriceStream();
@@ -56,8 +83,29 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     deal.groupIds.forEach((groupId, index) => {
       const group = deal.groups[groupId];
       group.ui.index = index;
-      group.ui.title = `${groupDefinitions[group.groupType].label} #${index + 1}`;
+      group.ui.title = groupTitle(group.groupType, index);
     });
+  };
+
+  /** Writes into a live product's data, leaf by leaf, by the shared rules (derived fields are computeds). */
+  const applyProductWrites = (data: ProductData, writes: readonly ProductWrite[]) => {
+    for (const change of planProductWrites(data, writes).changes) {
+      if ("remove" in change) deleteValueByPath(data, change.path);
+      else if (!change.derived) setValueByPath(data, change.path, change.value);
+    }
+  };
+
+  /** Loads options; when they arrive, every product still on that parameter reconciles. */
+  const loadOptions = (requests: readonly OptionsRequest[]) => {
+    for (const request of requests) {
+      void optionsStore.load(request.source, request.param).then((options) => {
+        if (!options) return;
+        // after an `await` we're outside the action: wrap the writes
+        runInAction(() => {
+          for (const { data } of deal.products) applyProductWrites(data, reconcileWrites(data, request, options));
+        });
+      });
+    }
   };
 
   const insertGroup = (
@@ -70,53 +118,30 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
     deal.groups[group.id] = group;
     deal.groupIds.splice(position, 0, group.id);
     reindexGroups();
-  };
-
-  /**
-   * The deal column's fields. Notional/Premium Ccy show the deal value and
-   * commit through the two-way sync. Every other field is a broadcast: it
-   * holds nothing (shows empty) and commits into every product.
-   */
-  const fields: Partial<Record<FieldId, FieldModel>> = {
-    notionalCcy: createFieldModel({
-      read: () => deal.notionalCcy,
-      commit: (value) => deal.setSynced("notionalCcy", String(value)),
-    }),
-    premiumCcy: createFieldModel({
-      read: () => deal.premiumCcy,
-      commit: (value) => deal.setSynced("premiumCcy", String(value)),
-    }),
-    ...Object.fromEntries(
-      broadcastFieldIds.map((id) => [
-        id,
-        createFieldModel({
-          read: () => undefined,
-          commit: (value) => {
-            if (value === "" || Number.isNaN(value)) return; // nothing to send
-            deal.broadcast(id, value);
-          },
-        }),
-      ]),
-    ),
+    loadOptions(uniqueRequests(group.productList.flatMap(({ data }) => optionsRequestsOf(data))));
   };
 
   const deal: DealStore = observable<DealStore>(
     {
-      notionalCcy: "1xxxxxx",
-      premiumCcy: "2",
+      ...initialDealFields,
       groups: {},
       groupIds: [],
-      isInternal: true,
+      ...initialDealSettings,
       spotPriceStream,
-      fields,
       get hedgeTypes() {
-        return deal.isInternal ? ["abc"] : ["def"];
+        return hedgeTypesFor(deal.isInternal);
       },
       get products() {
-        return deal.groupIds.flatMap((groupId) => deal.groups[groupId].productList);
+        return deal.groupIds.flatMap(
+          (groupId) => deal.groups[groupId].productList,
+        );
       },
       get hasValidationErrors() {
         return deal.products.some((product) => product.hasValidationErrors);
+      },
+      calc: initialCalcState,
+      get isReady() {
+        return isCalcReady(deal.hasValidationErrors, optionsStore.pending);
       },
       addNewGroup(groupType) {
         insertGroup(groupType, deal.groupIds.length);
@@ -137,23 +162,71 @@ export const createDealStore = (devtools: DealDevtools): DealStore => {
         delete deal.groups[groupId];
         reindexGroups();
       },
-      /** Two-way sync, as one action: the deal value and every product's copy. */
-      setSynced(id, value) {
-        deal[id] = value;
-        deal.products.forEach((product) => product.setField(id, value));
+      writePaths(writes) {
+        const products: DealProduct[] = deal.groupIds.flatMap((groupId) =>
+          deal.groups[groupId].productList.map((product) => ({ groupId, productId: product.id, data: product.data })),
+        );
+        const { notionalCcy, premiumCcy, notionalAmount, isInternal, hedgeType } = deal;
+        const routed = routeWrites(
+          { dealFields: { notionalCcy, premiumCcy, notionalAmount }, settings: { isInternal, hedgeType }, products },
+          writes,
+        );
+        // same-value writes don't notify: only what changed does
+        Object.assign(deal, routed.dealFields, routed.settings);
+        for (const [productId, { groupId, writes: productWrites }] of routed.products) {
+          applyProductWrites(deal.groups[groupId].products[productId].data, productWrites);
+        }
+        loadOptions(routed.requests);
       },
-      /** Pushes one value into every product; the deal keeps nothing. */
-      broadcast(id, value) {
-        deal.products.forEach((product) => product.setField(id, value));
+      calculate() {
+        if (!deal.isReady) return;
+        const requestId = deal.calc.requestId + 1;
+        deal.calc = calcStarted(deal.calc, requestId);
+        calculatePrice(deal.products.map((product) => product.data)).then(
+          (price) =>
+            runInAction(
+              () => (deal.calc = calcSucceeded(deal.calc, requestId, price)),
+            ),
+          () =>
+            runInAction(() => (deal.calc = calcFailed(deal.calc, requestId))),
+        );
+      },
+      markInputsChanged() {
+        deal.calc = calcInputsChanged(deal.calc);
       },
       dispose() {
         stopSpotPriceStream();
+        stopInputsReaction();
+        stopAutocalc();
         spotPriceStream.stop();
       },
     },
-    { spotPriceStream: false, fields: false, dispose: false },
+    { spotPriceStream: false, dispose: false, calc: observableRef },
     { autoBind: true },
   );
+
+  // the deal column's own options (its default parameters), loaded with the deal
+  loadOptions(dealOptionsRequests);
+
+  // any product edit outdates the price (and supersedes a calculation in flight);
+  // serializing reads, so tracks, every field of every product
+  const stopInputsReaction = reaction(
+    () => JSON.stringify(deal.products.map((product) => product.data)),
+    () => deal.markInputsChanged(),
+  );
+  // autocalc: whenever the deal is ready and its price missing or outdated.
+  // An autorun, not a reaction: a calculation can be superseded in the same
+  // batch that started it, leaving the condition true → true, which a
+  // reaction would not fire for. Run as an action: writable, and untracked.
+  const stopAutocalc = autorun(() => {
+    if (
+      devtools.isAutocalcEnabled &&
+      deal.isReady &&
+      needsAutocalc(deal.calc)
+    ) {
+      runInAction(() => deal.calculate());
+    }
+  });
 
   const stopSpotPriceStream = autorun(() =>
     devtools.isSpotPriceStreamEnabled
