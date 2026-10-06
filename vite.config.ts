@@ -30,6 +30,7 @@ export default defineConfig({
       // index.html links to every version of the app: valtio (src-valtio/),
       // MobX (src-mobx/), MobX-State-Tree (src-mobx-state-tree/),
       // mobx-keystone (src-mobx-keystone/), Legend-State (src-legend-state/),
+      // Redux Toolkit (src-redux/),
       // nested Effector (src-effector-nested/) and @effector/model
       // (src-effector-model/)
       input: {
@@ -39,6 +40,7 @@ export default defineConfig({
         'mobx-state-tree': 'mobx-state-tree.html',
         'mobx-keystone': 'mobx-keystone.html',
         'legend-state': 'legend-state.html',
+        redux: 'redux.html',
         'effector-nested': 'effector-nested.html',
         'effector-model': 'effector-model.html',
       },

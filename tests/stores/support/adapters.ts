@@ -12,8 +12,8 @@ import { type ProductData, definitionOf, productTypeOf } from "@shared/products/
  * the app being migrated would. Each app only adds what isn't on it (the
  * calculation, the autocalc switch, the deal-wide validation flag).
  */
-export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "legend-state" | "effector-nested" | "effector-model";
-export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "effector-nested", "effector-model"];
+export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "legend-state" | "redux" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "redux", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -219,6 +219,28 @@ const legendState = async (): Promise<DealAdapter> => {
   });
 };
 
+const redux = async (): Promise<DealAdapter> => {
+  const { createApp } = await import("../../../src-redux/stores/store.ts");
+  const { addDeal, calculate } = await import("../../../src-redux/stores/thunks.ts");
+  const { autocalcToggled } = await import("../../../src-redux/stores/devtoolsSlice.ts");
+  const { selectHasValidationErrors } = await import("../../../src-redux/stores/selectors.ts");
+  const { createPathDeal } = await import("../../../src-redux/stores/pathDeal.ts");
+  const { store, dispose } = createApp({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const dealId = store.dispatch(addDeal());
+  return pathAdapter(createPathDeal(store, dealId), {
+    hasValidationErrors: () => selectHasValidationErrors(store.getState(), dealId),
+    calc: () => {
+      const { status, price } = store.getState().deals[dealId].calc;
+      return { status, price };
+    },
+    calculate: () => store.dispatch(calculate(dealId)),
+    setAutocalc: (enabled) => {
+      if (store.getState().devtools.isAutocalcEnabled !== enabled) store.dispatch(autocalcToggled());
+    },
+    dispose,
+  });
+};
+
 const effectorNested = async (): Promise<DealAdapter> => {
   const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
@@ -254,5 +276,5 @@ const effectorModel = async (): Promise<DealAdapter> => {
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "legend-state": legendState, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
+  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "legend-state": legendState, redux, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };

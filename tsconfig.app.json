@@ -23,5 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src-shared", "src-valtio", "src-mobx", "src-mobx-state-tree", "src-mobx-keystone", "src-legend-state", "src-effector-nested", "src-effector-model"]
+  "include": ["src-shared", "src-valtio", "src-mobx", "src-mobx-state-tree", "src-mobx-keystone", "src-legend-state", "src-redux", "src-effector-nested", "src-effector-model"]
 }

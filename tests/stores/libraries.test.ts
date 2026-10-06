@@ -145,6 +145,46 @@ describe("legend-state", () => {
   });
 });
 
+describe("redux", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write copies only the path to its product, and only when a value changes", async () => {
+    const { createApp } = await import("../../src-redux/stores/store.ts");
+    const { addDeal, addGroup, cloneGroup, writePaths } = await import("../../src-redux/stores/thunks.ts");
+    const { store, dispose } = createApp({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+    const dealId = store.dispatch(addDeal());
+    store.dispatch(addGroup(dealId, "Strategy"));
+    store.dispatch(addGroup(dealId, "Average"));
+    const before = store.getState().deals[dealId];
+    const [strategy, average] = before.groupIds.map((id) => before.groups[id]);
+    const [edited, sibling] = strategy.productIds.map((id) => strategy.products[id]);
+    const write = () =>
+      store.dispatch(writePaths(dealId, [{ path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" }]));
+
+    write();
+    const after = store.getState().deals[dealId];
+    expect(after.groups[strategy.id].products[edited.id].data).not.toBe(edited.data);
+    expect(after.groups[strategy.id].products[edited.id].data.cashSettlement).toBe(edited.data.cashSettlement); // shared
+    expect(after.groups[strategy.id].products[sibling.id]).toBe(sibling);
+    expect(after.groups[average.id]).toBe(average);
+    expect(after.dealFields).toBe(before.dealFields);
+
+    const { deals } = store.getState();
+    write();
+    expect(store.getState().deals).toBe(deals); // same value: the same state
+
+    store.dispatch(cloneGroup(dealId, average.id)); // immutable: the clone shares its source's data
+    const cloned = store.getState().deals[dealId];
+    const copy = cloned.groups[cloned.groupIds[2]];
+    expect(copy.id).not.toBe(average.id);
+    expect(copy.products[copy.productIds[0]].data).toBe(average.products[average.productIds[0]].data);
+    dispose();
+  });
+});
+
 describe("effector-nested", () => {
   beforeEach(() => {
     installFakeApi();
