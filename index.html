@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>State store comparison</title>
+    <title>test</title>
     <style>
       :root {
         --text: #6b6375;
@@ -64,7 +64,7 @@
   <body>
     <main>
       <h1>Deal editor</h1>
-      <p>The same app, built with five state-management libraries.</p>
+      <p>The same app, built with several state-management libraries.</p>
       <ul>
         <li>
           <a href="/valtio.html">
@@ -79,28 +79,42 @@
           </a>
         </li>
         <li>
-          <a href="/effector.html">
-            <strong>Effector</strong> — <code>src-effector/</code><br />
-            Events, pure reducers and keyed stores.
+          <a href="/mobx-state-tree.html">
+            <strong>MobX-State-Tree</strong> — <code>src-mobx-state-tree/</code><br />
+            Typed models with views and actions; each product's data one immutable value.
           </a>
         </li>
         <li>
-          <a href="/jotai.html">
-            <strong>Jotai</strong> — <code>src-jotai/</code><br />
-            Field atoms, shared currencies and derived validation.
+          <a href="/mobx-keystone.html">
+            <strong>mobx-keystone</strong> — <code>src-mobx-keystone/</code><br />
+            Class models with decorators; each product's data a plain object, observable to the leaf.
           </a>
         </li>
         <li>
-          <a href="/zustand.html">
-            <strong>Zustand</strong> — <code>src-zustand/</code><br />
-            Immutable actions and explicit field selectors.
+          <a href="/legend-state.html">
+            <strong>Legend-State</strong> — <code>src-legend-state/</code><br />
+            One observable tree of plain data, set leaf by leaf; listeners get the paths that changed.
+          </a>
+        </li>
+        <li>
+          <a href="/redux.html">
+            <strong>Redux</strong> — <code>src-redux/</code><br />
+            Redux Toolkit: one store of immutable data, events as actions, everything else derived.
+          </a>
+        </li>
+        <li>
+          <a href="/effector-nested.html">
+            <strong>Effector Nested</strong> — <code>src-effector-nested/</code><br />
+            The same, with nested state: groups hold their products by id.
+          </a>
+        </li>
+        <li>
+          <a href="/effector-model.html">
+            <strong>Effector Model</strong> — <code>src-effector-model/</code><br />
+            @effector/model: a store per group and product, read and written by dot path.
           </a>
         </li>
       </ul>
     </main>
-    <script>
-      const version = new URLSearchParams(location.search).get('store');
-      if (['valtio', 'jotai', 'zustand'].includes(version)) location.replace(`/${version}.html`);
-    </script>
   </body>
 </html>

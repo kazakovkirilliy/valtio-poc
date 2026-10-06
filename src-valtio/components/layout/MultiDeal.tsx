@@ -1,4 +1,4 @@
-import "./MultiDeal.css";
+import "@shared/styles/multiDeal.css";
 import { Deal } from "./Deal.tsx";
 import { useProxyKeys, useProxyValue } from "../../hooks/useProxyValue.ts";
 import { multiTabStore } from "../../stores/multiTabStore.ts";
@@ -6,7 +6,7 @@ import { DealStoreProvider } from "../providers/DealStoreProvider.tsx";
 import clsx from "clsx";
 import { memo } from "react";
 import type { DealStore } from "../../stores/dealStore.ts";
-import { useOnMount } from "../../hooks/useOnMount.ts";
+import { useOnMount } from "@shared/hooks/useOnMount.ts";
 
 const SingleDeal = memo(
   ({ isActive, dealStore }: { isActive: boolean; dealStore: DealStore }) => {

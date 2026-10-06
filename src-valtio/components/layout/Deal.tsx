@@ -1,19 +1,15 @@
-import "../columns/columns.css";
-import "./Deal.css";
-import { memo } from "react";
-import { columnsGridTemplateRows } from "../../stores/fields.ts";
-import { LabelColumn } from "../columns/LabelColumn.tsx";
-import { GroupColumn } from "../columns/GroupColumn.tsx";
-import { useOnMount } from "../../hooks/useOnMount.ts";
-import { useProxyArray } from "../../hooks/useProxyValue.ts";
-import { DealColumn } from "../columns/DealColumn.tsx";
+import "@shared/styles/deal.css";
+import { memo, useMemo } from "react";
+import { DealGrid } from "@shared/grid/DealGrid.tsx";
+import { useOnMount } from "@shared/hooks/useOnMount.ts";
+import { createPathGridSource } from "@shared/grid/pathGridSource.ts";
+import { createPathDeal } from "../../stores/pathDeal.ts";
 import { DealHeader } from "./DealHeader.tsx";
 import { useDealStore } from "../providers/DealStoreProvider.tsx";
 
 export const Deal = memo(() => {
   const dealStore = useDealStore();
-  // re-renders only when groups are added, cloned, removed or reordered
-  const groupIds = useProxyArray(dealStore.groupIds);
+  const source = useMemo(() => createPathGridSource(createPathDeal(dealStore)), [dealStore]);
 
   useOnMount(() => {
     dealStore.actions.addNewGroup("VanillaGroup");
@@ -22,17 +18,7 @@ export const Deal = memo(() => {
   return (
     <section className="deal">
       <DealHeader />
-
-      <div
-        className="columns"
-        style={{ gridTemplateRows: columnsGridTemplateRows }}
-      >
-        <DealColumn />
-        <LabelColumn />
-        {groupIds.map((groupId) => (
-          <GroupColumn key={groupId} groupId={groupId} />
-        ))}
-      </div>
+      <DealGrid source={source} />
     </section>
   );
 });
