@@ -12,8 +12,8 @@ import { type ProductData, definitionOf, productTypeOf } from "@shared/products/
  * the app being migrated would. Each app only adds what isn't on it (the
  * calculation, the autocalc switch, the deal-wide validation flag).
  */
-export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "effector-nested" | "effector-model";
-export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "effector-nested", "effector-model"];
+export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "legend-state" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -204,6 +204,21 @@ const mobxKeystone = async (): Promise<DealAdapter> => {
   });
 };
 
+const legendState = async (): Promise<DealAdapter> => {
+  const { observable } = await import("@legendapp/state");
+  const { createDealStore } = await import("../../../src-legend-state/stores/dealStore.ts");
+  const { createPathDeal } = await import("../../../src-legend-state/stores/pathDeal.ts");
+  const devtools$ = observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const deal = createDealStore(devtools$);
+  return pathAdapter(createPathDeal(deal), {
+    hasValidationErrors: () => deal.hasValidationErrors$.get(),
+    calc: () => ({ status: deal.deal$.calc.status.peek(), price: deal.deal$.calc.price.peek() }),
+    calculate: () => deal.calculate(),
+    setAutocalc: (enabled) => devtools$.isAutocalcEnabled.set(enabled),
+    dispose: () => deal.dispose(),
+  });
+};
+
 const effectorNested = async (): Promise<DealAdapter> => {
   const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
@@ -239,5 +254,5 @@ const effectorModel = async (): Promise<DealAdapter> => {
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
+  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "legend-state": legendState, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };

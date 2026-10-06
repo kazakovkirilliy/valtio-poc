@@ -29,14 +29,16 @@ export default defineConfig({
     rolldownOptions: {
       // index.html links to every version of the app: valtio (src-valtio/),
       // MobX (src-mobx/), MobX-State-Tree (src-mobx-state-tree/),
-      // mobx-keystone (src-mobx-keystone/), nested Effector
-      // (src-effector-nested/) and @effector/model (src-effector-model/)
+      // mobx-keystone (src-mobx-keystone/), Legend-State (src-legend-state/),
+      // nested Effector (src-effector-nested/) and @effector/model
+      // (src-effector-model/)
       input: {
         index: 'index.html',
         valtio: 'valtio.html',
         mobx: 'mobx.html',
         'mobx-state-tree': 'mobx-state-tree.html',
         'mobx-keystone': 'mobx-keystone.html',
+        'legend-state': 'legend-state.html',
         'effector-nested': 'effector-nested.html',
         'effector-model': 'effector-model.html',
       },

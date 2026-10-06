@@ -14,6 +14,9 @@ importers:
       '@effector/model-react':
         specifier: ^0.0.8
         version: 0.0.8(effector@23.4.4)
+      '@legendapp/state':
+        specifier: 3.0.0-beta.48
+        version: 3.0.0-beta.48(react@19.3.0)
       clsx:
         specifier: latest
         version: 2.1.1
@@ -398,6 +401,14 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@legendapp/state@3.0.0-beta.48':
+    resolution: {integrity: sha512-aa7vpUSoBHnXQhYf2x/10C0w1EiesegRhR7LuxnIcEPyZzZyuSF2mevf1jphlh0zzqwIJm9QxnsayDNn8/kwcA==}
+    peerDependencies:
+      expo-sqlite: ^15.0.0
+    peerDependenciesMeta:
+      expo-sqlite:
+        optional: true
 
   '@msw/url@0.1.2':
     resolution: {integrity: sha512-DdeBLQxQ+ZrtmwEmaj7GQ7lbzPCgbbbyAqOz/I4ulo68hwBpfdNvQJ5bmihJUkAAKOeCmqCIG3OFZGosqFN4mA==}
@@ -1954,6 +1965,12 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@legendapp/state@3.0.0-beta.48(react@19.3.0)':
+    dependencies:
+      use-sync-external-store: 1.7.0(react@19.3.0)
+    transitivePeerDependencies:
+      - react
 
   '@msw/url@0.1.2': {}
 

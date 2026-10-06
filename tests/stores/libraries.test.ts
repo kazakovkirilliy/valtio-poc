@@ -115,6 +115,36 @@ describe("mobx-keystone", () => {
   });
 });
 
+describe("legend-state", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write sets only its own leaf, and only when its value changes", async () => {
+    const { observable } = await import("@legendapp/state");
+    const { createDealStore } = await import("../../src-legend-state/stores/dealStore.ts");
+    const deal = createDealStore(observable({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }));
+    deal.addNewGroup("Strategy");
+    deal.addNewGroup("Average");
+    const { groupIds, groups } = deal.deal$.peek();
+    const strategy = groups[groupIds[0]];
+    const edited = strategy.products[strategy.productIds[0]];
+    const changed: string[] = [];
+    const stop = deal.deal$.groups.onChange(({ changes }) => changed.push(...changes.map(({ path }) => path.join("."))));
+    const path = fieldPath(strategy.id, edited, "expiryCut");
+
+    deal.writePaths([{ path, value: "TK15" }]);
+    expect(changed).toEqual([path.slice("groups.".length)]); // one leaf: no sibling, no other group
+    expect(readField(edited.data, "expiryCut")).toBe("TK15"); // the plain data, written in place
+
+    deal.writePaths([{ path, value: "TK15" }]);
+    expect(changed).toHaveLength(1); // same value: nothing set
+    stop();
+    deal.dispose();
+  });
+});
+
 describe("effector-nested", () => {
   beforeEach(() => {
     installFakeApi();
