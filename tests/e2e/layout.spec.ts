@@ -35,7 +35,7 @@ for (const app of apps) {
 }
 
 test("the landing page links to every app", async ({ page }) => {
-  for (const [link, app] of [["Valtio", "valtio"], ["MobX", "mobx"], ["MobX-State-Tree", "mobx-state-tree"], ["mobx-keystone", "mobx-keystone"], ["Legend-State", "legend-state"], ["Redux", "redux"], ["Effector Nested", "effector-nested"], ["Effector Model", "effector-model"]] as const) {
+  for (const [link, app] of [["Valtio", "valtio"], ["MobX", "mobx"], ["MobX-State-Tree", "mobx-state-tree"], ["mobx-keystone", "mobx-keystone"], ["Legend-State", "legend-state"], ["Redux", "redux"], ["Zustand", "zustand"], ["Jotai", "jotai"], ["Effector Nested", "effector-nested"], ["Effector Model", "effector-model"]] as const) {
     await page.goto("/");
     await page.getByRole("link", { name: new RegExp(`^${link} —`) }).click();
     await expect(page).toHaveURL(new RegExp(`/${app}\\.html$`));

@@ -12,8 +12,8 @@ import { type ProductData, definitionOf, productTypeOf } from "@shared/products/
  * the app being migrated would. Each app only adds what isn't on it (the
  * calculation, the autocalc switch, the deal-wide validation flag).
  */
-export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "legend-state" | "redux" | "effector-nested" | "effector-model";
-export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "redux", "effector-nested", "effector-model"];
+export type AppName = "valtio" | "mobx" | "mobx-state-tree" | "mobx-keystone" | "legend-state" | "redux" | "zustand" | "jotai" | "effector-nested" | "effector-model";
+export const appNames: AppName[] = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "redux", "zustand", "jotai", "effector-nested", "effector-model"];
 
 type GroupType = "VanillaGroup" | "Strategy" | "Average";
 
@@ -241,6 +241,46 @@ const redux = async (): Promise<DealAdapter> => {
   });
 };
 
+const zustand = async (): Promise<DealAdapter> => {
+  const { createStore } = await import("zustand/vanilla");
+  const { createDealStore } = await import("../../../src-zustand/stores/dealStore.ts");
+  const { createPathDeal } = await import("../../../src-zustand/stores/pathDeal.ts");
+  const { selectHasValidationErrors } = await import("../../../src-zustand/stores/validation.ts");
+  // the deal reads the switches from a store of their own; give it a plain one
+  const devtools = createStore(() => ({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }));
+  const deal = createDealStore(devtools);
+  return pathAdapter(createPathDeal(deal), {
+    hasValidationErrors: () => selectHasValidationErrors(deal.getState()),
+    calc: () => {
+      const { status, price } = deal.getState().calc;
+      return { status, price };
+    },
+    calculate: () => deal.getState().actions.calculate(),
+    setAutocalc: (enabled) => devtools.setState({ isAutocalcEnabled: enabled }),
+    dispose: () => {},
+  });
+};
+
+const jotai = async (): Promise<DealAdapter> => {
+  const { atom, getDefaultStore } = await import("jotai/vanilla");
+  const { createDealStore } = await import("../../../src-jotai/stores/dealStore.ts");
+  const { createPathDeal } = await import("../../../src-jotai/stores/pathDeal.ts");
+  // the app's store: jotai's default one, kept across tests (each test's atoms are new)
+  const store = getDefaultStore();
+  const devtoolsAtom = atom({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false });
+  const deal = createDealStore(devtoolsAtom);
+  return pathAdapter(createPathDeal(deal), {
+    hasValidationErrors: () => store.get(deal.hasValidationErrorsAtom),
+    calc: () => {
+      const { status, price } = store.get(deal.calcAtom);
+      return { status, price };
+    },
+    calculate: () => deal.actions.calculate(),
+    setAutocalc: (enabled) => store.set(devtoolsAtom, (devtools) => ({ ...devtools, isAutocalcEnabled: enabled })),
+    dispose: () => deal.dispose(), // the store outlives the test: drop the deal's subscriptions
+  });
+};
+
 const effectorNested = async (): Promise<DealAdapter> => {
   const { createEvent, createStore } = await import("effector");
   const { createDealStore } = await import("../../../src-effector-nested/stores/dealStore.ts");
@@ -276,5 +316,5 @@ const effectorModel = async (): Promise<DealAdapter> => {
 /** A fresh deal, with fresh modules (no state shared between tests). */
 export const createAdapter = async (app: AppName): Promise<DealAdapter> => {
   vi.resetModules();
-  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "legend-state": legendState, redux, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
+  return { valtio, mobx, "mobx-state-tree": mobxStateTree, "mobx-keystone": mobxKeystone, "legend-state": legendState, redux, zustand, jotai, "effector-nested": effectorNested, "effector-model": effectorModel }[app]();
 };

@@ -19,6 +19,8 @@ is its own folder and HTML entry; everything library-independent lives in
 | mobx-keystone | `src-mobx-keystone/` | `mobx-keystone.html` |
 | Legend-State (v3 beta) | `src-legend-state/` | `legend-state.html` |
 | Redux Toolkit | `src-redux/` | `redux.html` |
+| Zustand | `src-zustand/` | `zustand.html` |
+| Jotai | `src-jotai/` | `jotai.html` |
 | Effector, nested state | `src-effector-nested/` | `effector-nested.html` |
 | @effector/model | `src-effector-model/` | `effector-model.html` |
 

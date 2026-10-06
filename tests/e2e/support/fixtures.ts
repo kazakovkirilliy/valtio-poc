@@ -1,6 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-export const apps = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "redux", "effector-nested", "effector-model"] as const;
+export const apps = ["valtio", "mobx", "mobx-state-tree", "mobx-keystone", "legend-state", "redux", "zustand", "jotai", "effector-nested", "effector-model"] as const;
 export type App = (typeof apps)[number];
 
 export const FIXING_SOURCES_URL = "https://jsonplaceholder.typicode.com/users";

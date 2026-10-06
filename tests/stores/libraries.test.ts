@@ -185,6 +185,166 @@ describe("redux", () => {
   });
 });
 
+describe("zustand", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write copies only the path to its product, notifies once per batch, and nothing when no value changes", async () => {
+    const { createStore } = await import("zustand/vanilla");
+    const { createDealStore } = await import("../../src-zustand/stores/dealStore.ts");
+    const deal = createDealStore(createStore(() => ({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false })));
+    const { actions } = deal.getState();
+    actions.addNewGroup("Strategy");
+    actions.addNewGroup("Average");
+    const before = deal.getState();
+    const [strategy, average] = before.groupIds.map((id) => before.groups[id]);
+    const [edited, sibling] = strategy.productIds.map((id) => ({ id, ...strategy.products[id] }));
+    let notified = 0;
+    const stop = deal.subscribe(() => notified++);
+    const write = () =>
+      actions.writePaths([
+        { path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" },
+        { path: fieldPath(strategy.id, edited, "strike"), value: "1" },
+      ]);
+
+    write();
+    expect(notified).toBe(1); // two writes, one `set`
+    const after = deal.getState();
+    const data = after.groups[strategy.id].products[edited.id].data;
+    expect(data).not.toBe(edited.data);
+    expect(getValueByPath(data, "optionsCommon")).not.toBe(getValueByPath(edited.data, "optionsCommon")); // the path to the fields is copied …
+    expect(data.cashSettlement).toBe(edited.data.cashSettlement); // … nothing else
+    expect(after.groups[strategy.id].products[sibling.id]).toBe(strategy.products[sibling.id]);
+    expect(after.groups[average.id]).toBe(average);
+    expect(after.calc).not.toBe(before.calc); // the price outdated in the same `set`
+
+    write();
+    expect(notified).toBe(1); // same values: no `set` at all
+    expect(deal.getState()).toBe(after);
+    stop();
+  });
+
+  it("options arriving start one calculation, not two: products reconcile before the load counts as done", async () => {
+    const api = installFakeApi({ Cash: [{ id: 3, name: "Shared" }, { id: 4, name: "C4" }] });
+    const { sleep } = await import("./support/fakeApi.ts");
+    const { createStore } = await import("zustand/vanilla");
+    const { createDealStore } = await import("../../src-zustand/stores/dealStore.ts");
+    const deal = createDealStore(createStore(() => ({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: true })));
+    const { actions } = deal.getState();
+    actions.addNewGroup("VanillaGroup");
+    const { groupIds, groups } = deal.getState();
+    const group = groups[groupIds[0]];
+    const product = { id: group.productIds[0], ...group.products[group.productIds[0]] };
+    actions.writePaths([
+      { path: "notionalCcy", value: "USD" },
+      { path: fieldPath(group.id, product, "settlementStyle"), value: "Cash" },
+    ]);
+    await sleep(60); // Cash's first option taken (3), and the deal priced
+    api.lists.Cash = [{ id: 4, name: "C4" }]; // 3 is no longer offered
+    const started = new Set<number>(); // by request id: a listener can see one state twice
+    const stop = deal.subscribe(({ calc }) => {
+      if (calc.status === "calculating") started.add(calc.requestId);
+    });
+
+    actions.cloneGroup(group.id); // the copy, still valid on 3, reloads Cash's options
+    await sleep(60);
+    const fixings = deal.getState().groupIds.map((id) => {
+      const { products, productIds } = deal.getState().groups[id];
+      return readField(products[productIds[0]].data, "settlementFixingSource");
+    });
+    expect(fixings).toEqual(["4", "4"]); // both reconciled
+    expect(deal.getState().calc.status).toBe("done");
+    expect(started.size).toBe(1); // priced once, on the reconciled data: not on 3 first
+    stop();
+  });
+});
+
+describe("jotai", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write sets only its own product's atom, once per batch, and nothing when no value changes", async () => {
+    const { atom, getDefaultStore } = await import("jotai/vanilla");
+    const { createDealStore } = await import("../../src-jotai/stores/dealStore.ts");
+    const store = getDefaultStore();
+    const deal = createDealStore(atom({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }));
+    deal.actions.addNewGroup("Strategy");
+    deal.actions.addNewGroup("Average");
+    const [strategy, average] = store.get(deal.groupIdsAtom).map((id) => store.get(deal.groupsAtom)[id]);
+    const [edited, sibling] = strategy.productIds.map((id) => ({
+      id,
+      ...strategy.products[id],
+      data: store.get(strategy.products[id].dataAtom),
+    }));
+    const other = average.products[average.productIds[0]];
+    const notified: string[] = [];
+    const stops = [
+      store.sub(edited.dataAtom, () => notified.push("edited")),
+      store.sub(sibling.dataAtom, () => notified.push("sibling")),
+      store.sub(other.dataAtom, () => notified.push("other")),
+      store.sub(deal.calcAtom, () => notified.push("calc")),
+    ];
+    const siblingIssues = store.get(sibling.issuesAtom);
+    const write = () =>
+      deal.actions.writePaths([
+        { path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" },
+        { path: fieldPath(strategy.id, edited, "strike"), value: "1" },
+      ]);
+
+    write();
+    expect([...notified].sort()).toEqual(["calc", "edited"]); // two writes, one batch: its own product once, the price outdated
+    const data = store.get(edited.dataAtom);
+    expect(getValueByPath(data, "optionsCommon")).not.toBe(getValueByPath(edited.data, "optionsCommon")); // the path to the fields is copied …
+    expect(data.cashSettlement).toBe(edited.data.cashSettlement); // … nothing else
+    expect(store.get(sibling.issuesAtom)).toBe(siblingIssues); // not re-validated
+
+    write();
+    expect(notified).toHaveLength(2); // same values: nothing set
+    expect(store.get(edited.dataAtom)).toBe(data);
+    stops.forEach((stop) => stop());
+    deal.dispose();
+  });
+
+  it("options arriving start one calculation, not two: products reconcile before the load counts as done", async () => {
+    const api = installFakeApi({ Cash: [{ id: 3, name: "Shared" }, { id: 4, name: "C4" }] });
+    const { sleep } = await import("./support/fakeApi.ts");
+    const { atom, getDefaultStore } = await import("jotai/vanilla");
+    const { createDealStore } = await import("../../src-jotai/stores/dealStore.ts");
+    const store = getDefaultStore();
+    const deal = createDealStore(atom({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: true }));
+    deal.actions.addNewGroup("VanillaGroup");
+    const group = store.get(deal.groupsAtom)[store.get(deal.groupIdsAtom)[0]];
+    const product = { id: group.productIds[0], data: store.get(group.products[group.productIds[0]].dataAtom) };
+    deal.actions.writePaths([
+      { path: "notionalCcy", value: "USD" },
+      { path: fieldPath(group.id, product, "settlementStyle"), value: "Cash" },
+    ]);
+    await sleep(60); // Cash's first option taken (3), and the deal priced
+    api.lists.Cash = [{ id: 4, name: "C4" }]; // 3 is no longer offered
+    const started = new Set<number>(); // by request id: a listener reads the latest value, so can see one twice
+    const stop = store.sub(deal.calcAtom, () => {
+      const { status, requestId } = store.get(deal.calcAtom);
+      if (status === "calculating") started.add(requestId);
+    });
+
+    deal.actions.cloneGroup(group.id); // the copy, still valid on 3, reloads Cash's options
+    await sleep(60);
+    const fixings = store.get(deal.groupIdsAtom).map((id) => {
+      const { products, productIds } = store.get(deal.groupsAtom)[id];
+      return readField(store.get(products[productIds[0]].dataAtom), "settlementFixingSource");
+    });
+    expect(fixings).toEqual(["4", "4"]); // both reconciled
+    expect(store.get(deal.calcAtom).status).toBe("done");
+    expect(started.size).toBe(1); // priced once, on the reconciled data: not on 3 first
+    stop();
+    deal.dispose();
+  });
+});
+
 describe("effector-nested", () => {
   beforeEach(() => {
     installFakeApi();
