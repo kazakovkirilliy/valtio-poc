@@ -1,0 +1,74 @@
+{
+ "a listener that writes back": {
+  "valtio": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "mobx": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "mobx-state-tree": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "mobx-keystone": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "legend-state": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "redux": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "zustand": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "jotai": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  },
+  "effector-nested": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 4
+  },
+  "effector-model": {
+   "reactions": 1,
+   "strike": "1",
+   "callPut": "Call",
+   "sibling": "",
+   "productEmits": 2
+  }
+ }
+}

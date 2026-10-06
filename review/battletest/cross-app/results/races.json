@@ -1,0 +1,184 @@
+{
+ "a failed Cash load: the product's issues": {
+  "valtio": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "mobx": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "mobx-state-tree": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "mobx-keystone": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "legend-state": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "redux": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "zustand": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "jotai": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "effector-nested": [
+   "Invalid input: expected string, received undefined"
+  ],
+  "effector-model": [
+   "Invalid input: expected string, received undefined"
+  ]
+ },
+ "Calculate twice: requests": {
+  "valtio": 2,
+  "mobx": 2,
+  "mobx-state-tree": 2,
+  "mobx-keystone": 2,
+  "legend-state": 2,
+  "redux": 2,
+  "zustand": 2,
+  "jotai": 2,
+  "effector-nested": 2,
+  "effector-model": 2
+ },
+ "autocalc on an empty deal": {
+  "valtio": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "mobx": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "mobx-state-tree": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "mobx-keystone": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "legend-state": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "redux": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "zustand": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "jotai": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "effector-nested": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  },
+  "effector-model": {
+   "calc": {
+    "status": "done",
+    "price": 0
+   },
+   "requests": [
+    1,
+    0
+   ]
+  }
+ },
+ "clone + reconcile: price requests": {
+  "valtio": 2,
+  "mobx": 2,
+  "mobx-state-tree": 2,
+  "mobx-keystone": 2,
+  "legend-state": 2,
+  "redux": 1,
+  "zustand": 1,
+  "jotai": 1,
+  "effector-nested": 1,
+  "effector-model": 1
+ },
+ "removing the invalid group: price requests": {
+  "valtio": 1,
+  "mobx": 1,
+  "mobx-state-tree": 1,
+  "mobx-keystone": 2,
+  "legend-state": 1,
+  "redux": 1,
+  "zustand": 1,
+  "jotai": 1,
+  "effector-nested": 1,
+  "effector-model": 3
+ },
+ "fixing an invalid edit: price requests": {
+  "valtio": 1,
+  "mobx": 1,
+  "mobx-state-tree": 1,
+  "mobx-keystone": 2,
+  "legend-state": 1,
+  "redux": 1,
+  "zustand": 1,
+  "jotai": 1,
+  "effector-nested": 1,
+  "effector-model": 1
+ }
+}

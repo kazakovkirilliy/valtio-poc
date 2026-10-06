@@ -1,0 +1,1437 @@
+{
+ "paste 1,500 cells / 151 products": {
+  "valtio": {
+   "writes": 1510,
+   "firstWriteMs": 116,
+   "firstSettledMs": 121,
+   "avgWriteMs": 50,
+   "emitsForOnePaste": 756,
+   "duplicateIds": 151,
+   "priceRequestsForThePaste": 1
+  },
+  "mobx": {
+   "writes": 1510,
+   "firstWriteMs": 60,
+   "firstSettledMs": 64,
+   "avgWriteMs": 46,
+   "emitsForOnePaste": 152,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "mobx-state-tree": {
+   "writes": 1510,
+   "firstWriteMs": 52,
+   "firstSettledMs": 57,
+   "avgWriteMs": 43,
+   "emitsForOnePaste": 2,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "mobx-keystone": {
+   "writes": 1510,
+   "firstWriteMs": 58,
+   "firstSettledMs": 62,
+   "avgWriteMs": 47,
+   "emitsForOnePaste": 2,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "legend-state": {
+   "writes": 1510,
+   "firstWriteMs": 93,
+   "firstSettledMs": 99,
+   "avgWriteMs": 62,
+   "emitsForOnePaste": 2,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "redux": {
+   "writes": 1510,
+   "firstWriteMs": 68,
+   "firstSettledMs": 71,
+   "avgWriteMs": 45,
+   "emitsForOnePaste": 2,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "zustand": {
+   "writes": 1510,
+   "firstWriteMs": 44,
+   "firstSettledMs": 46,
+   "avgWriteMs": 35,
+   "emitsForOnePaste": 2,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "jotai": {
+   "writes": 1510,
+   "firstWriteMs": 42,
+   "firstSettledMs": 47,
+   "avgWriteMs": 35,
+   "emitsForOnePaste": 152,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 1
+  },
+  "effector-nested": {
+   "writes": 1510,
+   "firstWriteMs": 43,
+   "firstSettledMs": 46,
+   "avgWriteMs": 37,
+   "emitsForOnePaste": 3,
+   "duplicateIds": 151,
+   "priceRequestsForThePaste": 1
+  },
+  "effector-model": {
+   "writes": 1510,
+   "firstWriteMs": 62,
+   "firstSettledMs": 66,
+   "avgWriteMs": 62,
+   "emitsForOnePaste": 77,
+   "duplicateIds": 0,
+   "priceRequestsForThePaste": 76
+  }
+ },
+ "broadcast over 10 groups": {
+  "valtio": {
+   "tornReads": 0,
+   "productEmits": 11,
+   "priceRequests": 1
+  },
+  "mobx": {
+   "tornReads": 0,
+   "productEmits": 11,
+   "priceRequests": 1
+  },
+  "mobx-state-tree": {
+   "tornReads": 0,
+   "productEmits": 1,
+   "priceRequests": 1
+  },
+  "mobx-keystone": {
+   "tornReads": 0,
+   "productEmits": 1,
+   "priceRequests": 1
+  },
+  "legend-state": {
+   "tornReads": 0,
+   "productEmits": 1,
+   "priceRequests": 1
+  },
+  "redux": {
+   "tornReads": 0,
+   "productEmits": 1,
+   "priceRequests": 1
+  },
+  "zustand": {
+   "tornReads": 0,
+   "productEmits": 1,
+   "priceRequests": 1
+  },
+  "jotai": {
+   "tornReads": 0,
+   "productEmits": 11,
+   "priceRequests": 1
+  },
+  "effector-nested": {
+   "tornReads": 0,
+   "productEmits": 2,
+   "priceRequests": 1
+  },
+  "effector-model": {
+   "tornReads": 0,
+   "productEmits": 10,
+   "priceRequests": 10
+  }
+ },
+ "synced write-back: calc after": {
+  "valtio": "outdated",
+  "mobx": "done",
+  "mobx-state-tree": "outdated",
+  "mobx-keystone": "outdated",
+  "legend-state": "outdated",
+  "redux": "outdated",
+  "zustand": "outdated",
+  "jotai": "outdated",
+  "effector-nested": "outdated",
+  "effector-model": "outdated"
+ },
+ "field write-back: calc after": {
+  "valtio": "outdated",
+  "mobx": "done",
+  "mobx-state-tree": "outdated",
+  "mobx-keystone": "outdated",
+  "legend-state": "done",
+  "redux": "outdated",
+  "zustand": "outdated",
+  "jotai": "outdated",
+  "effector-nested": "outdated",
+  "effector-model": "outdated"
+ },
+ "__proto__ path: Object.prototype.polluted": {
+  "valtio": "yes",
+  "mobx": "yes",
+  "mobx-state-tree": null,
+  "mobx-keystone": "yes",
+  "legend-state": "yes",
+  "redux": null,
+  "zustand": null,
+  "jotai": null,
+  "effector-nested": null,
+  "effector-model": null
+ },
+ "constructor.prototype path": {
+  "valtio": {
+   "polluted": "yes",
+   "threw": ""
+  },
+  "mobx": {
+   "polluted": "yes",
+   "threw": ""
+  },
+  "mobx-state-tree": {
+   "polluted": null,
+   "threw": ""
+  },
+  "mobx-keystone": {
+   "polluted": "yes",
+   "threw": ""
+  },
+  "legend-state": {
+   "polluted": null,
+   "threw": "Cannot read properties of undefined (reading 'set')"
+  },
+  "redux": {
+   "polluted": null,
+   "threw": ""
+  },
+  "zustand": {
+   "polluted": null,
+   "threw": ""
+  },
+  "jotai": {
+   "polluted": null,
+   "threw": ""
+  },
+  "effector-nested": {
+   "polluted": null,
+   "threw": ""
+  },
+  "effector-model": {
+   "polluted": null,
+   "threw": ""
+  }
+ },
+ "write under a string leaf": {
+  "valtio": {
+   "threw": "Cannot assign to read only property 'length' of string ''",
+   "strike": "",
+   "callPut": "Call",
+   "buySell": ""
+  },
+  "mobx": {
+   "threw": "Cannot assign to read only property 'length' of string ''",
+   "strike": "",
+   "callPut": "Call",
+   "buySell": ""
+  },
+  "mobx-state-tree": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "mobx-keystone": {
+   "threw": "Cannot assign to read only property 'length' of string ''",
+   "strike": "",
+   "callPut": "Call",
+   "buySell": ""
+  },
+  "legend-state": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "redux": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "zustand": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "jotai": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "effector-nested": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  },
+  "effector-model": {
+   "threw": "",
+   "strike": {
+    "length": 9
+   },
+   "callPut": "Call",
+   "buySell": "Buy"
+  }
+ },
+ "synced null/undefined": {
+  "valtio": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "mobx": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "mobx-state-tree": {
+   "threw": "[mobx-state-tree] Error while converting `null` to `string`:",
+   "premiumCcy": [
+    "2",
+    "2",
+    "2",
+    "2"
+   ],
+   "notionalAmount": [
+    "NaN",
+    "NaN",
+    "NaN",
+    "NaN"
+   ]
+  },
+  "mobx-keystone": {
+   "threw": "",
+   "premiumCcy": [
+    "2",
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    "NaN",
+    null,
+    null,
+    null
+   ]
+  },
+  "legend-state": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "redux": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "zustand": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "jotai": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "effector-nested": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  },
+  "effector-model": {
+   "threw": "",
+   "premiumCcy": [
+    null,
+    null,
+    null,
+    null
+   ],
+   "notionalAmount": [
+    null,
+    null,
+    null,
+    null
+   ]
+  }
+ },
+ "odd values": {
+  "valtio": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "mobx": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "mobx-state-tree": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": "THROWS: [mobx-state-tree] Error while converting `\"1000\"` to `number`:",
+   "sync notionalCcy: 123 (a number)": "THROWS: [mobx-state-tree] Error while converting `123` to `string`:",
+   "product notionalAmount: undefined": [
+    "NaN",
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": "THROWS: [mobx-state-tree] Error while converting `null` to `string`:"
+  },
+  "mobx-keystone": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    "NaN",
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    "2",
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "legend-state": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "redux": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "zustand": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "jotai": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "effector-nested": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  },
+  "effector-model": {
+   "strike: whitespace": [
+    "   ",
+    []
+   ],
+   "strike: 10,000 characters": [
+    10000,
+    [
+     "Must be at most 3 characters"
+    ]
+   ],
+   "strike: a number": [
+    12,
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "callPut: null": [
+    null,
+    [
+     "Invalid input"
+    ]
+   ],
+   "settlementStyle: 'Cash ' (trailing space)": [
+    "Cash ",
+    false,
+    [
+     "Invalid option: expected one of \"Cash\"|\"Delivery\""
+    ]
+   ],
+   "expiryDays: '5' (a string)": [
+    "",
+    "NaN"
+   ],
+   "expiryDays: 1.5": [
+    2,
+    []
+   ],
+   "expiryDate: '2999-02-30'": [
+    355163,
+    [
+     "Must be a valid date"
+    ]
+   ],
+   "broadcast strike: NaN (empty: ignored)": [
+    12,
+    "",
+    ""
+   ],
+   "broadcast strike: whitespace": [
+    " ",
+    " ",
+    " "
+   ],
+   "isInternal: 'yes'": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "hedgeType: a number": {
+    "isInternal": false,
+    "hedgeType": "d"
+   },
+   "sync notionalAmount: '1000' (a string)": [
+    "1000",
+    [
+     "1000",
+     "1000",
+     "1000"
+    ],
+    [
+     "Invalid input"
+    ]
+   ],
+   "sync notionalCcy: 123 (a number)": [
+    123,
+    [
+     123,
+     123,
+     123
+    ],
+    [
+     "Invalid input: expected string, received number"
+    ]
+   ],
+   "product notionalAmount: undefined": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ],
+   "sync premiumCcy: null": [
+    null,
+    [
+     null,
+     null,
+     null
+    ]
+   ]
+  }
+ }
+}

@@ -1,0 +1,297 @@
+{
+ "200 cycles": {
+  "valtio": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.11,
+   "pasteMsAfter": 0.06
+  },
+  "mobx": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.15,
+   "pasteMsAfter": 0.14
+  },
+  "mobx-state-tree": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.16,
+   "pasteMsAfter": 0.08
+  },
+  "mobx-keystone": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.12,
+   "pasteMsAfter": 0.1
+  },
+  "legend-state": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.12,
+   "pasteMsAfter": 0.1
+  },
+  "redux": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.13,
+   "pasteMsAfter": 0.07
+  },
+  "zustand": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.05,
+   "pasteMsAfter": 0.02
+  },
+  "jotai": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.1,
+   "pasteMsAfter": 0.06
+  },
+  "effector-nested": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.1,
+   "pasteMsAfter": 0.05
+  },
+  "effector-model": {
+   "groups": [
+    "Vanilla Group #1"
+   ],
+   "productsEverSeen": 535,
+   "ghostIds": 0,
+   "pasteMsBefore": 0.12,
+   "pasteMsAfter": 0.07
+  }
+ },
+ "dispose then write": {
+  "valtio": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 1,
+   "calc": "done",
+   "products": 2
+  },
+  "mobx": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "done",
+   "products": 2
+  },
+  "mobx-state-tree": {
+   "threw": "[mobx-state-tree] Cannot modify 'Group[]@/groups [dead]', the object is protected and can only be modified by using an action.",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "done",
+   "products": 1
+  },
+  "mobx-keystone": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "done",
+   "products": 2
+  },
+  "legend-state": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "done",
+   "products": 2
+  },
+  "redux": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "outdated",
+   "products": 2
+  },
+  "zustand": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 2,
+   "calc": "done",
+   "products": 2
+  },
+  "jotai": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 0,
+   "calc": "outdated",
+   "products": 2
+  },
+  "effector-nested": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 2,
+   "calc": "done",
+   "products": 2
+  },
+  "effector-model": {
+   "threw": "",
+   "autocalcRequestsAfterDispose": 2,
+   "calc": "done",
+   "products": 2
+  }
+ },
+ "calc answered after dispose": {
+  "valtio": {
+   "warnings": [],
+   "errors": []
+  },
+  "mobx": {
+   "warnings": [],
+   "errors": []
+  },
+  "mobx-state-tree": {
+   "warnings": [
+    "Error: [mobx-state-tree] You are trying to read or write to an object that is no longer part of a state tree. (Object ty",
+    "Error: [mobx-state-tree] You are trying to read or write to an object that is no longer part of a state tree. (Object ty",
+    "Error: [mobx-state-tree] You are trying to read or write to an object that is no longer part of a state tree. (Object ty",
+    "Error: [mobx-state-tree] You are trying to read or write to an object that is no longer part of a state tree. (Object ty"
+   ],
+   "errors": []
+  },
+  "mobx-keystone": {
+   "warnings": [],
+   "errors": []
+  },
+  "legend-state": {
+   "warnings": [],
+   "errors": []
+  },
+  "redux": {
+   "warnings": [],
+   "errors": []
+  },
+  "zustand": {
+   "warnings": [],
+   "errors": []
+  },
+  "jotai": {
+   "warnings": [],
+   "errors": []
+  },
+  "effector-nested": {
+   "warnings": [],
+   "errors": []
+  },
+  "effector-model": {
+   "warnings": [],
+   "errors": []
+  }
+ },
+ "options cross-talk between deals": {
+  "valtio": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "mobx": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "mobx-state-tree": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "mobx-keystone": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "legend-state": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "redux": {
+   "a": "4",
+   "b": "4",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "outdated"
+  },
+  "zustand": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "jotai": {
+   "a": "4",
+   "b": "3",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "done"
+  },
+  "effector-nested": {
+   "a": "4",
+   "b": "4",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "outdated"
+  },
+  "effector-model": {
+   "a": "4",
+   "b": "4",
+   "bOptions": [
+    "4"
+   ],
+   "bPrice": "outdated"
+  }
+ },
+ "another deal's pending load blocks Calculate": {
+  "valtio": "none",
+  "mobx": "none",
+  "mobx-state-tree": "none",
+  "mobx-keystone": "none",
+  "legend-state": "none",
+  "redux": "none",
+  "zustand": "none",
+  "jotai": "none",
+  "effector-nested": "none",
+  "effector-model": "none"
+ }
+}

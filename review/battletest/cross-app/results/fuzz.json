@@ -1,0 +1,256 @@
+{
+ "seed 1": {
+  "values": {},
+  "pricing": {
+   "mobx-keystone": {
+    "step": 35,
+    "at": "35 {\"kind\":\"remove\",\"group\":4}",
+    "app": {
+     "pendingPrices": {
+      "majority": 1,
+      "app": 2
+     },
+     "prices": {
+      "majority": 1,
+      "app": 2
+     }
+    }
+   },
+   "effector-model": {
+    "step": 35,
+    "at": "35 {\"kind\":\"remove\",\"group\":4}",
+    "app": {
+     "pendingPrices": {
+      "majority": 1,
+      "app": 2
+     },
+     "prices": {
+      "majority": 1,
+      "app": 2
+     }
+    }
+   }
+  },
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 2": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 3": {
+  "values": {},
+  "pricing": {
+   "effector-model": {
+    "step": 31,
+    "at": "31 {\"kind\":\"sync\",\"field\":\"notionalCcy\",\"value\":1}",
+    "app": {
+     "pendingPrices": {
+      "majority": 2,
+      "app": 5
+     },
+     "prices": {
+      "majority": 4,
+      "app": 7
+     }
+    }
+   }
+  },
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 4": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 5": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 6": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 7": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 8": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 9": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 10": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 11": {
+  "values": {},
+  "pricing": {
+   "mobx-keystone": {
+    "step": 56,
+    "at": "56 {\"kind\":\"remove\",\"group\":4}",
+    "app": {
+     "pendingPrices": {
+      "majority": 2,
+      "app": 3
+     },
+     "prices": {
+      "majority": 2,
+      "app": 3
+     }
+    }
+   }
+  },
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 12": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 13": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 14": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 15": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 16": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 17": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 18": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 19": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 20": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 21": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 22": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 23": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 24": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 25": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 26": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 27": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 28": {
+  "values": {},
+  "pricing": {
+   "effector-model": {
+    "step": 34,
+    "at": "34 {\"kind\":\"sync\",\"field\":\"notionalAmount\",\"value\":4}",
+    "app": {
+     "pendingPrices": {
+      "majority": 3,
+      "app": 6
+     },
+     "prices": {
+      "majority": 4,
+      "app": 7
+     }
+    }
+   }
+  },
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 29": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ },
+ "seed 30": {
+  "values": {},
+  "pricing": {},
+  "settled": "agree",
+  "errors": {}
+ }
+}

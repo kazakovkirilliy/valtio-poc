@@ -1,0 +1,309 @@
+{
+ "result": {
+  "valtio": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": true,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 1
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "mobx": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "mobx-state-tree": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "mobx-keystone": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "legend-state": {
+   "during": {
+    "threwToTheWriter": "listener failed",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 2
+    },
+    "priceRequests": 0
+   },
+   "after": {
+    "heard": [],
+    "calc": {
+     "status": "done",
+     "price": 2
+    },
+    "priceRequests": 0
+   },
+   "freshDealHeard": []
+  },
+  "redux": {
+   "during": {
+    "threwToTheWriter": "listener failed",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "outdated",
+     "price": 2
+    },
+    "priceRequests": 0
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "zustand": {
+   "during": {
+    "threwToTheWriter": "listener failed",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "calculating",
+     "price": 2
+    },
+    "priceRequests": 0
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "jotai": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options"
+   ]
+  },
+  "effector-nested": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options",
+    "products"
+   ]
+  },
+  "effector-model": {
+   "during": {
+    "threwToTheWriter": "",
+    "written": [
+     1000,
+     1000
+    ],
+    "laterListenerHeardIt": false,
+    "calc": {
+     "status": "done",
+     "price": 4
+    },
+    "priceRequests": 1
+   },
+   "after": {
+    "heard": [
+     "dealFields",
+     "groups",
+     "products"
+    ],
+    "calc": {
+     "status": "done",
+     "price": 9
+    },
+    "priceRequests": 2
+   },
+   "freshDealHeard": [
+    "groups",
+    "options",
+    "products"
+   ]
+  }
+ }
+}
