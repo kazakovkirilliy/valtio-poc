@@ -22,6 +22,7 @@
     "effector": "^23.4.4",
     "effector-react": "^23.3.0",
     "effector-storage": "^8.0.0",
+    "jotai": "^3.0.1",
     "mobx": "^7.0.5",
     "mobx-keystone": "^2.2.0",
     "mobx-react-lite": "^5.1.0",
@@ -36,7 +37,8 @@
     "valtio-persist": "^2.2.5",
     "valtio-plugin": "^1.11.4",
     "valtio-reactive": "0.2.0",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

@@ -185,6 +185,96 @@ describe("redux", () => {
   });
 });
 
+describe("zustand", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write copies only the path to its product, notifies once per batch, and nothing when no value changes", async () => {
+    const { createStore } = await import("zustand/vanilla");
+    const { createDealStore } = await import("../../src-zustand/stores/dealStore.ts");
+    const deal = createDealStore(createStore(() => ({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false })));
+    const { actions } = deal.getState();
+    actions.addNewGroup("Strategy");
+    actions.addNewGroup("Average");
+    const before = deal.getState();
+    const [strategy, average] = before.groupIds.map((id) => before.groups[id]);
+    const [edited, sibling] = strategy.productIds.map((id) => ({ id, ...strategy.products[id] }));
+    let notified = 0;
+    const stop = deal.subscribe(() => notified++);
+    const write = () =>
+      actions.writePaths([
+        { path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" },
+        { path: fieldPath(strategy.id, edited, "strike"), value: "1" },
+      ]);
+
+    write();
+    expect(notified).toBe(1); // two writes, one `set`
+    const after = deal.getState();
+    const data = after.groups[strategy.id].products[edited.id].data;
+    expect(data).not.toBe(edited.data);
+    expect(getValueByPath(data, "optionsCommon")).not.toBe(getValueByPath(edited.data, "optionsCommon")); // the path to the fields is copied …
+    expect(data.cashSettlement).toBe(edited.data.cashSettlement); // … nothing else
+    expect(after.groups[strategy.id].products[sibling.id]).toBe(strategy.products[sibling.id]);
+    expect(after.groups[average.id]).toBe(average);
+    expect(after.calc).not.toBe(before.calc); // the price outdated in the same `set`
+
+    write();
+    expect(notified).toBe(1); // same values: no `set` at all
+    expect(deal.getState()).toBe(after);
+    stop();
+  });
+});
+
+describe("jotai", () => {
+  beforeEach(() => {
+    installFakeApi();
+    vi.resetModules();
+  });
+
+  it("a write sets only its own product's atom, once per batch, and nothing when no value changes", async () => {
+    const { atom, getDefaultStore } = await import("jotai/vanilla");
+    const { createDealStore } = await import("../../src-jotai/stores/dealStore.ts");
+    const store = getDefaultStore();
+    const deal = createDealStore(atom({ isSpotPriceStreamEnabled: false, isAutocalcEnabled: false }));
+    deal.actions.addNewGroup("Strategy");
+    deal.actions.addNewGroup("Average");
+    const [strategy, average] = store.get(deal.groupIdsAtom).map((id) => store.get(deal.groupsAtom)[id]);
+    const [edited, sibling] = strategy.productIds.map((id) => ({
+      id,
+      ...strategy.products[id],
+      data: store.get(strategy.products[id].dataAtom),
+    }));
+    const other = average.products[average.productIds[0]];
+    const notified: string[] = [];
+    const stops = [
+      store.sub(edited.dataAtom, () => notified.push("edited")),
+      store.sub(sibling.dataAtom, () => notified.push("sibling")),
+      store.sub(other.dataAtom, () => notified.push("other")),
+      store.sub(deal.calcAtom, () => notified.push("calc")),
+    ];
+    const siblingIssues = store.get(sibling.issuesAtom);
+    const write = () =>
+      deal.actions.writePaths([
+        { path: fieldPath(strategy.id, edited, "expiryCut"), value: "TK15" },
+        { path: fieldPath(strategy.id, edited, "strike"), value: "1" },
+      ]);
+
+    write();
+    expect([...notified].sort()).toEqual(["calc", "edited"]); // two writes, one batch: its own product once, the price outdated
+    const data = store.get(edited.dataAtom);
+    expect(getValueByPath(data, "optionsCommon")).not.toBe(getValueByPath(edited.data, "optionsCommon")); // the path to the fields is copied …
+    expect(data.cashSettlement).toBe(edited.data.cashSettlement); // … nothing else
+    expect(store.get(sibling.issuesAtom)).toBe(siblingIssues); // not re-validated
+
+    write();
+    expect(notified).toHaveLength(2); // same values: nothing set
+    expect(store.get(edited.dataAtom)).toBe(data);
+    stops.forEach((stop) => stop());
+  });
+});
+
 describe("effector-nested", () => {
   beforeEach(() => {
     installFakeApi();

@@ -181,6 +181,11 @@ compared. Each has its own test in `tests/stores/libraries.test.ts`:
   product, and nothing changes when the value doesn't.
 - mobx-keystone: a clone gets new ids and its own copy of the data.
 - Legend-State: a write sets only its own leaf, and only when its value changes.
+- Zustand: a write copies only the path to its product, notifies once per
+  batch, and doesn't notify at all when no value changes.
+- Jotai: a write sets only its own product's data atom, once per batch,
+  copying only the path to the field; nothing is set when no value changes,
+  and other products aren't re-validated.
 - Effector Model: a write reaches only its own product's stores; a store per
   path updates only when its own value changes.
 
