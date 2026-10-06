@@ -62,6 +62,8 @@ adapter), `tests/e2e/support/fixtures.ts` (`apps`), `tests/e2e/layout.spec.ts`
   fails for apps you didn't touch, suspect a stale server first and ask before
   restarting mine. Kill any server you started by PID.
 
-## Current work
+## Requirements and current work
 
-See `HANDOFF.md` for where things stand and what's next.
+- `REQUIREMENTS.md`: what every version must do, each requirement linked to
+  the test that checks it. Keep it in step when behaviour or tests change.
+- `HANDOFF.md`: where things stand and what's next.
